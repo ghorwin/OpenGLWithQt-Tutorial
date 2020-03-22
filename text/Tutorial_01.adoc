@@ -1,362 +1,230 @@
 :imagesdir: ./images
-= OpenGL rendern innerhalb von QWindow
+= OpenGL innerhalb eines QWindow
 
-Das Ziel ist erstmal einfach: ein Dreieck zeichnen.
+Das Ziel ist erstmal einfach: ein einfarbiges Dreieck mit OpenGL in einem `QWindow` zu zeichnen.
 
-== Variante 01: Basisvariante mit benannten Variablenarrays
+Das sieht dann so (noch ziemlich langweilig) aus, reicht aber aus, um mehrere Seiten Tutorialtext zu füllen :-)
 
-Quelltext: `Var_01`
 
-.Ausgabe: Var_01
-image::Var_01_01.png[Var_01_01]
+.Ausgabe: Tutorial_01 (Mac OS Screenshot)
+image::Tutorial_01_mac.png[Tutorial_01]
 
-Basiert auf Tutorial/Beispiel https://doc.qt.io/qt-5/qtgui-openglwindow-example.html
 
-Die darin vorgestellte Basisklasse `OpenGLWindow` enthält bereits einige nützliche Dinge - gerendert wird nur, wenn das Fenster sichtbar ist. Das QOpenGLPaintDevice ist darin gekapselt, und und und... Die Details des Codes in dieser Klasse sind erstmal nicht weiter wichtig.
+[NOTE]
+====
+Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_01[Tutorial_01]
 
-Wir implementieren eine von dem OpenGLWindow abgeleitete Klasse `TriangleWindow`, welche wie folgt verwendet wird:
+`.pro`-Datei in Qt Creator öffnen und compilieren. 
+====
 
-.main.cpp
+Das Tutorial selbst basiert zum einen auf dem Qt Beispiel "OpenGLWindow" und auf dem Tutorial https://learnopengl.com/Getting-started/Hello-Triangle.
+
+Beim Rendern von OpenGL Inhalten mit Qt gibt es verschiedene Möglichkeiten. Hier soll zunächst ein `QWindow` verwendet werden, welches ein natives Fenster des jeweiligen Betriebssystems kapselt. Damit kann man also ziemlich direkt und plattformnah zeichnen.
+
+### QWidget näher betrachtet
+
+Um ein QWidget zu verwenden, muss man die Klasse ableiten und sollte dann einige Funktionen implementieren. Eine minimalistische Klassendeklaration sähe z.B. so aus:
+
 [source,c++]
 ----
-#include "TriangleWindow.h"
-
-#include <QApplication>
-#include <QSurfaceFormat>
-
-int main(int argc, char **argv) {
-	QGuiApplication app(argc, argv);
-
-	// Set OpenGL Version information
-	// Note: This format must be set before show() is called.
-	QSurfaceFormat format;
-	format.setRenderableType(QSurfaceFormat::OpenGL);
-	format.setProfile(QSurfaceFormat::CoreProfile);
-	format.setVersion(3,3);
-
-	TriangleWindow window;
-	window.setFormat(format);
-	window.resize(640, 480);
-	window.show();
-
-	return app.exec();
-}
-----
-
-Die Klasse `QSurfaceFormat` dient der Konfiguration der OpenGL Ausgabe. Mehr dazu später.
-
-Die von OpenGLWindow abgeleitete Klasse `TriangleWindow` sieht so aus:
-
-.TriangleWindow.h
-[source,c++]
-----
-#ifndef TRIANGLEWINDOW_H
-#define TRIANGLEWINDOW_H
-
-#include <QOpenGLVertexArrayObject>
-#include <QOpenGLBuffer>
-#include <QOpenGLShaderProgram>
-
-#include "OpenGLWindow.h"
-
-/*! This is the window that shows the triangle.
-	We derive from our OpenGLWindow base class and implement the
-	virtual initialize() and render() functions.
-*/
-class TriangleWindow : public OpenGLWindow {
+class OpenGLWindow : public QWindow {
+	Q_OBJECT
 public:
+	explicit OpenGLWindow(QWindow *parent = 0);
 
-	void initialize() Q_DECL_OVERRIDE;
-	void render() Q_DECL_OVERRIDE;
+    // ... other public members ...
+    
+protected:
+	bool event(QEvent *event) Q_DECL_OVERRIDE;
+	void exposeEvent(QExposeEvent *event) Q_DECL_OVERRIDE;
 
 private:
-
-	/*! Wraps an OpenGL VertexArrayObject, that holds the vertice coordinate and color buffers. */
-	QOpenGLVertexArrayObject	m_vao;
-
-	/*! Holds the compiled shader programs. */
-	QOpenGLShaderProgram		*m_program;
+    // ... private members ...
 };
-
-#endif // TRIANGLEWINDOW_H
 ----
+[TIP]
+====
+Das Makro `Q_DECL_OVERRIDE` wird zum Schlüsselwort `override`, wenn der Compiler dies unterstützt (C++11 erlaubt). Da das eigentlich bei Qt 5 vorausgesetzt werden kann, könnte man eigentlich immer gleich `override` schreiben.
+====
 
-Die wesentlichen Funktionen, welche zu implementieren sind, heißen `initialize()` und `render()`.
-
-Die beiden Member-Variablen werden in der Funktion `initialize()` erstellt.
-
-.TriangleWindow.cpp, Funktion initialize()
+Man kann entweder mit einem rasterbasierten QPainter zeichnen, oder eben mit OpenGL. Dies legt man am besten im Constructor der Klasse fest, wie beispielsweise:
 [source,c++]
 ----
-...
-
-void TriangleWindow::initialize() {
-	// this function is called once, when the window is first initialized
-
-	// set the background color = clear color
-	glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
-
-	// compile the shader programs
-	m_program = new QOpenGLShaderProgram();
-
-	// read the shader programs from the resource
-	m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/triangle.vert");
-	QString log = m_program->log();
-	if (!log.isEmpty())
-		qDebug() << "vertex shader errors :" << log;
-
-	m_program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/triangle.frag");
-	log = m_program->log();
-	if (!log.isEmpty())
-		qDebug() << "fragment shader errors :" << log;
-
-	m_program->link();
-	m_program->bind(); // bind Shader (Do not release until Vertex Array Object (VAO) is created)
-
-	// here we start with the geometry - since in this example the geometry is fixed, we can do this in
-	// the initialization
-
-	// we create two static/constant arrays:
-	// - one with vertex positions (in model space)
-	// - one with corresponding vertex colors (same order, same size)
-
-	// location of vertex data arrays must be before they are referenced
-	// but location not important otherwise
-	static const float vertexPositions[] = {
-		-1.0f, 0.0f, 0.0f, // (x,y,z) bottom left
-		1.0f, 0.0f, 0.0f,  // bottom right
-		0.0f, 1.0f, 0.0f   // top middle
-	};
-
-	static const float vertexColors[] = {
-		1.0f, .0f, .0f, // red (r,g,b) values for each vertex
-		.0f, 1.0f, .0f, // green
-		.0f, .0f, 1.0f  // blue
-	};
-
-	// Initialize the Vertex Array Object (VAO)
-
-	m_vao.create(); // create underlying OpenGL object
-	m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so we can write attributes to it
-
-	// create a new buffer for the vertices
-	QOpenGLBuffer positionBuffer(QOpenGLBuffer::VertexBuffer);
-	positionBuffer.create(); // again, create underlying OpenGL object
-	positionBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw); // data won't change - only set once, used many times
-
-	positionBuffer.bind(); // set it active in the context, so that we can write to it
-	positionBuffer.allocate(vertexPositions, 9 * sizeof(float)); // set the buffer - first pointer to buffer, then size = 3 x 3 floats
-
-	m_program->enableAttributeArray("position");
-	// This call labels an attribute "position" that points to the memory slot from the last buffer allocate().
-	// By this name it will be accessible in the shader programs (input value).
-	m_program->setAttributeBuffer("position", GL_FLOAT, 0, 3);
-	// This maps the data we have set in the buffer to the "position" attribute.
-	// 0 - offset - means the "position" data starts at the begin of the memory array
-	// 3 - stride - means that each position-tuple has the size of 3 floats (those are the 3 coordinates,
-	//              a tuple-stride is comparible to a record size)
-
-
-	// another buffer, now for the colors
-	QOpenGLBuffer colorBuffer(QOpenGLBuffer::VertexBuffer);
-	colorBuffer.create(); // as above
-	colorBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw); // as above
-	colorBuffer.bind(); // as above
-	colorBuffer.allocate(vertexColors, 9 * sizeof(float)); // now we pass the pointer to the color array
-	m_program->enableAttributeArray("color");
-	// This call labels an attribute "color" that points to the memory slot from the last buffer allocate().
-	// The "color" attribute is an input to our vertex shader.
-	m_program->setAttributeBuffer("color", GL_FLOAT, 0, 3); // as above: offset=0, stride=3
-
-	// Release (unbind) all
-	positionBuffer.release();
-	colorBuffer.release();
-	m_vao.release();
-	m_program->release();
-}
-----
-
-Die wichtigsten Dinge:
-* das Shaderprogramm (bestehend aus Vertex- und Fragmentationshader) muss erstellt werden.
-* Buffer für die Koordinaten und Farben müssen erstellt werden.
-
-Wichtig zum Verständnis: Erläuterung zum Vertex- und Fragmentation Shader lesen in http://duriansoftware.com/joe/An-intro-to-modern-OpenGL.-Table-of-Contents.html.
-
-Grundsätzlich: Der Vertexshader beschreibt, wie die Werte an einem Vertex berechnet werden. Die Grafikkarte berechnet für die einzelnen Pixel im Rasterizer dann _interpolierte Werte_, weswegen dann jeweils pixelspezifische interpolierte Farbwerte im Fragmentation-Shader landen (vai fragColor im Fragmentation Shader).
-
-.triangle.vert, Vertex Shader Programm
-[source,c]
-----
-#version 140
-
-// GLSL version 1.4
-// vertex shader
-
-in vec3 position;   // input:  attribute named 'position' with 3 elements per vertex
-in vec3 color;      // input:  attribute named 'color' with 3 elements (=rgb) per vertex
-out vec4 fragColor; // output: computed fragmentation color
-
-void main() {
-  // Note: you must not use tab characters for indentation!
-  fragColor = vec4(color, 1.0);
-  gl_Position = vec4(position, 1.0);
-}
-----
-Die Eingangsparameter `position` und `color` müssen entsprechend im Eingangsdatenpuffer benannt werden (siehe `enableAttributeArray()` im Quelltext oben).
-
-Auch wichtig: im Shaderprogramm sind keine Tab-Zeichen erlaubt.
-
-.triangle.frag, Fragmentation Shader Programm
-[source,c]
-----
-#version 140
-
-// GLSL version 1.4
-// fragmentation shader
-
-in vec4 fragColor;    // input: fragColor (bereits interpolierter rgb-Wert)
-out vec4 finalcolor;  // output: finalColor (fertiger Farbwert als rgb-Wert)
-
-void main() {
-  // Note: you must not use tab characters for indentation!
-  finalcolor = fragColor;
-}
-----
-
-Die Shaderprogramme (immer zwei) werden bei jedem Programmlauf kompiliert. Es ist sinnvoll, diese in Form von qrc-Resourcen vorzuhalten, und zu laden (anstatt im Quelltext als C-Zeichenkettenkonstanten zu definieren).
-
-Hinweis: `StaticDraw` --> siehe Erläuterung auf http://duriansoftware.com/joe/An-intro-to-modern-OpenGL.-Chapter-2.1:-Buffers-and-Textures.html
-
-
-
-.TriangleWindow.cpp, Funktion render()
-[source,c++]
-----
-void TriangleWindow::render() {
-	// this function is called for every frame to be rendered on screen
-	const qreal retinaScale = devicePixelRatio();
-	glViewport(0, 0, width() * retinaScale, height() * retinaScale);
-
-	// clear the background color
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	// render using our shader
-	m_program->bind();
-	// set the geometry ("position" and "color" arrays)
-	m_vao.bind();
-	// now draw the triangles:
-	// - GL_TRIANGLES - draw individual triangles
-	// - 0 index of first triangle to draw
-	// - 3 number of vertices to process
-	glDrawArrays(GL_TRIANGLES, 0, 3);
-	// release vertices again
-	m_vao.release();
-	m_program->release();
-}
-
-----
-Erläuterung siehe Tutorial https://steventaitinger.wordpress.com/2015/11/24/part-1-modern-opengl-using-qt-5-5-tutorial
-
-== Variante 02: Überarbeitete Basisvariante mit Vertex-Objekten und index-basierten Shader-Variablen-Arrays
-
-Quelltext: `Var_02`
-
-Wichtigste Änderungen gegenüber Var 1:
-
-- Einführung der Klasse Vertex, Datenspeicher für 6 __floats__ (=6*4=24 Bytes), die ersten 3 (innerhalb einer QVector3D-Klasse) für die Position, die letzten 3 (auch im QVector3D) für die RGB-Farbe
-- Dadurch nur ein Datenarray `sg_vertices` für das Dreieck: 3*Vertex = 3*24 Bytes = 72 Bytes; die Verwendung eines einzigen Arrays ist hier zwar bequem, aber nicht zwingend die beste Wahl für alle Anwendungsfälle. Wichtig ist beim Aufruf von `setAttributeBuffer()`, dass er sich immer auf den Puffer mit  dem letzten `allocate()`-Aufruf bezieht (siehe dafür auch Var_01).
-- Shaderprogramm-Code gekürzt (Fehlerprüfung raus)
-- Nur ein Datenpuffer für Position und Farben:
-
-[source,c++]
-----
-// Create Buffer (Do not release until VAO is created)
-m_vertexDataBuffer.create();
-m_vertexDataBuffer.bind();
-m_vertexDataBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
-int vertexArrayMemSize = sizeof(sg_vertexes); // = 72 Bytes
-m_vertexDataBuffer.allocate(sg_vertexes, vertexArrayMemSize);
-----
-
-- Variablenarrays werden index-basiert angesprochen:
-
-[source,c++]
-----
-// tell shader program we have two data arrays to be used as input to the shaders
-m_program->enableAttributeArray(0); // array with index/id 0
-m_program->enableAttributeArray(1); // array with index/id 1
-// index 0 = position
-m_program->setAttributeBuffer(0, GL_FLOAT, Vertex::positionOffset(), Vertex::PositionTupleSize, Vertex::stride());
-// index 0 = color
-m_program->setAttributeBuffer(1, GL_FLOAT, Vertex::colorOffset(), Vertex::ColorTupleSize, Vertex::stride());
-----
-im Vertex-Shaderprogramm werden diese wie folgt identifiziert:
-
-[source,c]
-----
-#version 330
-
-// GLSL version 3.3
-// vertex shader
-
-layout(location = 0) in vec3 position; // input:  attribute with index '0' with 3 elements per vertex
-layout(location = 1) in vec3 color;    // input:  attribute with index '1' with 3 elements (=rgb) per vertex
-out vec4 fragColor;                    // output: computed fragmentation color
-
-void main() {
-  // Note: you must not use tab characters for indentation!
-  gl_Position = vec4(position, 1.0);
-  fragColor = vec4(color, 1.0);
-}
-----
-(ÜBUNG: mal `layout(location = x)` ändern und 1 mit 0 vertauschen)
-
-- es wird noch eine kurze OpenGL Info beim Start ausgegeben
-
-== Variante 02widget: Einbettung des OpenGLWindow in eine Widgets-Anwendung
-
-Das OpenGLWindow (abgeleitet von QWindow) verwendet die Fenster der Windowmanagers direkt und zeichnet so sehr effizient direkt auf den Bildschirm. Allerdings kann es nicht direkt in eine klassische Framebuffer-gepufferte Widgetsanwendung eingebettet werden. Dafür ist ein Widget-Container notwendig. 
-
-Ergebnis:
-
-.OpenGLWindow eingebettet in einen QDialog
-image::Var_02widget.png[]
-
-Quelltext: `Var_02widget`
-
-.Einbettung des TriangleWidgets in das vertikale Layout eines Dialogs
-[source,c++]
-----
-Dialog::Dialog(QWidget *parent) :
-	QDialog(parent),
-	ui(new Ui::Dialog)
+OpenGLWindow::OpenGLWindow(QWindow *parent) :
+	QWindow(parent)
 {
-	ui->setupUi(this);
+	setSurfaceType(QWindow::OpenGLSurface);
+}
+----
+Durch Aufruf der Funktion https://doc.qt.io/qt-5/qwindow.html#setSurfaceType[setSurfaceType(QWindow::OpenGLSurface)] legt man fest, dass man ein natives OpenGL-Window erstellen möchte. 
 
-	// Set OpenGL Version information
-	// Note: This format must be set before show() is called.
-	QSurfaceFormat format;
-	format.setRenderableType(QSurfaceFormat::OpenGL);
-	format.setProfile(QSurfaceFormat::CoreProfile);
-	format.setVersion(3,3);
+Das Qt Framework sendet nun zwei für uns interessante Events:
 
-    // create widget on heap
-	openGLWindow = new TriangleWindow;
-	openGLWindow->setFormat(format);
+* `QEvent::UpdateRequest` - wir sollten das Widget neu zeichnen
+* `QEvent::Expose` - das Fenster (oder ein Teil davon) ist nun sichtbar und sollte aktualisiert werden
 
-	// we now create a widget container, place it into the layout and insert the OpenGLWindow in it.
+Für letzteres Event existiert eine überladene Funktion https://doc.qt.io/qt-5/qwindow.html#exposeEvent[void exposeEvent(QExposeEvent *event)], welche wir implementieren:
+[source,c++]
+----
+void OpenGLWindow::exposeEvent(QExposeEvent * /*event*/) {
+	renderNow(); // simply redirect call to renderNow()
+}
+----
+Wir leiten einfach die Anfrage an das Zeichnen des Bildes an eine Funktion weiter, die das macht (dazu kommen wir gleich).
 
-	QWidget *container = QWidget::createWindowContainer(openGLWindow);
-	container->setMinimumSize(QSize(640,480));
-	container->setFocusPolicy(Qt::TabFocus);
+In der Implementierung der generischen Ereignisbehandlungsfunktion `event()` picken wir uns nur das `UpdateRequest`-Ereignis heraus:
+[source,c++]
+----
+bool OpenGLWindow::event(QEvent *event) {
+	switch (event->type()) {
+    	case QEvent::UpdateRequest:
+    		renderNow(); // now render the image
+		    return true;
+	    default:
+		    return QWindow::event(event);
+	}
+}
+----
+Damit wäre dann unsere Aufgabe klar - eine Funktion `renderNow()` zu implementieren, die mit OpenGL zeichnet.
 
-	ui->verticalLayout->insertWidget(0, container);
+== Allgemeingültige Basisklasse für OpenGL-Render-Fenster
+
+Die nachfolgend beschriebene Funktionalität kann man für beliebige OpenGL-Anwendungen nachnutzen, daher wird das ganze in Form einer abstrakten Basisklasse `OpenGLWindow` implementiert.
+
+Wir erweitern die Klassendeklaration geringfügig:
+[source,c++]
+----
+class OpenGLWindow : public QWindow, protected QOpenGLFunctions {
+	Q_OBJECT
+public:
+	explicit OpenGLWindow(QWindow *parent = 0);
+
+	virtual void initialize() = 0;
+	virtual void render() = 0;
+
+public slots:
+	void renderLater();
+	void renderNow();
+
+protected:
+	bool event(QEvent *event) Q_DECL_OVERRIDE;
+	void exposeEvent(QExposeEvent *event) Q_DECL_OVERRIDE;
+
+private:
+	QOpenGLContext *m_context; // wraps the OpenGL context
+};
+----
+Der Zugriff auf die nativen OpenGL Funktionen ist in Qt in der Klasse `QOpenGLFunctions` gekapselt. Diese kann entweder als Datenmember gehalten werden, oder eben wie oben gezeigt als Implementierung vererbt werden. Da es sich ja um ein `OpenGLWindow` handelt, fühlt sich das mit der Vererbung schon richtig an.
+
+Es gibt zwei pur virtuelle Funktionen, `initialize()` und `render()`, ohne die kein OpenGL-Programm auskommt. Daher verlangen wir von Nutzern dieser Basisklasse, dass sie diese Funktionen bereitstellen (Inhalt wird später erläutert).
+
+Neben der Funktion `renderNow()`, welche ja oben bereits aufgerufen wurde, und deren Aufgabe das _sofortige_ OpenGL-Zeichnen ist, gibt es noch eine weitere Funktion `renderLater()`. Deren Aufgabe ist es letztlich, einen Neu-Zeichen-Aufruf passend zum Vertical-Sync anzufordern, was letztlich dem Absenden eines `UpdateRequest`-Ereignisses in die Anwendungs-Ereignis-Schleife entspricht. Das macht die Funktion https://doc.qt.io/qt-5/qwindow.html#requestUpdate[requestUpdate()]:
+[source,c++]
+----
+void OpenGLWindow::renderLater() {
+	// Schedule an UpdateRequest event in the event loop
+	// that will be send with the next VSync.
+	requestUpdate(); // call public slot requestUpdate()
+}
+----
+Man kann sich strenggenommen die Funktion auch sparen, und direkt den Slot `requestUpdate()` aufrufen, aber die Benennung zeigt letztlich an, dass erst beim nächsten VSync gezeichnet wird.
+
+Zur Synchronisation mit Bildwiederholraten kann man an dieser Stelle schon einmal zwei Dinge vorwegnehmen:
+
+* es wird doppelgepuffert gezeichnet
+* Qt ist standardmäßig zu konfiguriert, dass das `QEvent::UpdateRequest` immer zu einem VSync gesendet wird. Es wird natürlich bei einer Bildwiederholfrequenz von 60Hz vorausgesetzt, dass die Zeit bis zum Umschalten des Zeichenpuffers nicht mehr als ~16 ms ist.
+
+Die Variante mit dem Absenden des `UpdateRequest` in die Ereignisschleife hat den Vorteil, dass mehrere Aufrufe dieser Funktion (z.B. via Signal-Slot-Verbindung) innerhalb eines Sync-Zyklus (d.h. innerhalb von 16ms) letztlich zu einem Ereignis zusammengefasst werden, und so nur _einmal_ je VSync gezeichnet wird. Wäre sonst ja auch eine Verschwendung von Rechenzeit.
+
+Zuletzt sei noch auf die neuen private Membervariable `m_context` hingewiesen. Dieser Kontext kapselt letztlich den nativen OpenGL Kontext, d.h. den Zustandsautomaten, der bei OpenGL verwendet wird. Obwohl dieser dynamisch erzeugt wird, brauchen wir keinen  Destruktor, da wir über die QObject-Eltern-Beziehung auch automatisch `m_context` mit aufräumen.
+
+Im Konstruktor initialisieren wir die Zeigervariable mit einem nullptr.
+[source,c++]
+----
+OpenGLWindow::OpenGLWindow(QWindow *parent) :
+	QWindow(parent),
+	m_context(nullptr)
+{
+	setSurfaceType(QWindow::OpenGLSurface);
 }
 ----
 
-== Variante Var_02widgetAndQOpenGLWindow: Verwendung der QOpenGLWindow Klasse
+=== Initialisierung des OpenGL-Fensters
 
-Die eigene OpenGLWindow-Klasse wird durch die Bequemlichkeitsklasse `QOpenGLWindow` ersetzt. Dies sollte keine Performancenachteile bringen, da auch direkt auf dem Bildschirm gerendert wird.
+Es gibt nun verschiedenen Möglichkeiten, das OpenGL-Zeichenfenster zu initialisieren. Man könnte das gleich im Konstruktor tun, wobei dann allerdings alle dafür benötigten Resourcen (auch eventuell Meshes/Texturen, ...) bereits initialisiert sein sollten. Für ein schnellen Anwendungsstart wäre das hinderlich. Besser ist es, dies später zu machen.
 
-Quelltext: `Var_02widgetAndQOpenGLWindow`
+Man könnten nun eine eigene Initialisierungsfunktion implementieren, die der Nutzer der Klasse anfänglich aufruft. Oder man regelt dies beim allerersten Anzeigen des Fensters. Hier gibt es einiges an Spielraum und je nach Komplexität und Fehleranfälligkeit der Initialisierung ist die Variante mit einer expliziten Initialisierungsfunktion sicher gut.
+
+Hier wird die Variante der Initialisierung-bei-erster-Verwendung genutzt (was nebenbei ja ein übliches Pattern bei Verwendung von Dialogen in Qt ist). Damit ist die Funktion `renderNow()` gefordert, die Initialisierung anzustoßen:
+[source,c++]
+----
+void OpenGLWindow::renderNow() {
+    // only render if exposed
+	if (!isExposed())
+		return;
+
+	bool needsInitialize = false;
+
+	// initialize on first call
+	if (m_context == nullptr) {
+		m_context = new QOpenGLContext(this);
+		m_context->setFormat(requestedFormat());
+		m_context->create();
+
+		needsInitialize = true;
+	}
+
+	m_context->makeCurrent(this);
+
+	if (needsInitialize) {
+		initializeOpenGLFunctions();
+		initialize(); // call user code
+	}
+
+	render(); // call user code
+
+	m_context->swapBuffers(this);
+}
+----
+Die Funktion wird einmal von `exposeEvent()` und von `event()` aufgerufen. In beiden Fällen sollte nur gezeichnet werden, wenn das Fenster tatsächlich sichtbar ist. Daher wird über die Funtion `isExposed()` zunächst geprüft, ob es überhaupt zu sehen ist. Wenn nicht, dann raus.
+
+Jetzt kommt die oben angesprochene Initialisierung-bei-erster-Benutzung. Zuerst wird das `QOpenGLContext` Objekt erstellt. Als nächstes werden verschiedene OpenGL-spezifische Anforderungen gesetzt, wobei die im QWindow-gesetzten Formate an den QOpenGLContext übergeben werden.
+[IMPORTANT]
+====
+Die Funktion https://doc.qt.io/qt-5/qwindow.html#requestedFormat[requestedFormat()] liefert das für das `QWindow` eingestellte Format der Oberfläche (`QSurfaceFormat` zurück. Dieses enthält Einstellungen zu den Farb- und Tiefenpuffern, und auch zum Antialiasing des OpenGL-Renderes. 
+
+Zum Zeitpunkt der Initialisierung des OpenGL-Context muss also dieses Format bereits für das QWindow festgelegt worden sein, d.h. _bevor_ das erste Mal `show()` für das OpenGLWindow aufgerufen wird.
+
+Wenn man diese Fehlerquelle vermeiden will, muss man die Initialisierung unter Anforderung des gewünschten `QSurfaceFormat` tatsächlich in eine spezielle Funktion verschieben.
+====
+
+Mit dem Aufruf von `m_context->create()` wird der OpenGL Kontext (also Zustand) erstellt, wobei die vorab gesetzten Formatparameter verwendet werden. 
+[TIP]
+====
+Falls man später die Formatparameter ändern möchte (z.B. Antialiasing), so muss zunächst wieder das Format im Kontextobjekt neu gesetzt werden und danach `create()` neu aufgerufen werden. Dies löscht und ersetzt dann den vorherigen Kontext.
+====
+
+Nachdem der Kontext erzeugt wurde, stehen die wohl wichtigsten Funktionen `makeCurrent()` und `swapBuffers()` zur Verfügung.
+
+Der Aufruf `m_context->makeCurrent(this)` überträgt den Inhalt des Kontext-Objekts in den OpenGL-Zustand. 
+
+Der zweite Schritt der Initialisierung besteht im Aufruf der Funktion 
+https://doc.qt.io/qt-5/qopenglfunctions.html#initializeOpenGLFunctions[QOpenGLFunctions::initializeOpenGLFunctions()]. Hierbei werden letztlich die plattformspezifischen OpenGL-Bibliotheken dynamisch eingebunden und die Funktionszeiger auf die nativen OpenGL-Funktionen (`glXXX...`) geholt.
+
+Zuletzt wird noch die Funktion `initialize()` mit nutzerspezifischen Initialisierungen aufgerufen.
+
+Das eigentliche Rendern der 3D Szene muss der Anwender dann in der Funktion `render()` erledigen (dazu kommen wir gleich).
+
+Am Ende tauschen wir noch mittels `m_context->swapBuffers(this)` den Fensterpuffer mit dem Renderpuffer aus. 
+
+[NOTE]
+====
+Nachdem der Fensterpuffer aktualisiert wurde, kann das Fenster beliebig auf dem Bildschirm verschoben oder sogar minimiert werden, _ohne_ dass wir neu rendern müssen. Dies gilt zumindest solange, bis wir anfangen, in der Szene mit Animationen zu arbeiten. Bei Anwendungen ohne Animationen ist es deshalb sinnvoll, nicht automaisch jeden Frame neu zu rendern, wie das bei Spieleengines wie Unity/Unreal/Irrlicht etc. gemacht wird. 
+
+Falls wir dennoch animieren wollen (und wenn es nur eine weiche Kamerafahrt wird), dann sollten wir am Ende der Funktion `renderNow()` die Funktion `renderLater()` aufrufen, und so beim nächsten VSync einen neuen Aufruf erhalten. Ach ja: wenn das Fenster versteckt ist (nicht _exposed_), dann würde natürlich die Funktion schnell verlassen werden, und die Funktion `renderLater()` wird nicht aufgerufen. Damit wäre dann die Animation gestoppt. Damit sie wieder losläuft, gibt es die implementierte Ereignisfunktion `exposeEvent()`, die das Rendering wieder anstößt.
+====
+
+Damit wäre die zentrale Basisklasse für OpenGL-Renderfenster fertig. Wir testen das jetzt mit dem ganz am Anfang erwähnten primitiven Dreiecksbeispiel.
+
+== Implementierung eines konkreten Renderfensters
 

@@ -97,5 +97,18 @@ properly resized to 1000 pixel widths (depending on style sheet)
 -> after html export, adjust png image file names to reference
    scaled versions -> need python script
 
+## Screenshots
+
+### MacOS
+
+Cmd + Shift + 4 - dann Space, Screenshot wird auf dem Schreibtisch gespeichert
+
+### Linux
+
+Shutter
+
+### Windows
+
+SnagIt
 
 

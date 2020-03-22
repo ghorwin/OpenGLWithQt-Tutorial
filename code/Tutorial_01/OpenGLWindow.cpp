@@ -51,6 +51,7 @@
 #include "OpenGLWindow.h"
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QDebug>
 
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QOpenGLPaintDevice>
@@ -64,14 +65,10 @@ OpenGLWindow::OpenGLWindow(QWindow *parent) :
 }
 
 
-OpenGLWindow::~OpenGLWindow() {
-}
-
-
 void OpenGLWindow::renderLater() {
-	requestUpdate();
-	// schedules a UpdateRequest event in the event loop
-	// the event will be send matching the next VSync
+	// Schedule an UpdateRequest event in the event loop
+	// that will be send with the next VSync.
+	requestUpdate(); // call public slot requestUpdate()
 }
 
 
@@ -86,17 +83,16 @@ bool OpenGLWindow::event(QEvent *event) {
 }
 
 
-void OpenGLWindow::exposeEvent(QExposeEvent *event) {
-	Q_UNUSED(event);
-
-	if (isExposed())
-		renderNow();
+void OpenGLWindow::exposeEvent(QExposeEvent * /*event*/) {
+	qDebug() << "exposeEvent()";
+	renderNow(); // simply redirect call to renderNow()
 }
 
 
 void OpenGLWindow::renderNow() {
 	if (!isExposed())
 		return;
+	qDebug() << "renderNow()";
 
 	bool needsInitialize = false;
 

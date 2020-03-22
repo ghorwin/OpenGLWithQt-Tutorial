@@ -1,26 +1,31 @@
 = Einführung
 
-Dieses Tutorial ist _kein_ OpenGL Tutorial. Man sollte also OpenGL selbst schon ganz gut kennen.
+Dieses Tutorial ist *_kein_* OpenGL Tutorial. Man sollte also OpenGL selbst schon ganz gut kennen. Natürlich kann man die hier vorgestellten Beispiele als Vorlage nehmen, aber ver
 
 == Kernthemen
 In diesem Tutorial geht es primär um folgende Themen:
 
-- Integration von OpenGL in eine Qt Widget Anwendung (es werden verschiedene Ansätze diskutiert)
+- Integration von OpenGL in eine Qt Widget Anwendung (es werden verschiedene Ansätze diskutiert), einschließlich Fehlerbehandlung
 - Verwendung der Qt-Wrapper-Klassen als Ersatz für native OpenGL Aufrufe (die Dokumentation vieler OpenGL-Qt-Klassen ist bisweilen etwas dürftig)
 - Implementierung von Keyboard- und Maussteuerung
 - Rendering-on-Demand mit Fokus auf CAD/Virtual Design Anwendungen, d.h. batterieschonendes Rendern nur, wenn sich Camera oder Scene ändern
 
+
+== Plattformunterstützung und OpenGL-Version
+
+Das Tutorial addressiert Desktopanwendungen, d.h. _Linux_, _Windows_ und _MacOS_ Widgets-Anwendungen. Daher ist OpenGL ES (ES für Embedded Systems) kein Thema für dieses Tutorial. Das Wesentliche sollte aber übertragbar sein.
+
+Hinsichtlich der OpenGL-Version wird Mac-bedingt Version 3.3 angepeilt. Hinsichtlich der Einbettung von OpenGL in Qt Widgets-Anwendungen spielt die OpenGL-Version eigentlich keine Rolle.
 
 == Grundlagen
 
 Als Einstieg in OpenGL empfehle ich folgende (englischsprachige) Webseiten:
 
 - https://learnopengl.com : ein gutes und aktuelles Tutorial mit guten Abbildungen und guter Mischung aus C++ und C, mein Tutorial orientiert sich inhaltlich an den hier dargestellten Themen
-- http://antongerdelan.net/opengl : englisch
+- http://antongerdelan.net/opengl : englisch, gute Illustrationen und Erklärungen zu einzelnen Themen
 - http://www.opengl-tutorial.org : eher grundlegendes Tutorialset, C und GLUT werden verwendet
 
-Das Tutorial basiert zum Teil auf folgenden Webtutorials:
+Mein Tutorial selbst basiert zum Teil auf folgenden Webtutorials:
 
-- https://doc.qt.io/qt-5/qtgui-openglwindow-example.html
-- https://www.trentreed.net/blog/qt5-opengl-part-0-creating-a-window : in diesem Tutorial und den Forumkommentaren gibt es einige Anregungen, allerdings ist dies eher eine Dokumentation eigener Versuche grafisch optimale Effekte zu erziehlen. Es gibt aber interessante Anregungen.
+- https://www.trentreed.net/blog/qt5-opengl-part-0-creating-a-window : in diesem Tutorial und den Forumkommentaren gibt es einige Anregungen, allerdings ist dies eher eine Dokumentation eigener Versuche grafisch optimale Effekte zu erziehlen. Es gibt aber interessante Anregungen. Manche Quelltextumsetzung sind nicht ganz optimal, daher mit Vorsicht als Vorlage für eigene Programme verwenden. (Diese Kleinigkeiten, über die ich selber auch gestolpert bin, sind u.A. der Grund für dieses Tutorial.)
 
