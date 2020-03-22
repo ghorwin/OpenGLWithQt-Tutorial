@@ -1,0 +1,26 @@
+= Einführung
+
+Dieses Tutorial ist _kein_ OpenGL Tutorial. Man sollte also OpenGL selbst schon ganz gut kennen.
+
+== Kernthemen
+In diesem Tutorial geht es primär um folgende Themen:
+
+- Integration von OpenGL in eine Qt Widget Anwendung (es werden verschiedene Ansätze diskutiert)
+- Verwendung der Qt-Wrapper-Klassen als Ersatz für native OpenGL Aufrufe (die Dokumentation vieler OpenGL-Qt-Klassen ist bisweilen etwas dürftig)
+- Implementierung von Keyboard- und Maussteuerung
+- Rendering-on-Demand mit Fokus auf CAD/Virtual Design Anwendungen, d.h. batterieschonendes Rendern nur, wenn sich Camera oder Scene ändern
+
+
+== Grundlagen
+
+Als Einstieg in OpenGL empfehle ich folgende (englischsprachige) Webseiten:
+
+- https://learnopengl.com : ein gutes und aktuelles Tutorial mit guten Abbildungen und guter Mischung aus C++ und C, mein Tutorial orientiert sich inhaltlich an den hier dargestellten Themen
+- http://antongerdelan.net/opengl : englisch
+- http://www.opengl-tutorial.org : eher grundlegendes Tutorialset, C und GLUT werden verwendet
+
+Das Tutorial basiert zum Teil auf folgenden Webtutorials:
+
+- https://doc.qt.io/qt-5/qtgui-openglwindow-example.html
+- https://www.trentreed.net/blog/qt5-opengl-part-0-creating-a-window : in diesem Tutorial und den Forumkommentaren gibt es einige Anregungen, allerdings ist dies eher eine Dokumentation eigener Versuche grafisch optimale Effekte zu erziehlen. Es gibt aber interessante Anregungen.
+

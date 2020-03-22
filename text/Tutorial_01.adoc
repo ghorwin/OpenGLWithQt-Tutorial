@@ -1,0 +1,362 @@
+:imagesdir: ./images
+= OpenGL rendern innerhalb von QWindow
+
+Das Ziel ist erstmal einfach: ein Dreieck zeichnen.
+
+== Variante 01: Basisvariante mit benannten Variablenarrays
+
+Quelltext: `Var_01`
+
+.Ausgabe: Var_01
+image::Var_01_01.png[Var_01_01]
+
+Basiert auf Tutorial/Beispiel https://doc.qt.io/qt-5/qtgui-openglwindow-example.html
+
+Die darin vorgestellte Basisklasse `OpenGLWindow` enthält bereits einige nützliche Dinge - gerendert wird nur, wenn das Fenster sichtbar ist. Das QOpenGLPaintDevice ist darin gekapselt, und und und... Die Details des Codes in dieser Klasse sind erstmal nicht weiter wichtig.
+
+Wir implementieren eine von dem OpenGLWindow abgeleitete Klasse `TriangleWindow`, welche wie folgt verwendet wird:
+
+.main.cpp
+[source,c++]
+----
+#include "TriangleWindow.h"
+
+#include <QApplication>
+#include <QSurfaceFormat>
+
+int main(int argc, char **argv) {
+	QGuiApplication app(argc, argv);
+
+	// Set OpenGL Version information
+	// Note: This format must be set before show() is called.
+	QSurfaceFormat format;
+	format.setRenderableType(QSurfaceFormat::OpenGL);
+	format.setProfile(QSurfaceFormat::CoreProfile);
+	format.setVersion(3,3);
+
+	TriangleWindow window;
+	window.setFormat(format);
+	window.resize(640, 480);
+	window.show();
+
+	return app.exec();
+}
+----
+
+Die Klasse `QSurfaceFormat` dient der Konfiguration der OpenGL Ausgabe. Mehr dazu später.
+
+Die von OpenGLWindow abgeleitete Klasse `TriangleWindow` sieht so aus:
+
+.TriangleWindow.h
+[source,c++]
+----
+#ifndef TRIANGLEWINDOW_H
+#define TRIANGLEWINDOW_H
+
+#include <QOpenGLVertexArrayObject>
+#include <QOpenGLBuffer>
+#include <QOpenGLShaderProgram>
+
+#include "OpenGLWindow.h"
+
+/*! This is the window that shows the triangle.
+	We derive from our OpenGLWindow base class and implement the
+	virtual initialize() and render() functions.
+*/
+class TriangleWindow : public OpenGLWindow {
+public:
+
+	void initialize() Q_DECL_OVERRIDE;
+	void render() Q_DECL_OVERRIDE;
+
+private:
+
+	/*! Wraps an OpenGL VertexArrayObject, that holds the vertice coordinate and color buffers. */
+	QOpenGLVertexArrayObject	m_vao;
+
+	/*! Holds the compiled shader programs. */
+	QOpenGLShaderProgram		*m_program;
+};
+
+#endif // TRIANGLEWINDOW_H
+----
+
+Die wesentlichen Funktionen, welche zu implementieren sind, heißen `initialize()` und `render()`.
+
+Die beiden Member-Variablen werden in der Funktion `initialize()` erstellt.
+
+.TriangleWindow.cpp, Funktion initialize()
+[source,c++]
+----
+...
+
+void TriangleWindow::initialize() {
+	// this function is called once, when the window is first initialized
+
+	// set the background color = clear color
+	glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
+
+	// compile the shader programs
+	m_program = new QOpenGLShaderProgram();
+
+	// read the shader programs from the resource
+	m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/triangle.vert");
+	QString log = m_program->log();
+	if (!log.isEmpty())
+		qDebug() << "vertex shader errors :" << log;
+
+	m_program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/triangle.frag");
+	log = m_program->log();
+	if (!log.isEmpty())
+		qDebug() << "fragment shader errors :" << log;
+
+	m_program->link();
+	m_program->bind(); // bind Shader (Do not release until Vertex Array Object (VAO) is created)
+
+	// here we start with the geometry - since in this example the geometry is fixed, we can do this in
+	// the initialization
+
+	// we create two static/constant arrays:
+	// - one with vertex positions (in model space)
+	// - one with corresponding vertex colors (same order, same size)
+
+	// location of vertex data arrays must be before they are referenced
+	// but location not important otherwise
+	static const float vertexPositions[] = {
+		-1.0f, 0.0f, 0.0f, // (x,y,z) bottom left
+		1.0f, 0.0f, 0.0f,  // bottom right
+		0.0f, 1.0f, 0.0f   // top middle
+	};
+
+	static const float vertexColors[] = {
+		1.0f, .0f, .0f, // red (r,g,b) values for each vertex
+		.0f, 1.0f, .0f, // green
+		.0f, .0f, 1.0f  // blue
+	};
+
+	// Initialize the Vertex Array Object (VAO)
+
+	m_vao.create(); // create underlying OpenGL object
+	m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so we can write attributes to it
+
+	// create a new buffer for the vertices
+	QOpenGLBuffer positionBuffer(QOpenGLBuffer::VertexBuffer);
+	positionBuffer.create(); // again, create underlying OpenGL object
+	positionBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw); // data won't change - only set once, used many times
+
+	positionBuffer.bind(); // set it active in the context, so that we can write to it
+	positionBuffer.allocate(vertexPositions, 9 * sizeof(float)); // set the buffer - first pointer to buffer, then size = 3 x 3 floats
+
+	m_program->enableAttributeArray("position");
+	// This call labels an attribute "position" that points to the memory slot from the last buffer allocate().
+	// By this name it will be accessible in the shader programs (input value).
+	m_program->setAttributeBuffer("position", GL_FLOAT, 0, 3);
+	// This maps the data we have set in the buffer to the "position" attribute.
+	// 0 - offset - means the "position" data starts at the begin of the memory array
+	// 3 - stride - means that each position-tuple has the size of 3 floats (those are the 3 coordinates,
+	//              a tuple-stride is comparible to a record size)
+
+
+	// another buffer, now for the colors
+	QOpenGLBuffer colorBuffer(QOpenGLBuffer::VertexBuffer);
+	colorBuffer.create(); // as above
+	colorBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw); // as above
+	colorBuffer.bind(); // as above
+	colorBuffer.allocate(vertexColors, 9 * sizeof(float)); // now we pass the pointer to the color array
+	m_program->enableAttributeArray("color");
+	// This call labels an attribute "color" that points to the memory slot from the last buffer allocate().
+	// The "color" attribute is an input to our vertex shader.
+	m_program->setAttributeBuffer("color", GL_FLOAT, 0, 3); // as above: offset=0, stride=3
+
+	// Release (unbind) all
+	positionBuffer.release();
+	colorBuffer.release();
+	m_vao.release();
+	m_program->release();
+}
+----
+
+Die wichtigsten Dinge:
+* das Shaderprogramm (bestehend aus Vertex- und Fragmentationshader) muss erstellt werden.
+* Buffer für die Koordinaten und Farben müssen erstellt werden.
+
+Wichtig zum Verständnis: Erläuterung zum Vertex- und Fragmentation Shader lesen in http://duriansoftware.com/joe/An-intro-to-modern-OpenGL.-Table-of-Contents.html.
+
+Grundsätzlich: Der Vertexshader beschreibt, wie die Werte an einem Vertex berechnet werden. Die Grafikkarte berechnet für die einzelnen Pixel im Rasterizer dann _interpolierte Werte_, weswegen dann jeweils pixelspezifische interpolierte Farbwerte im Fragmentation-Shader landen (vai fragColor im Fragmentation Shader).
+
+.triangle.vert, Vertex Shader Programm
+[source,c]
+----
+#version 140
+
+// GLSL version 1.4
+// vertex shader
+
+in vec3 position;   // input:  attribute named 'position' with 3 elements per vertex
+in vec3 color;      // input:  attribute named 'color' with 3 elements (=rgb) per vertex
+out vec4 fragColor; // output: computed fragmentation color
+
+void main() {
+  // Note: you must not use tab characters for indentation!
+  fragColor = vec4(color, 1.0);
+  gl_Position = vec4(position, 1.0);
+}
+----
+Die Eingangsparameter `position` und `color` müssen entsprechend im Eingangsdatenpuffer benannt werden (siehe `enableAttributeArray()` im Quelltext oben).
+
+Auch wichtig: im Shaderprogramm sind keine Tab-Zeichen erlaubt.
+
+.triangle.frag, Fragmentation Shader Programm
+[source,c]
+----
+#version 140
+
+// GLSL version 1.4
+// fragmentation shader
+
+in vec4 fragColor;    // input: fragColor (bereits interpolierter rgb-Wert)
+out vec4 finalcolor;  // output: finalColor (fertiger Farbwert als rgb-Wert)
+
+void main() {
+  // Note: you must not use tab characters for indentation!
+  finalcolor = fragColor;
+}
+----
+
+Die Shaderprogramme (immer zwei) werden bei jedem Programmlauf kompiliert. Es ist sinnvoll, diese in Form von qrc-Resourcen vorzuhalten, und zu laden (anstatt im Quelltext als C-Zeichenkettenkonstanten zu definieren).
+
+Hinweis: `StaticDraw` --> siehe Erläuterung auf http://duriansoftware.com/joe/An-intro-to-modern-OpenGL.-Chapter-2.1:-Buffers-and-Textures.html
+
+
+
+.TriangleWindow.cpp, Funktion render()
+[source,c++]
+----
+void TriangleWindow::render() {
+	// this function is called for every frame to be rendered on screen
+	const qreal retinaScale = devicePixelRatio();
+	glViewport(0, 0, width() * retinaScale, height() * retinaScale);
+
+	// clear the background color
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	// render using our shader
+	m_program->bind();
+	// set the geometry ("position" and "color" arrays)
+	m_vao.bind();
+	// now draw the triangles:
+	// - GL_TRIANGLES - draw individual triangles
+	// - 0 index of first triangle to draw
+	// - 3 number of vertices to process
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+	// release vertices again
+	m_vao.release();
+	m_program->release();
+}
+
+----
+Erläuterung siehe Tutorial https://steventaitinger.wordpress.com/2015/11/24/part-1-modern-opengl-using-qt-5-5-tutorial
+
+== Variante 02: Überarbeitete Basisvariante mit Vertex-Objekten und index-basierten Shader-Variablen-Arrays
+
+Quelltext: `Var_02`
+
+Wichtigste Änderungen gegenüber Var 1:
+
+- Einführung der Klasse Vertex, Datenspeicher für 6 __floats__ (=6*4=24 Bytes), die ersten 3 (innerhalb einer QVector3D-Klasse) für die Position, die letzten 3 (auch im QVector3D) für die RGB-Farbe
+- Dadurch nur ein Datenarray `sg_vertices` für das Dreieck: 3*Vertex = 3*24 Bytes = 72 Bytes; die Verwendung eines einzigen Arrays ist hier zwar bequem, aber nicht zwingend die beste Wahl für alle Anwendungsfälle. Wichtig ist beim Aufruf von `setAttributeBuffer()`, dass er sich immer auf den Puffer mit  dem letzten `allocate()`-Aufruf bezieht (siehe dafür auch Var_01).
+- Shaderprogramm-Code gekürzt (Fehlerprüfung raus)
+- Nur ein Datenpuffer für Position und Farben:
+
+[source,c++]
+----
+// Create Buffer (Do not release until VAO is created)
+m_vertexDataBuffer.create();
+m_vertexDataBuffer.bind();
+m_vertexDataBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+int vertexArrayMemSize = sizeof(sg_vertexes); // = 72 Bytes
+m_vertexDataBuffer.allocate(sg_vertexes, vertexArrayMemSize);
+----
+
+- Variablenarrays werden index-basiert angesprochen:
+
+[source,c++]
+----
+// tell shader program we have two data arrays to be used as input to the shaders
+m_program->enableAttributeArray(0); // array with index/id 0
+m_program->enableAttributeArray(1); // array with index/id 1
+// index 0 = position
+m_program->setAttributeBuffer(0, GL_FLOAT, Vertex::positionOffset(), Vertex::PositionTupleSize, Vertex::stride());
+// index 0 = color
+m_program->setAttributeBuffer(1, GL_FLOAT, Vertex::colorOffset(), Vertex::ColorTupleSize, Vertex::stride());
+----
+im Vertex-Shaderprogramm werden diese wie folgt identifiziert:
+
+[source,c]
+----
+#version 330
+
+// GLSL version 3.3
+// vertex shader
+
+layout(location = 0) in vec3 position; // input:  attribute with index '0' with 3 elements per vertex
+layout(location = 1) in vec3 color;    // input:  attribute with index '1' with 3 elements (=rgb) per vertex
+out vec4 fragColor;                    // output: computed fragmentation color
+
+void main() {
+  // Note: you must not use tab characters for indentation!
+  gl_Position = vec4(position, 1.0);
+  fragColor = vec4(color, 1.0);
+}
+----
+(ÜBUNG: mal `layout(location = x)` ändern und 1 mit 0 vertauschen)
+
+- es wird noch eine kurze OpenGL Info beim Start ausgegeben
+
+== Variante 02widget: Einbettung des OpenGLWindow in eine Widgets-Anwendung
+
+Das OpenGLWindow (abgeleitet von QWindow) verwendet die Fenster der Windowmanagers direkt und zeichnet so sehr effizient direkt auf den Bildschirm. Allerdings kann es nicht direkt in eine klassische Framebuffer-gepufferte Widgetsanwendung eingebettet werden. Dafür ist ein Widget-Container notwendig. 
+
+Ergebnis:
+
+.OpenGLWindow eingebettet in einen QDialog
+image::Var_02widget.png[]
+
+Quelltext: `Var_02widget`
+
+.Einbettung des TriangleWidgets in das vertikale Layout eines Dialogs
+[source,c++]
+----
+Dialog::Dialog(QWidget *parent) :
+	QDialog(parent),
+	ui(new Ui::Dialog)
+{
+	ui->setupUi(this);
+
+	// Set OpenGL Version information
+	// Note: This format must be set before show() is called.
+	QSurfaceFormat format;
+	format.setRenderableType(QSurfaceFormat::OpenGL);
+	format.setProfile(QSurfaceFormat::CoreProfile);
+	format.setVersion(3,3);
+
+    // create widget on heap
+	openGLWindow = new TriangleWindow;
+	openGLWindow->setFormat(format);
+
+	// we now create a widget container, place it into the layout and insert the OpenGLWindow in it.
+
+	QWidget *container = QWidget::createWindowContainer(openGLWindow);
+	container->setMinimumSize(QSize(640,480));
+	container->setFocusPolicy(Qt::TabFocus);
+
+	ui->verticalLayout->insertWidget(0, container);
+}
+----
+
+== Variante Var_02widgetAndQOpenGLWindow: Verwendung der QOpenGLWindow Klasse
+
+Die eigene OpenGLWindow-Klasse wird durch die Bequemlichkeitsklasse `QOpenGLWindow` ersetzt. Dies sollte keine Performancenachteile bringen, da auch direkt auf dem Bildschirm gerendert wird.
+
+Quelltext: `Var_02widgetAndQOpenGLWindow`
+
