@@ -228,3 +228,164 @@ Damit wäre die zentrale Basisklasse für OpenGL-Renderfenster fertig. Wir teste
 
 == Implementierung eines konkreten Renderfensters
 
+Das konkrete Renderfenster heißt in diesem Beispiel `TriangleWindow` mit der Headerdatei `TriangleWindow.h`. Die Klassendeklaration ist recht kurz:
+[source,c++]
+----
+/*	This is the window that shows the triangle.
+	We derive from our OpenGLWindow base class and implement the
+	virtual initialize() and render() functions.
+*/
+class TriangleWindow : public OpenGLWindow {
+public:
+	TriangleWindow();
+	~TriangleWindow();
+
+	void initialize() Q_DECL_OVERRIDE;
+	void render() Q_DECL_OVERRIDE;
+
+private:
+	// Wraps an OpenGL VertexArrayObject (VAO), that holds the vertex buffer.
+	QOpenGLVertexArrayObject	m_vao;
+	// Vertex buffer (only positions now).
+	QOpenGLBuffer				m_vertexBufferObject;
+
+	// Holds the compiled shader programs.
+	QOpenGLShaderProgram		*m_program;
+};
+----
+
+Interessant sind die privaten Membervariablen, die nachfolgend in der Implementierung der Klasse näher erläutert werden.
+
+=== Shaderprogramm, VertexBufferObjekte (VBO) und VertexArrayObjekte (VBA)
+Die Klasse `QOpenGLShaderProgram` kapselt ein Shaderprogramm und bietet verschiedene Bequemlichkeitsfunktionen, die in nativen OpenGL-Aufrufe umgesetzt werden.
+
+Zuerst wird das Objekt erstellt:
+
+.Funktion: TriangleWindow::initialize()
+[source,c++]
+----
+void TriangleWindow::initialize() {
+	// this function is called once, when the window is first shown, i.e. when
+	// the the window content is first rendereds
+
+	// build and compile our shader program
+	// ------------------------------------
+
+	m_program = new QOpenGLShaderProgram();
+
+    ...
+----
+
+Dies entspricht in etwa den folgenden OpenGL-Befehlen:
+[source,c]
+----
+unsigned int shaderProgram;
+shaderProgram = glCreateProgram();
+----
+
+Es gibt nun eine ganze Reihe von Möglichkeiten, Shaderprogramme hinzuzufügen. Für das einfache Dreieck brauchen wir nur ein Vertex-Shader und ein Fragment-Shaderprogramme. Die Implementierungen dieser Shader sind in zwei Dateien abgelegt:
+
+.Vertex-Shader: shader/pass_through.vert
+[source,c]
+----
+#version 330 core
+
+// vertex shader
+
+// input:  attribute named 'position' with 3 floats per vertex
+layout (location = 0) in vec3 position;
+
+void main() {
+  gl_Position = vec4(position, 1.0);
+}
+----
+
+.Fragment-Shader: shaders/uniform_color.frag
+[source,c]
+----
+#version 330 core
+
+// fragment shader
+
+out vec4 FragColor;  // output: fertiger Farbwert als rgb-Wert
+
+void main() {
+  FragColor = vec4(0.8, 0.2, 0.1, 1);
+}
+----
+
+Der Vertexshader schiebt die Vertexkoordinaten (als vec3) einfach als vec4 ohne jede Transformation raus. Und der Fragmentationshader gibt einfach nur die gleiche Farbe (dunkles Rot) aus.
+
+=== Compilieren und Linken von Shaderprogrammen
+
+Die nächsten Zeilen in der `initialize()` Funktion übersetzen die Shaderprogramme und linken die Programme:
+
+.Funktion: TriangleWindow::initialize(), fortgesetzt
+[source,c++]
+----
+	if (!m_program->addShaderFromSourceFile(
+	    QOpenGLShader::Vertex, ":/shaders/pass_through.vert"))
+	{
+		qDebug() << "Vertex shader errors :\n" << m_program->log();
+	}
+
+	if (!m_program->addShaderFromSourceFile(
+	QOpenGLShader::Fragment, ":/shaders/uniform_color.frag"))
+	{
+		qDebug() << "Fragment shader errors :\n" << m_program->log();
+	}
+
+	if (!m_program->link())
+		qDebug() << "Shader linker errors :\n" << m_program->log();
+
+----
+
+Es gibt mehrere überladene Funktionen `addShaderFromSourceFile()` in der Klasse https://doc.qt.io/qt-5/qopenglshaderprogram.html[QOpenGLShaderProgram], hier wird die Variante mit Übernahme eines Dateinamens verwendet. Die Dateien sind in einer `.qrc` Resourcendatei referenziert und daher über die Resourcenpfade `:/shaders/...` angeben. Wichtig ist die Angabe des Typs des Shaderprogramms, hier `QOpenGLShader::Vertex` und `QOpenGLShader::Fragment`.
+
+Erfolg oder Fehler wird über den Rückgabecode signalisiert. Das Thema Fehlerbehandlung wird aber in einem späteren Tutorial noch einmal aufgegriffen.
+
+Letzter Schritt ist das Linken der Shaderprogramme, d.h. das Verknüpfen selbstdefinierter Variablen (Kommunikation zwischen Shaderprogrammen).
+[NOTE]
+====
+
+Die Funktionen der Klasse `QOpenGLShaderProgram` kapseln letztlich OpenGL-Befehle der Art:
+
+[source,c]
+----
+// create the shader
+unsigned int vertexShader;
+vertexShader = glCreateShader(GL_VERTEX_SHADER);
+
+// pass shader program in C string 
+glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+
+// compile the shader
+glCompileShader(vertexShader);
+
+// check success of compilation
+int  success;
+char infoLog[512];
+glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+
+// print out an error if any
+if (!success) {
+    glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+    std::cout << "Vertex shader error:\n" << infoLog << std::endl;
+}
+
+
+// ... same for fragment shader
+
+// attach shaders to shader program 
+glAttachShader(shaderProgram, vertexShader);
+glAttachShader(shaderProgram, fragmentShader);
+
+// and link
+glLinkProgram(shaderProgram);
+----
+
+Verglichen damit ist die Qt Variante mit "etwas" weniger Tippaufwand verbunden.
+====
+
+
+

@@ -1,7 +1,17 @@
+/************************************************************************************
+
+OpenGL with Qt - Tutorial
+-------------------------
+Autor      : Andreas Nicolai <andreas.nicolai@gmx.net>
+Repository : https://github.com/ghorwin/OpenGLWithQt-Tutorial
+License    : BSD License,
+			 see https://github.com/ghorwin/OpenGLWithQt-Tutorial/blob/master/LICENSE
+
+************************************************************************************/
+
 #include "TriangleWindow.h"
 
 #include <QDebug>
-
 
 TriangleWindow::TriangleWindow() :
 	m_program(nullptr)
@@ -18,7 +28,8 @@ TriangleWindow::~TriangleWindow() {
 
 
 void TriangleWindow::initialize() {
-	// this function is called once, when the window is first initialized
+	// this function is called once, when the window is first shown, i.e. when
+	// the the window content is first rendered
 
 	// build and compile our shader program
 	// ------------------------------------
@@ -27,16 +38,13 @@ void TriangleWindow::initialize() {
 
 	// read the shader programs from the resource
 	if (!m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/pass_through.vert"))
-		qDebug() << "Vertex shader errors :" << m_program->log();
+		qDebug() << "Vertex shader errors:\n" << m_program->log();
 
 	if (!m_program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/uniform_color.frag"))
-		qDebug() << "fragment shader errors :" << m_program->log();
+		qDebug() << "Fragment shader errors:\n" << m_program->log();
 
 	if (!m_program->link())
-		qDebug() << "Shader linker errors :" << m_program->log();
-
-	if (!m_program->bind()) // bind Shader (Do not release until Vertex Array Object (VAO) is created)
-		qDebug() << "Shader binding errors :" << m_program->log();
+		qDebug() << "Shader linker errors:\n" << m_program->log();
 
 
 	// set up vertex data (and buffer(s)) and configure vertex attributes
@@ -72,7 +80,6 @@ void TriangleWindow::initialize() {
 	// Release (unbind) all
 	m_vertexBufferObject.release();
 	m_vao.release();
-	m_program->release();
 }
 
 
