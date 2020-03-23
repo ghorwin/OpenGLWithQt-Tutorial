@@ -1,6 +1,6 @@
 = Einführung
 
-Dieses Tutorial ist *_kein_* OpenGL Tutorial. Man sollte also OpenGL selbst schon ganz gut kennen. Natürlich kann man die hier vorgestellten Beispiele als Vorlage nehmen, aber ver
+Dieses Tutorial ist *_kein_* OpenGL Tutorial. Man sollte also OpenGL selbst schon ganz gut kennen. Natürlich kann man die hier vorgestellten Beispiele als Vorlage nehmen, aber es geht hier wirklich darum, die Qt-Klassen und vorbereitete Funktionalität zu verstehen und sinnvoll zu nutzen.
 
 == Kernthemen
 In diesem Tutorial geht es primär um folgende Themen:

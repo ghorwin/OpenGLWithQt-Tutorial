@@ -1,5 +1,5 @@
 :imagesdir: ./images
-= OpenGL innerhalb eines QWindow
+= Teil 1: OpenGL innerhalb eines QWindow
 
 Das Ziel ist erstmal einfach: ein einfarbiges Dreieck mit OpenGL in einem `QWindow` zu zeichnen.
 
@@ -256,7 +256,7 @@ private:
 
 Interessant sind die privaten Membervariablen, die nachfolgend in der Implementierung der Klasse näher erläutert werden.
 
-=== Shaderprogramm, VertexBufferObjekte (VBO) und VertexArrayObjekte (VBA)
+== Shaderprogramme
 Die Klasse `QOpenGLShaderProgram` kapselt ein Shaderprogramm und bietet verschiedene Bequemlichkeitsfunktionen, die in nativen OpenGL-Aufrufe umgesetzt werden.
 
 Zuerst wird das Objekt erstellt:
@@ -345,8 +345,6 @@ Es gibt mehrere überladene Funktionen `addShaderFromSourceFile()` in der Klasse
 Erfolg oder Fehler wird über den Rückgabecode signalisiert. Das Thema Fehlerbehandlung wird aber in einem späteren Tutorial noch einmal aufgegriffen.
 
 Letzter Schritt ist das Linken der Shaderprogramme, d.h. das Verknüpfen selbstdefinierter Variablen (Kommunikation zwischen Shaderprogrammen).
-[NOTE]
-====
 
 Die Funktionen der Klasse `QOpenGLShaderProgram` kapseln letztlich OpenGL-Befehle der Art:
 
@@ -385,7 +383,116 @@ glLinkProgram(shaderProgram);
 ----
 
 Verglichen damit ist die Qt Variante mit "etwas" weniger Tippaufwand verbunden.
+
+== Vertex-Buffer-Objekte (VBO) und Vertex-Array-Objekte (VBA)
+
+Nachdem das Shaderprogramm fertig ist, erstellen wir zunächst ein Vertexpufferobjekt mit den Koordinaten des Dreiecks. Danach werden dann die Zuordnungen der Vertexdaten zu Attributen festgelegt. Und damit man diese Zuordnungen nicht immer wieder neu machen muss, merkt man sich diese in einem VertexArrayObject (VBA). Auf den ersten Blick ist das alles ganz schön kompliziert, daher machen wir das am Besten am Beispiel.
+[TIP]
 ====
+Vertexpufferobjekte (engl. _Vertex Buffer Objects (VBO)_) beinhalten letztlich die Daten, die an den Vertex-Shader gesendet werden. Aus Sicht von OpenGL müssen diese Objekte erst erstellt werden, dann gebunden werden (d.h. nachfolgende OpenGL-Befehle beziehen sich auf den Puffer), und dann wieder freigegeben werden. 
+====
+
+.Funktion: TriangleWindow::initialize(), fortgesetzt
+[source,c++]
+----
+	float vertices[] = {
+		-0.5f, -0.5f, 0.0f,
+		 0.5f, -0.5f, 0.0f,
+		 0.0f,  0.5f, 0.0f
+	};
+
+	// create a new buffer for the vertices
+	m_vertexBufferObject = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer); // VBO
+	m_vertexBufferObject.create(); // create underlying OpenGL object
+	m_vertexBufferObject.setUsagePattern(QOpenGLBuffer::StaticDraw); // must be called before allocate
+
+	m_vertexBufferObject.bind(); // set it active in the context, so that we can write to it
+	// int bufSize = sizeof(vertices) = 9 * sizeof(float) = 9*4 = 36 bytes
+	m_vertexBufferObject.allocate(vertices, sizeof(vertices) ); // copy data into buffer
+----
+Im obigen Quelltext wird zunächst ein statisches Array mit 9 floats (3 x 3 Vektoren) definiert. Z-Koordinate ist jeweils 0. Nun erstellen wir ein neues VertexBufferObject vom Typ `QOpenGLBuffer::VertexBuffer`. Der Aufruf von `create()` erstellt das Objekt selbst und entspricht in etwa dem OpenGL-Aufruf:
+[source,c]
+----
+unsigned int VBO;
+glGenBuffers(1, &VBO);
+----
+Dann wird dem QOpenGLBuffer-Pufferobjekt noch die geplante Zugriffsart via `setUsagePattern()` mitgeteilt. Dies führt keinen OpenGL Aufruf aus, sondern es wird sich dieses Attribute für später gemerkt.
+
+Mit dem Aufruf von `bind()` wird dieses VBO als Aktiv im OpenGL-Kontext gesetzt, d.h. nachfolgende Funktionsaufrufe mit Bezug auf VBOs beziehen sich auf unser erstelltes VBO. Dies entspricht dem OpenGL-Aufruf:
+[source,c]
+----
+glBindBuffer(GL_ARRAY_BUFFER, VBO);
+----
+Zuletzt werden die Daten im Aufruf von `allocate()` in den Puffer kopiert. Dies entspricht in etwa einem memcpy-Befehl, d.h. Quelladresse des Puffers wird übergeben und Länge in Bytes as zweites Argument. In diesem Fall sind es 9 floats, d.h. 9*4=36 Bytes. Dies entspricht dem OpenGL-Befehl:
+[source,c]
+----
+glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+----
+Hier wird der vorab gesetzte Verwendungstyp (usagePattern) verwendet. Deshalb ist es wichtig, `setUsagePattern()` immer _vor_ `allocate()` aufzurufen.
+
+Der Puffer ist nun gebunden und man könnte nun die Vertex-Daten mit den Eingangsparametern im Shaderprogramm verknüpfen. Da wir dies nicht jedesmal vorm Zeichnen erneut machen wollen, verwenden wir ein VertexArrayObject (VBA), welches letztlich so etwas wie ein Container für derartige Verknüpfungen darstellt. Man kann sich so ein VBA wie eine Aufzeichnung der nachfolgenden Verknüpfungsbefehle vorstellen, wobei der jeweils aktive Vertexpuffer und die verknüpften Variablen kollektiv gespeichert werden. Später beim eigentlichen Zeichnen muss man nur noch das VBA einbinden, welches unter der Haube dann alle aufgezeichneten Verknüpfungen abspielt und so den OpenGL-Zustand entsprechend wiederherstellt.
+
+Konkret sieht das so aus:
+
+.Funktion: TriangleWindow::initialize(), fortgesetzt
+[source,c++]
+----
+	// Initialize the Vertex Array Object (VAO) to record and remember subsequent attribute assocations with
+	// generated vertex buffer(s)
+	m_vao.create(); // create underlying OpenGL object
+	m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so it monitors attribute assignments
+
+	// now all following enableAttributeArray(), disableAttributeArray() and setAttributeBuffer() calls are
+	// "recorded" in the currently bound VBA.
+
+	// Enable attribute array at layout location 0
+	m_program->enableAttributeArray(0);
+	m_program->setAttributeBuffer(0, GL_FLOAT, 0, 3);
+	// This maps the data we have set in the VBO to the "position" attribute.
+	// 0 - offset - means the "position" data starts at the begin of the memory array
+	// 3 - size of each vertex (=vec3) - means that each position-tuple has the size of 3 floats (those are the 3 coordinates,
+	//     mind: this is the size of GL_FLOAT, not the size in bytes!
+----
+Zunächst wir das Vertex-Array-Objekt erstellt und eingebunden. Danach werden alle folgenden Aufrufe von `enableAttributeArray()` und `setAttributeBuffer()` vermerkt.
+
+Der Befehl `enableAttributeArray(0)` aktiviert ein Attribut (bzw. Variable) im Vertex-Puffer, welches im Shaderprogramm dann mit dem layout-Index 0 angesprochen werden kann. Im Vertex-Shader dieses Beispiels (siehe oben) ist das der 'position' Vektor.
+
+Mit `setAttributeBuffer()` wird nun definiert, wo im Vertex-Buffer die Daten zu finden sind, d.h. Datentyp, Anzahl (hier 3 floats entsprechend den 3 Koordinaten) und dem Startoffset (hier 0).
+
+Diese beiden Aufrufe entsprechen den OpenGL-Aufrufen:
+[source,c]
+----
+glEnableVertexAttribArray(0);
+glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+----
+
+Damit sind alle Daten initialisiert, und die Pufferobjekte können freigegeben werden:
+.Funktion: TriangleWindow::initialize(), fortgesetzt
+[source,c++]
+----
+	// Release (unbind) all
+	m_vertexBufferObject.release();
+	m_vao.release(); // not really necessary, but done for completeness
+}
+----
+Dies entspricht den OpenGL-Aufrufen:
+[source,c]
+----
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+----
+
+Man sieht also, dass die Qt-Klassen letztlich die nativen OpenGL-Funktionsaufrufe (mitunter ziemlich direkt) kapseln.
+[IMPORTANT]
+====
+Die Qt API ist hier nicht ganz glücklich gewählt. Aufrufe wie `m_programm->enableAttributeArray(0)` sugggerieren, dass hier tatsächlich Objekteigenschaften geändert werden, dabei wird tatsächlich mit dem OpenGL-Zustandsautomaten gearbeitet. Entsprechend ist bei etlichen Befehlen die Reihenfolge der Aufrufe wichtig, obgleich es bei individuell setzbaren Attributen eines Objekts eigentlich egal sein sollte, welches Attribut man zuerst setzt. Daher habe ich oben im Tutorial auch noch einmal explizit die dahinterliegenden OpenGL-Befehle angegeben.
+
+Es ist daher empfehlenswert, dass man die Qt API nochmal in eigene Klassen einpackt, und dann eine entsprechend schlange und fehlerunanfällige API entwirft.
+====
+
+
+== Rendern
+
 
 
 
