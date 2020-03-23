@@ -5,6 +5,6 @@ asciidoctor OpenGLQtTutorial.adoc
 echo '*** Generating pdf ***'
 asciidoctor-pdf -a pdf-theme=pdf-theme.yml -r ./rouge_theme.rb OpenGLQtTutorial.adoc
 
-mv OpenGLQtTutorial.html ../docs
+mv OpenGLQtTutorial.html ../docs/index.html
 mv OpenGLQtTutorial.pdf ../docs
 
