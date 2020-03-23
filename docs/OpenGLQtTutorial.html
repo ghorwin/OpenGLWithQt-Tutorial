@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Asciidoctor 2.0.10">
+<meta name="author" content="Andreas Nicolai">
+<title>OpenGL + Qt Tutorial</title>
+<style>
+/* Asciidoctor default stylesheet | MIT License | https://asciidoctor.org */
+
+@import url(https://fonts.googleapis.com/css?family=Roboto+Condensed);
+@import url(https://asciidoctor.org/stylesheets/asciidoctor.css); /* Default asciidoc style framework - important */
+
+/* CUSTOMISATIONS */
+/* Change the values in root for quick customisation. If you want even more fine grain... venture further. */
+
+:root{
+--maincolor:#FFFFFF;
+--primarycolor:#E95420;
+--secondarycolor:#333333;
+--tertiarycolor: #772953;
+--sidebarbackground:#CCC;
+--linkcolor:#b71c1c;
+--linkcoloralternate:#f44336;
+--white:#FFFFFF;
+--black:#000000;
+}
+
+/* Text styles */
+body{font-family: "Roboto Condensed",sans-serif;}
+
+h1,h2{color:var(--primarycolor) !important;font-family:"Roboto Condensed",sans-serif;}
+h3,h4,h5,h6{color:var(--secondarycolor);font-family: "Roboto Condensed",sans-serif;}
+.title{color:(--primarycolor) !important;font-family:"Roboto Condensed",sans-serif;font-style: normal; font-weight: normal;}
+p{font-family: "Roboto Condensed",sans-serif ! important}
+#toc.toc2 a:link{color:white;}
+/* code{background-color: var(--secondarycolor) !important;color:var(--white)} */
+code,kbd,pre,samp{font-family:monospace;font-size:0.8em}
+
+/* Table styles */
+th{background-color: var(--tertiarycolor);color:var(--white) !important;}
+
+#toc.toc2{background-color:#2C001E;color:white;}
+#toc.toc2.a{color:white;}
+#toctitle{color:#E95420;}
+
+/* Responsiveness fixes */
+video {
+  max-width: 100%;
+}
+
+@media all and (max-width: 600px) {
+table {
+  width: 55vw!important;
+  font-size: 3vw;
+}
+
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+</head>
+<body class="article toc2 toc-left">
+<div id="header">
+<h1>OpenGL + Qt Tutorial</h1>
+<div class="details">
+<span id="author" class="author">Andreas Nicolai</span><br>
+<span id="email" class="email"><a href="mailto:andreas.nicolai@tu-dresden.de">andreas.nicolai@tu-dresden.de</a></span><br>
+<span id="revnumber">version 0.1.0,</span>
+<span id="revdate">März 2020</span>
+</div>
+<div id="toc" class="toc2">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#_einführung">1. Einführung</a>
+<ul class="sectlevel2">
+<li><a href="#_kernthemen">1.1. Kernthemen</a></li>
+<li><a href="#_plattformunterstützung_und_opengl_version">1.2. Plattformunterstützung und OpenGL-Version</a></li>
+<li><a href="#_grundlagen">1.3. Grundlagen</a></li>
+</ul>
+</li>
+<li><a href="#_teil_1_opengl_innerhalb_eines_qwindow">2. Teil 1: OpenGL innerhalb eines QWindow</a>
+<ul class="sectlevel2">
+<li><a href="#_qwidget_näher_betrachtet">2.1. QWidget näher betrachtet</a></li>
+<li><a href="#_allgemeingültige_basisklasse_für_opengl_render_fenster">2.2. Allgemeingültige Basisklasse für OpenGL-Render-Fenster</a>
+<ul class="sectlevel3">
+<li><a href="#_initialisierung_des_opengl_fensters">2.2.1. Initialisierung des OpenGL-Fensters</a></li>
+</ul>
+</li>
+<li><a href="#_implementierung_eines_konkreten_renderfensters">2.3. Implementierung eines konkreten Renderfensters</a>
+<ul class="sectlevel3">
+<li><a href="#_shaderprogramme">2.3.1. Shaderprogramme</a></li>
+<li><a href="#_vertex_buffer_objekte_vbo_und_vertex_array_objekte_vba">2.3.2. Vertex-Buffer-Objekte (VBO) und Vertex-Array-Objekte (VBA)</a></li>
+<li><a href="#_rendern">2.3.3. Rendern</a></li>
+</ul>
+</li>
+<li><a href="#_das_hauptprogramm">2.4. Das Hauptprogramm</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="_einführung">1. Einführung</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Dieses Tutorial ist <strong><em>kein</em></strong> OpenGL Tutorial. Man sollte also OpenGL selbst schon ganz gut kennen. Natürlich kann man die hier vorgestellten Beispiele als Vorlage nehmen, aber es geht hier wirklich darum, die Qt-Klassen und vorbereitete Funktionalität zu verstehen und sinnvoll zu nutzen.</p>
+</div>
+<div class="sect2">
+<h3 id="_kernthemen">1.1. Kernthemen</h3>
+<div class="paragraph">
+<p>In diesem Tutorial geht es primär um folgende Themen:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Integration von OpenGL in eine Qt Widget Anwendung (es werden verschiedene Ansätze diskutiert), einschließlich Fehlerbehandlung</p>
+</li>
+<li>
+<p>Verwendung der Qt-Wrapper-Klassen als Ersatz für native OpenGL Aufrufe (die Dokumentation vieler OpenGL-Qt-Klassen ist bisweilen etwas dürftig)</p>
+</li>
+<li>
+<p>Implementierung von Keyboard- und Maussteuerung</p>
+</li>
+<li>
+<p>Rendering-on-Demand mit Fokus auf CAD/Virtual Design Anwendungen, d.h. batterieschonendes Rendern nur, wenn sich Camera oder Scene ändern</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_plattformunterstützung_und_opengl_version">1.2. Plattformunterstützung und OpenGL-Version</h3>
+<div class="paragraph">
+<p>Das Tutorial addressiert Desktopanwendungen, d.h. <em>Linux</em>, <em>Windows</em> und <em>MacOS</em> Widgets-Anwendungen. Daher ist OpenGL ES (ES für Embedded Systems) kein Thema für dieses Tutorial. Das Wesentliche sollte aber übertragbar sein.</p>
+</div>
+<div class="paragraph">
+<p>Hinsichtlich der OpenGL-Version wird Mac-bedingt Version 3.3 angepeilt. Hinsichtlich der Einbettung von OpenGL in Qt Widgets-Anwendungen spielt die OpenGL-Version eigentlich keine Rolle.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_grundlagen">1.3. Grundlagen</h3>
+<div class="paragraph">
+<p>Als Einstieg in OpenGL empfehle ich folgende (englischsprachige) Webseiten:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://learnopengl.com" class="bare">https://learnopengl.com</a> : ein gutes und aktuelles Tutorial mit guten Abbildungen und guter Mischung aus C++ und C, mein Tutorial orientiert sich inhaltlich an den hier dargestellten Themen</p>
+</li>
+<li>
+<p><a href="http://antongerdelan.net/opengl" class="bare">http://antongerdelan.net/opengl</a> : englisch, gute Illustrationen und Erklärungen zu einzelnen Themen</p>
+</li>
+<li>
+<p><a href="http://www.opengl-tutorial.org" class="bare">http://www.opengl-tutorial.org</a> : eher grundlegendes Tutorialset, C und GLUT werden verwendet</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Mein Tutorial selbst basiert zum Teil auf folgenden Webtutorials:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://www.trentreed.net/blog/qt5-opengl-part-0-creating-a-window" class="bare">https://www.trentreed.net/blog/qt5-opengl-part-0-creating-a-window</a> : in diesem Tutorial und den Forumkommentaren gibt es einige Anregungen, allerdings ist dies eher eine Dokumentation eigener Versuche grafisch optimale Effekte zu erziehlen. Es gibt aber interessante Anregungen. Manche Quelltextumsetzung sind nicht ganz optimal, daher mit Vorsicht als Vorlage für eigene Programme verwenden. (Diese Kleinigkeiten, über die ich selber auch gestolpert bin, sind u.A. der Grund für dieses Tutorial.)</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_teil_1_opengl_innerhalb_eines_qwindow">2. Teil 1: OpenGL innerhalb eines QWindow</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Das Ziel ist erstmal einfach: ein einfarbiges Dreieck mit OpenGL in einem <code>QWindow</code> zu zeichnen.</p>
+</div>
+<div class="paragraph">
+<p>Das sieht dann so (noch ziemlich langweilig) aus, reicht aber aus, um mehrere Seiten Tutorialtext zu füllen :-)</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/Tutorial_01_mac.png" alt="Tutorial_01">
+</div>
+<div class="title">Figure 1. Ausgabe: Tutorial_01 (Mac OS Screenshot)</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Quelltext für dieses Tutorial liegt im github repo:  <a href="https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_01">Tutorial_01</a></p>
+</div>
+<div class="paragraph">
+<p><code>.pro</code>-Datei in Qt Creator öffnen und compilieren.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Das Tutorial selbst basiert zum einen auf dem Qt Beispiel "OpenGLWindow" und auf dem Tutorial <a href="https://learnopengl.com/Getting-started/Hello-Triangle" class="bare">https://learnopengl.com/Getting-started/Hello-Triangle</a>.</p>
+</div>
+<div class="paragraph">
+<p>Beim Rendern von OpenGL Inhalten mit Qt gibt es verschiedene Möglichkeiten. Hier soll zunächst ein <code>QWindow</code> verwendet werden, welches ein natives Fenster des jeweiligen Betriebssystems kapselt. Damit kann man also ziemlich direkt und plattformnah zeichnen.</p>
+</div>
+<div class="sect2">
+<h3 id="_qwidget_näher_betrachtet">2.1. QWidget näher betrachtet</h3>
+<div class="paragraph">
+<p>Um ein QWidget zu verwenden, muss man die Klasse ableiten und sollte dann einige Funktionen implementieren. Eine minimalistische Klassendeklaration sähe z.B. so aus:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">class</span> <span class="nc">OpenGLWindow</span> <span class="o">:</span> <span class="k">public</span> <span class="n">QWindow</span> <span class="p">{</span>
+	<span class="n">Q_OBJECT</span>
+<span class="nl">public:</span>
+	<span class="k">explicit</span> <span class="n">OpenGLWindow</span><span class="p">(</span><span class="n">QWindow</span> <span class="o">*</span><span class="n">parent</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
+
+    <span class="c1">// ... other public members ...</span>
+
+<span class="nl">protected:</span>
+	<span class="kt">bool</span> <span class="n">event</span><span class="p">(</span><span class="n">QEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">)</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
+	<span class="kt">void</span> <span class="n">exposeEvent</span><span class="p">(</span><span class="n">QExposeEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">)</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
+
+<span class="nl">private:</span>
+    <span class="c1">// ... private members ...</span>
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Das Makro <code>Q_DECL_OVERRIDE</code> wird zum Schlüsselwort <code>override</code>, wenn der Compiler dies unterstützt (C++11 erlaubt). Da das eigentlich bei Qt 5 vorausgesetzt werden kann, könnte man eigentlich immer gleich <code>override</code> schreiben.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Man kann entweder mit einem rasterbasierten QPainter zeichnen, oder eben mit OpenGL. Dies legt man am besten im Constructor der Klasse fest, wie beispielsweise:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">OpenGLWindow</span><span class="o">::</span><span class="n">OpenGLWindow</span><span class="p">(</span><span class="n">QWindow</span> <span class="o">*</span><span class="n">parent</span><span class="p">)</span> <span class="o">:</span>
+	<span class="n">QWindow</span><span class="p">(</span><span class="n">parent</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="n">setSurfaceType</span><span class="p">(</span><span class="n">QWindow</span><span class="o">::</span><span class="n">OpenGLSurface</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Durch Aufruf der Funktion <a href="https://doc.qt.io/qt-5/qwindow.html#setSurfaceType">setSurfaceType(QWindow::OpenGLSurface)</a> legt man fest, dass man ein natives OpenGL-Window erstellen möchte.</p>
+</div>
+<div class="paragraph">
+<p>Das Qt Framework sendet nun zwei für uns interessante Events:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>QEvent::UpdateRequest</code> - wir sollten das Widget neu zeichnen</p>
+</li>
+<li>
+<p><code>QEvent::Expose</code> - das Fenster (oder ein Teil davon) ist nun sichtbar und sollte aktualisiert werden</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Für letzteres Event existiert eine überladene Funktion <a href="https://doc.qt.io/qt-5/qwindow.html#exposeEvent">void exposeEvent(QExposeEvent *event)</a>, welche wir implementieren:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">OpenGLWindow</span><span class="o">::</span><span class="n">exposeEvent</span><span class="p">(</span><span class="n">QExposeEvent</span> <span class="o">*</span> <span class="cm">/*event*/</span><span class="p">)</span> <span class="p">{</span>
+	<span class="n">renderNow</span><span class="p">();</span> <span class="c1">// simply redirect call to renderNow()</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Wir leiten einfach die Anfrage an das Zeichnen des Bildes an eine Funktion weiter, die das macht (dazu kommen wir gleich).</p>
+</div>
+<div class="paragraph">
+<p>In der Implementierung der generischen Ereignisbehandlungsfunktion <code>event()</code> picken wir uns nur das <code>UpdateRequest</code>-Ereignis heraus:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">bool</span> <span class="n">OpenGLWindow</span><span class="o">::</span><span class="n">event</span><span class="p">(</span><span class="n">QEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">switch</span> <span class="p">(</span><span class="n">event</span><span class="o">-&gt;</span><span class="n">type</span><span class="p">())</span> <span class="p">{</span>
+    	<span class="k">case</span> <span class="n">QEvent</span><span class="p">:</span><span class="o">:</span><span class="n">UpdateRequest</span><span class="o">:</span>
+    		<span class="n">renderNow</span><span class="p">();</span> <span class="c1">// now render the image</span>
+		    <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+	    <span class="nl">default:</span>
+		    <span class="k">return</span> <span class="n">QWindow</span><span class="o">::</span><span class="n">event</span><span class="p">(</span><span class="n">event</span><span class="p">);</span>
+	<span class="p">}</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Damit wäre dann unsere Aufgabe klar - eine Funktion <code>renderNow()</code> zu implementieren, die mit OpenGL zeichnet.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_allgemeingültige_basisklasse_für_opengl_render_fenster">2.2. Allgemeingültige Basisklasse für OpenGL-Render-Fenster</h3>
+<div class="paragraph">
+<p>Die nachfolgend beschriebene Funktionalität kann man für beliebige OpenGL-Anwendungen nachnutzen, daher wird das ganze in Form einer abstrakten Basisklasse <code>OpenGLWindow</code> implementiert.</p>
+</div>
+<div class="paragraph">
+<p>Wir erweitern die Klassendeklaration geringfügig:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">class</span> <span class="nc">OpenGLWindow</span> <span class="o">:</span> <span class="k">public</span> <span class="n">QWindow</span><span class="p">,</span> <span class="k">protected</span> <span class="n">QOpenGLFunctions</span> <span class="p">{</span>
+	<span class="n">Q_OBJECT</span>
+<span class="nl">public:</span>
+	<span class="k">explicit</span> <span class="n">OpenGLWindow</span><span class="p">(</span><span class="n">QWindow</span> <span class="o">*</span><span class="n">parent</span> <span class="o">=</span> <span class="mi">0</span><span class="p">);</span>
+
+	<span class="k">virtual</span> <span class="kt">void</span> <span class="n">initialize</span><span class="p">()</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+	<span class="k">virtual</span> <span class="kt">void</span> <span class="n">render</span><span class="p">()</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+<span class="k">public</span> <span class="n">slots</span><span class="o">:</span>
+	<span class="kt">void</span> <span class="n">renderLater</span><span class="p">();</span>
+	<span class="kt">void</span> <span class="n">renderNow</span><span class="p">();</span>
+
+<span class="nl">protected:</span>
+	<span class="kt">bool</span> <span class="n">event</span><span class="p">(</span><span class="n">QEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">)</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
+	<span class="kt">void</span> <span class="n">exposeEvent</span><span class="p">(</span><span class="n">QExposeEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">)</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
+
+<span class="nl">private:</span>
+	<span class="n">QOpenGLContext</span> <span class="o">*</span><span class="n">m_context</span><span class="p">;</span> <span class="c1">// wraps the OpenGL context</span>
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Der Zugriff auf die nativen OpenGL Funktionen ist in Qt in der Klasse <code>QOpenGLFunctions</code> gekapselt. Diese kann entweder als Datenmember gehalten werden, oder eben wie oben gezeigt als Implementierung vererbt werden. Da es sich ja um ein <code>OpenGLWindow</code> handelt, fühlt sich das mit der Vererbung schon richtig an.</p>
+</div>
+<div class="paragraph">
+<p>Es gibt zwei pur virtuelle Funktionen, <code>initialize()</code> und <code>render()</code>, ohne die kein OpenGL-Programm auskommt. Daher verlangen wir von Nutzern dieser Basisklasse, dass sie diese Funktionen bereitstellen (Inhalt wird später erläutert).</p>
+</div>
+<div class="paragraph">
+<p>Neben der Funktion <code>renderNow()</code>, welche ja oben bereits aufgerufen wurde, und deren Aufgabe das <em>sofortige</em> OpenGL-Zeichnen ist, gibt es noch eine weitere Funktion <code>renderLater()</code>. Deren Aufgabe ist es letztlich, einen Neu-Zeichen-Aufruf passend zum Vertical-Sync anzufordern, was letztlich dem Absenden eines <code>UpdateRequest</code>-Ereignisses in die Anwendungs-Ereignis-Schleife entspricht. Das macht die Funktion <a href="https://doc.qt.io/qt-5/qwindow.html#requestUpdate">requestUpdate()</a>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">OpenGLWindow</span><span class="o">::</span><span class="n">renderLater</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// Schedule an UpdateRequest event in the event loop</span>
+	<span class="c1">// that will be send with the next VSync.</span>
+	<span class="n">requestUpdate</span><span class="p">();</span> <span class="c1">// call public slot requestUpdate()</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Man kann sich strenggenommen die Funktion auch sparen, und direkt den Slot <code>requestUpdate()</code> aufrufen, aber die Benennung zeigt letztlich an, dass erst beim nächsten VSync gezeichnet wird.</p>
+</div>
+<div class="paragraph">
+<p>Zur Synchronisation mit Bildwiederholraten kann man an dieser Stelle schon einmal zwei Dinge vorwegnehmen:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>es wird doppelgepuffert gezeichnet</p>
+</li>
+<li>
+<p>Qt ist standardmäßig zu konfiguriert, dass das <code>QEvent::UpdateRequest</code> immer zu einem VSync gesendet wird. Es wird natürlich bei einer Bildwiederholfrequenz von 60Hz vorausgesetzt, dass die Zeit bis zum Umschalten des Zeichenpuffers nicht mehr als ~16 ms ist.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Die Variante mit dem Absenden des <code>UpdateRequest</code> in die Ereignisschleife hat den Vorteil, dass mehrere Aufrufe dieser Funktion (z.B. via Signal-Slot-Verbindung) innerhalb eines Sync-Zyklus (d.h. innerhalb von 16ms) letztlich zu einem Ereignis zusammengefasst werden, und so nur <em>einmal</em> je VSync gezeichnet wird. Wäre sonst ja auch eine Verschwendung von Rechenzeit.</p>
+</div>
+<div class="paragraph">
+<p>Zuletzt sei noch auf die neuen private Membervariable <code>m_context</code> hingewiesen. Dieser Kontext kapselt letztlich den nativen OpenGL Kontext, d.h. den Zustandsautomaten, der bei OpenGL verwendet wird. Obwohl dieser dynamisch erzeugt wird, brauchen wir keinen  Destruktor, da wir über die QObject-Eltern-Beziehung auch automatisch <code>m_context</code> mit aufräumen.</p>
+</div>
+<div class="paragraph">
+<p>Im Konstruktor initialisieren wir die Zeigervariable mit einem nullptr.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">OpenGLWindow</span><span class="o">::</span><span class="n">OpenGLWindow</span><span class="p">(</span><span class="n">QWindow</span> <span class="o">*</span><span class="n">parent</span><span class="p">)</span> <span class="o">:</span>
+	<span class="n">QWindow</span><span class="p">(</span><span class="n">parent</span><span class="p">),</span>
+	<span class="n">m_context</span><span class="p">(</span><span class="nb">nullptr</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="n">setSurfaceType</span><span class="p">(</span><span class="n">QWindow</span><span class="o">::</span><span class="n">OpenGLSurface</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_initialisierung_des_opengl_fensters">2.2.1. Initialisierung des OpenGL-Fensters</h4>
+<div class="paragraph">
+<p>Es gibt nun verschiedenen Möglichkeiten, das OpenGL-Zeichenfenster zu initialisieren. Man könnte das gleich im Konstruktor tun, wobei dann allerdings alle dafür benötigten Resourcen (auch eventuell Meshes/Texturen, &#8230;&#8203;) bereits initialisiert sein sollten. Für ein schnellen Anwendungsstart wäre das hinderlich. Besser ist es, dies später zu machen.</p>
+</div>
+<div class="paragraph">
+<p>Man könnten nun eine eigene Initialisierungsfunktion implementieren, die der Nutzer der Klasse anfänglich aufruft. Oder man regelt dies beim allerersten Anzeigen des Fensters. Hier gibt es einiges an Spielraum und je nach Komplexität und Fehleranfälligkeit der Initialisierung ist die Variante mit einer expliziten Initialisierungsfunktion sicher gut.</p>
+</div>
+<div class="paragraph">
+<p>Hier wird die Variante der Initialisierung-bei-erster-Verwendung genutzt (was nebenbei ja ein übliches Pattern bei Verwendung von Dialogen in Qt ist). Damit ist die Funktion <code>renderNow()</code> gefordert, die Initialisierung anzustoßen:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">OpenGLWindow</span><span class="o">::</span><span class="n">renderNow</span><span class="p">()</span> <span class="p">{</span>
+    <span class="c1">// only render if exposed</span>
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">isExposed</span><span class="p">())</span>
+		<span class="k">return</span><span class="p">;</span>
+
+	<span class="kt">bool</span> <span class="n">needsInitialize</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+
+	<span class="c1">// initialize on first call</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">m_context</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="p">{</span>
+		<span class="n">m_context</span> <span class="o">=</span> <span class="k">new</span> <span class="n">QOpenGLContext</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+		<span class="n">m_context</span><span class="o">-&gt;</span><span class="n">setFormat</span><span class="p">(</span><span class="n">requestedFormat</span><span class="p">());</span>
+		<span class="n">m_context</span><span class="o">-&gt;</span><span class="n">create</span><span class="p">();</span>
+
+		<span class="n">needsInitialize</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+	<span class="p">}</span>
+
+	<span class="n">m_context</span><span class="o">-&gt;</span><span class="n">makeCurrent</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+
+	<span class="k">if</span> <span class="p">(</span><span class="n">needsInitialize</span><span class="p">)</span> <span class="p">{</span>
+		<span class="n">initializeOpenGLFunctions</span><span class="p">();</span>
+		<span class="n">initialize</span><span class="p">();</span> <span class="c1">// call user code</span>
+	<span class="p">}</span>
+
+	<span class="n">render</span><span class="p">();</span> <span class="c1">// call user code</span>
+
+	<span class="n">m_context</span><span class="o">-&gt;</span><span class="n">swapBuffers</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Funktion wird einmal von <code>exposeEvent()</code> und von <code>event()</code> aufgerufen. In beiden Fällen sollte nur gezeichnet werden, wenn das Fenster tatsächlich sichtbar ist. Daher wird über die Funtion <code>isExposed()</code> zunächst geprüft, ob es überhaupt zu sehen ist. Wenn nicht, dann raus.</p>
+</div>
+<div class="paragraph">
+<p>Jetzt kommt die oben angesprochene Initialisierung-bei-erster-Benutzung. Zuerst wird das <code>QOpenGLContext</code> Objekt erstellt. Als nächstes werden verschiedene OpenGL-spezifische Anforderungen gesetzt, wobei die im QWindow-gesetzten Formate an den QOpenGLContext übergeben werden.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Die Funktion <a href="https://doc.qt.io/qt-5/qwindow.html#requestedFormat">requestedFormat()</a> liefert das für das <code>QWindow</code> eingestellte Format der Oberfläche (<code>QSurfaceFormat</code> zurück. Dieses enthält Einstellungen zu den Farb- und Tiefenpuffern, und auch zum Antialiasing des OpenGL-Renderes.</p>
+</div>
+<div class="paragraph">
+<p>Zum Zeitpunkt der Initialisierung des OpenGL-Context muss also dieses Format bereits für das QWindow festgelegt worden sein, d.h. <em>bevor</em> das erste Mal <code>show()</code> für das OpenGLWindow aufgerufen wird.</p>
+</div>
+<div class="paragraph">
+<p>Wenn man diese Fehlerquelle vermeiden will, muss man die Initialisierung unter Anforderung des gewünschten <code>QSurfaceFormat</code> tatsächlich in eine spezielle Funktion verschieben.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Mit dem Aufruf von <code>m_context-&gt;create()</code> wird der OpenGL Kontext (also Zustand) erstellt, wobei die vorab gesetzten Formatparameter verwendet werden.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Falls man später die Formatparameter ändern möchte (z.B. Antialiasing), so muss zunächst wieder das Format im Kontextobjekt neu gesetzt werden und danach <code>create()</code> neu aufgerufen werden. Dies löscht und ersetzt dann den vorherigen Kontext.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Nachdem der Kontext erzeugt wurde, stehen die wohl wichtigsten Funktionen <code>makeCurrent()</code> und <code>swapBuffers()</code> zur Verfügung.</p>
+</div>
+<div class="paragraph">
+<p>Der Aufruf <code>m_context-&gt;makeCurrent(this)</code> überträgt den Inhalt des Kontext-Objekts in den OpenGL-Zustand.</p>
+</div>
+<div class="paragraph">
+<p>Der zweite Schritt der Initialisierung besteht im Aufruf der Funktion
+<a href="https://doc.qt.io/qt-5/qopenglfunctions.html#initializeOpenGLFunctions">QOpenGLFunctions::initializeOpenGLFunctions()</a>. Hierbei werden letztlich die plattformspezifischen OpenGL-Bibliotheken dynamisch eingebunden und die Funktionszeiger auf die nativen OpenGL-Funktionen (<code>glXXX...</code>) geholt.</p>
+</div>
+<div class="paragraph">
+<p>Zuletzt wird noch die Funktion <code>initialize()</code> mit nutzerspezifischen Initialisierungen aufgerufen.</p>
+</div>
+<div class="paragraph">
+<p>Das eigentliche Rendern der 3D Szene muss der Anwender dann in der Funktion <code>render()</code> erledigen (dazu kommen wir gleich).</p>
+</div>
+<div class="paragraph">
+<p>Am Ende tauschen wir noch mittels <code>m_context-&gt;swapBuffers(this)</code> den Fensterpuffer mit dem Renderpuffer aus.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Nachdem der Fensterpuffer aktualisiert wurde, kann das Fenster beliebig auf dem Bildschirm verschoben oder sogar minimiert werden, <em>ohne</em> dass wir neu rendern müssen. Dies gilt zumindest solange, bis wir anfangen, in der Szene mit Animationen zu arbeiten. Bei Anwendungen ohne Animationen ist es deshalb sinnvoll, nicht automaisch jeden Frame neu zu rendern, wie das bei Spieleengines wie Unity/Unreal/Irrlicht etc. gemacht wird.</p>
+</div>
+<div class="paragraph">
+<p>Falls wir dennoch animieren wollen (und wenn es nur eine weiche Kamerafahrt wird), dann sollten wir am Ende der Funktion <code>renderNow()</code> die Funktion <code>renderLater()</code> aufrufen, und so beim nächsten VSync einen neuen Aufruf erhalten. Ach ja: wenn das Fenster versteckt ist (nicht <em>exposed</em>), dann würde natürlich die Funktion schnell verlassen werden, und die Funktion <code>renderLater()</code> wird nicht aufgerufen. Damit wäre dann die Animation gestoppt. Damit sie wieder losläuft, gibt es die implementierte Ereignisfunktion <code>exposeEvent()</code>, die das Rendering wieder anstößt.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Damit wäre die zentrale Basisklasse für OpenGL-Renderfenster fertig. Wir testen das jetzt mit dem ganz am Anfang erwähnten primitiven Dreiecksbeispiel.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_implementierung_eines_konkreten_renderfensters">2.3. Implementierung eines konkreten Renderfensters</h3>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Vor der Lektüre diese Abschnitts sollte man den Tutorialteil <a href="https://learnopengl.com/Getting-started/Hello-Triangle" class="bare">https://learnopengl.com/Getting-started/Hello-Triangle</a> überflogen haben (oder sich zumindest soweit mit OpenGL auskennen).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Das konkrete Renderfenster heißt in diesem Beispiel <code>TriangleWindow</code> mit der Headerdatei <code>TriangleWindow.h</code>. Die Klassendeklaration ist recht kurz:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="cm">/*	This is the window that shows the triangle.
+	We derive from our OpenGLWindow base class and implement the
+	virtual initialize() and render() functions.
+*/</span>
+<span class="k">class</span> <span class="nc">TriangleWindow</span> <span class="o">:</span> <span class="k">public</span> <span class="n">OpenGLWindow</span> <span class="p">{</span>
+<span class="nl">public:</span>
+	<span class="n">TriangleWindow</span><span class="p">();</span>
+	<span class="o">~</span><span class="n">TriangleWindow</span><span class="p">();</span>
+
+	<span class="kt">void</span> <span class="n">initialize</span><span class="p">()</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
+	<span class="kt">void</span> <span class="n">render</span><span class="p">()</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
+
+<span class="nl">private:</span>
+	<span class="c1">// Wraps an OpenGL VertexArrayObject (VAO), that holds the vertex buffer.</span>
+	<span class="n">QOpenGLVertexArrayObject</span>	<span class="n">m_vao</span><span class="p">;</span>
+	<span class="c1">// Vertex buffer (only positions now).</span>
+	<span class="n">QOpenGLBuffer</span>				<span class="n">m_vertexBufferObject</span><span class="p">;</span>
+
+	<span class="c1">// Holds the compiled shader programs.</span>
+	<span class="n">QOpenGLShaderProgram</span>		<span class="o">*</span><span class="n">m_program</span><span class="p">;</span>
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Interessant sind die privaten Membervariablen, die nachfolgend in der Implementierung der Klasse näher erläutert werden.</p>
+</div>
+<div class="sect3">
+<h4 id="_shaderprogramme">2.3.1. Shaderprogramme</h4>
+<div class="paragraph">
+<p>Die Klasse <code>QOpenGLShaderProgram</code> kapselt ein Shaderprogramm und bietet verschiedene Bequemlichkeitsfunktionen, die in nativen OpenGL-Aufrufe umgesetzt werden.</p>
+</div>
+<div class="paragraph">
+<p>Zuerst wird das Objekt erstellt:</p>
+</div>
+<div class="listingblock">
+<div class="title">Funktion: TriangleWindow::initialize()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">TriangleWindow</span><span class="o">::</span><span class="n">initialize</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// this function is called once, when the window is first shown, i.e. when</span>
+	<span class="c1">// the the window content is first rendereds</span>
+
+	<span class="c1">// build and compile our shader program</span>
+	<span class="c1">// ------------------------------------</span>
+
+	<span class="n">m_program</span> <span class="o">=</span> <span class="k">new</span> <span class="n">QOpenGLShaderProgram</span><span class="p">();</span>
+
+    <span class="p">...</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Dies entspricht in etwa den folgenden OpenGL-Befehlen:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">shaderProgram</span><span class="p">;</span>
+<span class="n">shaderProgram</span> <span class="o">=</span> <span class="n">glCreateProgram</span><span class="p">();</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Es gibt nun eine ganze Reihe von Möglichkeiten, Shaderprogramme hinzuzufügen. Für das einfache Dreieck brauchen wir nur ein Vertex-Shader und ein Fragment-Shaderprogramme. Die Implementierungen dieser Shader sind in zwei Dateien abgelegt:</p>
+</div>
+<div class="listingblock">
+<div class="title">Vertex-Shader: shader/pass_through.vert</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="cp">#version 330 core
+</span>
+<span class="c1">// vertex shader</span>
+
+<span class="c1">// input:  attribute named 'position' with 3 floats per vertex</span>
+<span class="n">layout</span> <span class="p">(</span><span class="n">location</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="n">in</span> <span class="n">vec3</span> <span class="n">position</span><span class="p">;</span>
+
+<span class="kt">void</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">gl_Position</span> <span class="o">=</span> <span class="n">vec4</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="title">Fragment-Shader: shaders/uniform_color.frag</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="cp">#version 330 core
+</span>
+<span class="c1">// fragment shader</span>
+
+<span class="n">out</span> <span class="n">vec4</span> <span class="n">FragColor</span><span class="p">;</span>  <span class="c1">// output: fertiger Farbwert als rgb-Wert</span>
+
+<span class="kt">void</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">FragColor</span> <span class="o">=</span> <span class="n">vec4</span><span class="p">(</span><span class="mi">0</span><span class="p">.</span><span class="mi">8</span><span class="p">,</span> <span class="mi">0</span><span class="p">.</span><span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">.</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Der Vertexshader schiebt die Vertexkoordinaten (als vec3) einfach als vec4 ohne jede Transformation raus. Und der Fragmentationshader gibt einfach nur die gleiche Farbe (dunkles Rot) aus.</p>
+</div>
+<div class="sect4">
+<h5 id="_compilieren_und_linken_von_shaderprogrammen">Compilieren und Linken von Shaderprogrammen</h5>
+<div class="paragraph">
+<p>Die nächsten Zeilen in der <code>initialize()</code> Funktion übersetzen die Shaderprogramme und linken die Programme:</p>
+</div>
+<div class="listingblock">
+<div class="title">Funktion: TriangleWindow::initialize(), fortgesetzt</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++">	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">m_program</span><span class="o">-&gt;</span><span class="n">addShaderFromSourceFile</span><span class="p">(</span>
+	    <span class="n">QOpenGLShader</span><span class="o">::</span><span class="n">Vertex</span><span class="p">,</span> <span class="s">":/shaders/pass_through.vert"</span><span class="p">))</span>
+	<span class="p">{</span>
+		<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Vertex shader errors :</span><span class="se">\n</span><span class="s">"</span> <span class="o">&lt;&lt;</span> <span class="n">m_program</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">();</span>
+	<span class="p">}</span>
+
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">m_program</span><span class="o">-&gt;</span><span class="n">addShaderFromSourceFile</span><span class="p">(</span>
+	<span class="n">QOpenGLShader</span><span class="o">::</span><span class="n">Fragment</span><span class="p">,</span> <span class="s">":/shaders/uniform_color.frag"</span><span class="p">))</span>
+	<span class="p">{</span>
+		<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Fragment shader errors :</span><span class="se">\n</span><span class="s">"</span> <span class="o">&lt;&lt;</span> <span class="n">m_program</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">();</span>
+	<span class="p">}</span>
+
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">m_program</span><span class="o">-&gt;</span><span class="n">link</span><span class="p">())</span>
+		<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Shader linker errors :</span><span class="se">\n</span><span class="s">"</span> <span class="o">&lt;&lt;</span> <span class="n">m_program</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">();</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Es gibt mehrere überladene Funktionen <code>addShaderFromSourceFile()</code> in der Klasse <a href="https://doc.qt.io/qt-5/qopenglshaderprogram.html">QOpenGLShaderProgram</a>, hier wird die Variante mit Übernahme eines Dateinamens verwendet. Die Dateien sind in einer <code>.qrc</code> Resourcendatei referenziert und daher über die Resourcenpfade <code>:/shaders/...</code> angeben. Wichtig ist die Angabe des Typs des Shaderprogramms, hier <code>QOpenGLShader::Vertex</code> und <code>QOpenGLShader::Fragment</code>.</p>
+</div>
+<div class="paragraph">
+<p>Erfolg oder Fehler wird über den Rückgabecode signalisiert. Das Thema Fehlerbehandlung wird aber in einem späteren Tutorial noch einmal aufgegriffen.</p>
+</div>
+<div class="paragraph">
+<p>Letzter Schritt ist das Linken der Shaderprogramme, d.h. das Verknüpfen selbstdefinierter Variablen (Kommunikation zwischen Shaderprogrammen).</p>
+</div>
+<div class="paragraph">
+<p>Die Funktionen der Klasse <code>QOpenGLShaderProgram</code> kapseln letztlich OpenGL-Befehle der Art:</p>
+</div>
+<div class="listingblock">
+<div class="title">Native OpenGL Shaderprogramm-Initialisierung</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="c1">// create the shader</span>
+<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">vertexShader</span><span class="p">;</span>
+<span class="n">vertexShader</span> <span class="o">=</span> <span class="n">glCreateShader</span><span class="p">(</span><span class="n">GL_VERTEX_SHADER</span><span class="p">);</span>
+
+<span class="c1">// pass shader program in C string</span>
+<span class="n">glShaderSource</span><span class="p">(</span><span class="n">vertexShader</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">vertexShaderSource</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+<span class="c1">// compile the shader</span>
+<span class="n">glCompileShader</span><span class="p">(</span><span class="n">vertexShader</span><span class="p">);</span>
+
+<span class="c1">// check success of compilation</span>
+<span class="kt">int</span>  <span class="n">success</span><span class="p">;</span>
+<span class="kt">char</span> <span class="n">infoLog</span><span class="p">[</span><span class="mi">512</span><span class="p">];</span>
+<span class="n">glGetShaderiv</span><span class="p">(</span><span class="n">vertexShader</span><span class="p">,</span> <span class="n">GL_COMPILE_STATUS</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">success</span><span class="p">);</span>
+
+<span class="c1">// print out an error if any</span>
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">success</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">glGetShaderInfoLog</span><span class="p">(</span><span class="n">vertexShader</span><span class="p">,</span> <span class="mi">512</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">,</span> <span class="n">infoLog</span><span class="p">);</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Vertex shader error:</span><span class="se">\n</span><span class="s">"</span> <span class="o">&lt;&lt;</span> <span class="n">infoLog</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+<span class="p">}</span>
+
+
+<span class="c1">// ... same for fragment shader</span>
+
+<span class="c1">// attach shaders to shader program</span>
+<span class="n">glAttachShader</span><span class="p">(</span><span class="n">shaderProgram</span><span class="p">,</span> <span class="n">vertexShader</span><span class="p">);</span>
+<span class="n">glAttachShader</span><span class="p">(</span><span class="n">shaderProgram</span><span class="p">,</span> <span class="n">fragmentShader</span><span class="p">);</span>
+
+<span class="c1">// and link</span>
+<span class="n">glLinkProgram</span><span class="p">(</span><span class="n">shaderProgram</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Verglichen damit ist die Qt Variante mit "etwas" weniger Tippaufwand verbunden.</p>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_vertex_buffer_objekte_vbo_und_vertex_array_objekte_vba">2.3.2. Vertex-Buffer-Objekte (VBO) und Vertex-Array-Objekte (VBA)</h4>
+<div class="paragraph">
+<p>Nachdem das Shaderprogramm fertig ist, erstellen wir zunächst ein Vertexpufferobjekt mit den Koordinaten des Dreiecks. Danach werden dann die Zuordnungen der Vertexdaten zu Attributen festgelegt. Und damit man diese Zuordnungen nicht immer wieder neu machen muss, merkt man sich diese in einem VertexArrayObject (VBA). Auf den ersten Blick ist das alles ganz schön kompliziert, daher machen wir das am Besten am Beispiel.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Vertexpufferobjekte (engl. <em>Vertex Buffer Objects (VBO)</em>) beinhalten letztlich die Daten, die an den Vertex-Shader gesendet werden. Aus Sicht von OpenGL müssen diese Objekte erst erstellt werden, dann gebunden werden (d.h. nachfolgende OpenGL-Befehle beziehen sich auf den Puffer), und dann wieder freigegeben werden.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="listingblock">
+<div class="title">Funktion: TriangleWindow::initialize(), fortgesetzt</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++">	<span class="kt">float</span> <span class="n">vertices</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
+		<span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span>
+		 <span class="mf">0.5</span><span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span>
+		 <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span>  <span class="mf">0.5</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span>
+	<span class="p">};</span>
+
+	<span class="c1">// create a new buffer for the vertices</span>
+	<span class="n">m_vertexBufferObject</span> <span class="o">=</span> <span class="n">QOpenGLBuffer</span><span class="p">(</span><span class="n">QOpenGLBuffer</span><span class="o">::</span><span class="n">VertexBuffer</span><span class="p">);</span> <span class="c1">// VBO</span>
+	<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">create</span><span class="p">();</span> <span class="c1">// create underlying OpenGL object</span>
+	<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">setUsagePattern</span><span class="p">(</span><span class="n">QOpenGLBuffer</span><span class="o">::</span><span class="n">StaticDraw</span><span class="p">);</span> <span class="c1">// must be called before allocate</span>
+
+	<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span> <span class="c1">// set it active in the context, so that we can write to it</span>
+	<span class="c1">// int bufSize = sizeof(vertices) = 9 * sizeof(float) = 9*4 = 36 bytes</span>
+	<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">vertices</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">vertices</span><span class="p">)</span> <span class="p">);</span> <span class="c1">// copy data into buffer</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Im obigen Quelltext wird zunächst ein statisches Array mit 9 floats (3 x 3 Vektoren) definiert. Z-Koordinate ist jeweils 0. Nun erstellen wir ein neues VertexBufferObject vom Typ <code>QOpenGLBuffer::VertexBuffer</code>. Der Aufruf von <code>create()</code> erstellt das Objekt selbst und entspricht in etwa dem OpenGL-Aufruf:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">VBO</span><span class="p">;</span>
+<span class="n">glGenBuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">VBO</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Dann wird dem QOpenGLBuffer-Pufferobjekt noch die geplante Zugriffsart via <code>setUsagePattern()</code> mitgeteilt. Dies führt keinen OpenGL Aufruf aus, sondern es wird sich dieses Attribute für später gemerkt.</p>
+</div>
+<div class="paragraph">
+<p>Mit dem Aufruf von <code>bind()</code> wird dieses VBO als Aktiv im OpenGL-Kontext gesetzt, d.h. nachfolgende Funktionsaufrufe mit Bezug auf VBOs beziehen sich auf unser erstelltes VBO. Dies entspricht dem OpenGL-Aufruf:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="n">glBindBuffer</span><span class="p">(</span><span class="n">GL_ARRAY_BUFFER</span><span class="p">,</span> <span class="n">VBO</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Zuletzt werden die Daten im Aufruf von <code>allocate()</code> in den Puffer kopiert. Dies entspricht in etwa einem memcpy-Befehl, d.h. Quelladresse des Puffers wird übergeben und Länge in Bytes as zweites Argument. In diesem Fall sind es 9 floats, d.h. 9*4=36 Bytes. Dies entspricht dem OpenGL-Befehl:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="n">glBufferData</span><span class="p">(</span><span class="n">GL_ARRAY_BUFFER</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">vertices</span><span class="p">),</span> <span class="n">vertices</span><span class="p">,</span> <span class="n">GL_STATIC_DRAW</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Hier wird der vorab gesetzte Verwendungstyp (usagePattern) verwendet. Deshalb ist es wichtig, <code>setUsagePattern()</code> immer <em>vor</em> <code>allocate()</code> aufzurufen.</p>
+</div>
+<div class="paragraph">
+<p>Der Puffer ist nun gebunden und man könnte nun die Vertex-Daten mit den Eingangsparametern im Shaderprogramm verknüpfen. Da wir dies nicht jedesmal vorm Zeichnen erneut machen wollen, verwenden wir ein VertexArrayObject (VBA), welches letztlich so etwas wie ein Container für derartige Verknüpfungen darstellt. Man kann sich so ein VBA wie eine Aufzeichnung der nachfolgenden Verknüpfungsbefehle vorstellen, wobei der jeweils aktive Vertexpuffer und die verknüpften Variablen kollektiv gespeichert werden. Später beim eigentlichen Zeichnen muss man nur noch das VBA einbinden, welches unter der Haube dann alle aufgezeichneten Verknüpfungen abspielt und so den OpenGL-Zustand entsprechend wiederherstellt.</p>
+</div>
+<div class="paragraph">
+<p>Konkret sieht das so aus:</p>
+</div>
+<div class="listingblock">
+<div class="title">Funktion: TriangleWindow::initialize(), fortgesetzt</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++">	<span class="c1">// Initialize the Vertex Array Object (VAO) to record and remember subsequent attribute assocations with</span>
+	<span class="c1">// generated vertex buffer(s)</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">create</span><span class="p">();</span> <span class="c1">// create underlying OpenGL object</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span> <span class="c1">// sets the Vertex Array Object current to the OpenGL context so it monitors attribute assignments</span>
+
+	<span class="c1">// now all following enableAttributeArray(), disableAttributeArray() and setAttributeBuffer() calls are</span>
+	<span class="c1">// "recorded" in the currently bound VBA.</span>
+
+	<span class="c1">// Enable attribute array at layout location 0</span>
+	<span class="n">m_program</span><span class="o">-&gt;</span><span class="n">enableAttributeArray</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+	<span class="n">m_program</span><span class="o">-&gt;</span><span class="n">setAttributeBuffer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">GL_FLOAT</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+	<span class="c1">// This maps the data we have set in the VBO to the "position" attribute.</span>
+	<span class="c1">// 0 - offset - means the "position" data starts at the begin of the memory array</span>
+	<span class="c1">// 3 - size of each vertex (=vec3) - means that each position-tuple has the size of 3 floats (those are the 3 coordinates,</span>
+	<span class="c1">//     mind: this is the size of GL_FLOAT, not the size in bytes!</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Zunächst wir das Vertex-Array-Objekt erstellt und eingebunden. Danach werden alle folgenden Aufrufe von <code>enableAttributeArray()</code> und <code>setAttributeBuffer()</code> vermerkt.</p>
+</div>
+<div class="paragraph">
+<p>Der Befehl <code>enableAttributeArray(0)</code> aktiviert ein Attribut (bzw. Variable) im Vertex-Puffer, welches im Shaderprogramm dann mit dem layout-Index 0 angesprochen werden kann. Im Vertex-Shader dieses Beispiels (siehe oben) ist das der <em>position</em> Vektor.</p>
+</div>
+<div class="paragraph">
+<p>Mit <code>setAttributeBuffer()</code> wird nun definiert, wo im Vertex-Buffer die Daten zu finden sind, d.h. Datentyp, Anzahl (hier 3 floats entsprechend den 3 Koordinaten) und dem Startoffset (hier 0).</p>
+</div>
+<div class="paragraph">
+<p>Diese beiden Aufrufe entsprechen den OpenGL-Aufrufen:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="n">glEnableVertexAttribArray</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="n">glVertexAttribPointer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">GL_FLOAT</span><span class="p">,</span> <span class="n">GL_FALSE</span><span class="p">,</span> <span class="mi">3</span> <span class="o">*</span> <span class="nf">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">),</span> <span class="p">(</span><span class="kt">void</span><span class="o">*</span><span class="p">)</span><span class="mi">0</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Damit sind alle Daten initialisiert, und die Pufferobjekte können freigegeben werden:</p>
+</div>
+<div class="listingblock">
+<div class="title">Funktion: TriangleWindow::initialize(), fortgesetzt</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++">	<span class="c1">// Release (unbind) all</span>
+	<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">release</span><span class="p">();</span> <span class="c1">// not really necessary, but done for completeness</span>
+<span class="err">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Dies entspricht den OpenGL-Aufrufen:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="n">glBindBuffer</span><span class="p">(</span><span class="n">GL_ARRAY_BUFFER</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="n">glBindVertexArray</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Man sieht also, dass die Qt-Klassen letztlich die nativen OpenGL-Funktionsaufrufe (mitunter ziemlich direkt) kapseln.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Die Qt API fühlt sich hier nicht ganz glücklich gewählt an. Aufrufe wie <code>m_programm-&gt;enableAttributeArray(0)</code> sugggerieren, dass hier tatsächlich Objekteigenschaften geändert werden, dabei wird tatsächlich mit dem OpenGL-Zustandsautomaten gearbeitet. Entsprechend ist bei etlichen Befehlen die Reihenfolge der Aufrufe wichtig, obgleich es bei individuell setzbaren Attributen eines Objekts eigentlich egal sein sollte, welches Attribut man zuerst setzt. Daher habe ich oben im Tutorial auch noch einmal explizit die dahinterliegenden OpenGL-Befehle angegeben.</p>
+</div>
+<div class="paragraph">
+<p>Es ist daher empfehlenswert, dass man die Qt API nochmal in eigene Klassen einpackt, und dann eine entsprechend schlange und fehlerunanfällige API entwirft.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_rendern">2.3.3. Rendern</h4>
+<div class="paragraph">
+<p>Das eigentliche Render erfolgt in der Funktion <code>render()</code>, die als rein virtuelle Funktion von der Basisklasse <code>OpenGLWindow</code> aufgerufen wird. Die Basisklasse prüft ja auch, ob Rendern überhaupt notwendig ist, und setzt den aktuellen OpenGL Context. Dadurch kann man in dieser Funktion direkt losrendern.</p>
+</div>
+<div class="paragraph">
+<p>Die Implementierung ist (noch) recht selbsterklärend:</p>
+</div>
+<div class="listingblock">
+<div class="title">Funktion: TriangleWindow::render()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">TriangleWindow</span><span class="o">::</span><span class="n">render</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// this function is called for every frame to be rendered on screen</span>
+	<span class="k">const</span> <span class="n">qreal</span> <span class="n">retinaScale</span> <span class="o">=</span> <span class="n">devicePixelRatio</span><span class="p">();</span> <span class="c1">// needed for Macs with retina display</span>
+	<span class="n">glViewport</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="p">()</span> <span class="o">*</span> <span class="n">retinaScale</span><span class="p">,</span> <span class="n">height</span><span class="p">()</span> <span class="o">*</span> <span class="n">retinaScale</span><span class="p">);</span>
+
+	<span class="c1">// set the background color = clear color</span>
+	<span class="n">glClearColor</span><span class="p">(</span><span class="mf">0.1</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.1</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.2</span><span class="n">f</span><span class="p">,</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
+	<span class="n">glClear</span><span class="p">(</span><span class="n">GL_COLOR_BUFFER_BIT</span><span class="p">);</span>
+
+	<span class="c1">// use our shader program</span>
+	<span class="n">m_program</span><span class="o">-&gt;</span><span class="n">bind</span><span class="p">();</span>
+	<span class="c1">// bind the vertex array object, which in turn binds the vertex buffer object and</span>
+	<span class="c1">// sets the attribute buffer in the OpenGL context</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+	<span class="c1">// now draw the triangles:</span>
+	<span class="c1">// - GL_TRIANGLES - draw individual triangles</span>
+	<span class="c1">// - 0 index of first triangle to draw</span>
+	<span class="c1">// - 3 number of vertices to process</span>
+	<span class="n">glDrawArrays</span><span class="p">(</span><span class="n">GL_TRIANGLES</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+	<span class="c1">// finally release VAO again (not really necessary, just for completeness)</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die ersten drei <code>glXXX</code> Befehle sind native OpenGL-Aufrufe, und sollten eigentlich in dieser Art mehr oder weniger immer auftauchen. Die Anpassung des ViewPort (<code>glViewport(...)</code>) ist für resize-Operationen notwendig, das Löschen des Color Buffers (<code>glClear(...)</code>) auch (später werden in diesem Aufruf noch andere Puffer gelöscht werden). Die Funktion <a href="https://doc.qt.io/qt-5/qwindow.html#devicePixelRatio">devicePixelRatio()</a> ist für Bildschirme mit angepasster Skalierung interessant (vornehmlich für Macs mit Retina-Display).</p>
+</div>
+<div class="paragraph">
+<p>Solange sich die Hintergrundfarbe (clear-color) nicht ändert, könnte man diesen Aufruf auch in die Initialisierung verschieben.</p>
+</div>
+<div class="paragraph">
+<p>Danach kommt der interessante Teil. Es wird das Shader-Programm gebunden (<code>m_programm-&gt;bind()</code>) und danach das Vertex Array Objekt (VAO) (<code>m_vao.bind()</code>). Letzteres sorgt dafür, dass im OpenGL-Kontext auch das Vertex-Buffer-Objekt und die Attributzuordnung gesetzt werden. Damit kann dann einfach gezeichnet werden, wofür mit <code>glDrawArrays(...)</code> wieder ein nativer OpenGL-Befehl zum Einsatz kommt.</p>
+</div>
+<div class="paragraph">
+<p>Dieser Teil des Programms sähe in nativem OpenGL-Code so aus:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="n">glUseProgram</span><span class="p">(</span><span class="n">shaderProgram</span><span class="p">);</span>
+<span class="n">glBindVertexArray</span><span class="p">(</span><span class="n">VAO</span><span class="p">);</span>
+<span class="n">glDrawArrays</span><span class="p">(</span><span class="n">GL_TRIANGLES</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">);</span>
+<span class="n">glBindVertexArray</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Ist also ziemlich ähnlich. Damit wäre dann die Implementierung des <code>TriangleWindow</code> komplett.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_das_hauptprogramm">2.4. Das Hauptprogramm</h3>
+<div class="paragraph">
+<p>Das <code>TriangleWindow</code> kann jetzt eigentlich direkt als Top-Level-Fenster verwendet werden. Allerdings ist zu beachten, dass <em>vor</em> dem ersten Anzeigen (und damit vor der OpenGL-Initialisierung und Erstellung des OpenGL-Kontext) die Oberflächeneigenschaften (<code>QSurfaceFormat</code>) zu setzen sind:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+	<span class="n">QGuiApplication</span> <span class="n">app</span><span class="p">(</span><span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
+
+	<span class="c1">// Set OpenGL Version information</span>
+	<span class="n">QSurfaceFormat</span> <span class="n">format</span><span class="p">;</span>
+	<span class="n">format</span><span class="p">.</span><span class="n">setRenderableType</span><span class="p">(</span><span class="n">QSurfaceFormat</span><span class="o">::</span><span class="n">OpenGL</span><span class="p">);</span>
+	<span class="n">format</span><span class="p">.</span><span class="n">setProfile</span><span class="p">(</span><span class="n">QSurfaceFormat</span><span class="o">::</span><span class="n">CoreProfile</span><span class="p">);</span>
+	<span class="n">format</span><span class="p">.</span><span class="n">setVersion</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">);</span>
+
+	<span class="n">TriangleWindow</span> <span class="n">window</span><span class="p">;</span>
+	<span class="c1">// Note: The format must be set before show() is called.</span>
+	<span class="n">window</span><span class="p">.</span><span class="n">setFormat</span><span class="p">(</span><span class="n">format</span><span class="p">);</span>
+	<span class="n">window</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="mi">640</span><span class="p">,</span> <span class="mi">480</span><span class="p">);</span>
+	<span class="n">window</span><span class="p">.</span><span class="n">show</span><span class="p">();</span>
+
+	<span class="k">return</span> <span class="n">app</span><span class="p">.</span><span class="n">exec</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Das wäre dann erstmal eine Grundlage, auf der man aufbauen kann. Allerdings fehlt noch die Einbettung der <code>QWindow</code>-basierten Renderklasse in eine Widgets-Anwendung. Das machen wir in Tutorial 02.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="footer">
+<div id="footer-text">
+Version 0.1.0<br>
+Last updated 2020-03-23 14:13:08 +0100
+</div>
+</div>
+<style>
+pre.rouge table td { padding: 5px; }
+pre.rouge table pre { margin: 0; }
+pre.rouge .cm {
+  color: #999988;
+  font-style: italic;
+}
+pre.rouge .cp {
+  color: #999999;
+  font-weight: bold;
+}
+pre.rouge .c1 {
+  color: #999988;
+  font-style: italic;
+}
+pre.rouge .cs {
+  color: #999999;
+  font-weight: bold;
+  font-style: italic;
+}
+pre.rouge .c, pre.rouge .ch, pre.rouge .cd, pre.rouge .cpf {
+  color: #999988;
+  font-style: italic;
+}
+pre.rouge .err {
+  color: #a61717;
+  background-color: #e3d2d2;
+}
+pre.rouge .gd {
+  color: #000000;
+  background-color: #ffdddd;
+}
+pre.rouge .ge {
+  color: #000000;
+  font-style: italic;
+}
+pre.rouge .gr {
+  color: #aa0000;
+}
+pre.rouge .gh {
+  color: #999999;
+}
+pre.rouge .gi {
+  color: #000000;
+  background-color: #ddffdd;
+}
+pre.rouge .go {
+  color: #888888;
+}
+pre.rouge .gp {
+  color: #555555;
+}
+pre.rouge .gs {
+  font-weight: bold;
+}
+pre.rouge .gu {
+  color: #aaaaaa;
+}
+pre.rouge .gt {
+  color: #aa0000;
+}
+pre.rouge .kc {
+  color: #000000;
+  font-weight: bold;
+}
+pre.rouge .kd {
+  color: #000000;
+  font-weight: bold;
+}
+pre.rouge .kn {
+  color: #000000;
+  font-weight: bold;
+}
+pre.rouge .kp {
+  color: #000000;
+  font-weight: bold;
+}
+pre.rouge .kr {
+  color: #000000;
+  font-weight: bold;
+}
+pre.rouge .kt {
+  color: #445588;
+  font-weight: bold;
+}
+pre.rouge .k, pre.rouge .kv {
+  color: #000000;
+  font-weight: bold;
+}
+pre.rouge .mf {
+  color: #009999;
+}
+pre.rouge .mh {
+  color: #009999;
+}
+pre.rouge .il {
+  color: #009999;
+}
+pre.rouge .mi {
+  color: #009999;
+}
+pre.rouge .mo {
+  color: #009999;
+}
+pre.rouge .m, pre.rouge .mb, pre.rouge .mx {
+  color: #009999;
+}
+pre.rouge .sb {
+  color: #d14;
+}
+pre.rouge .sc {
+  color: #d14;
+}
+pre.rouge .sd {
+  color: #d14;
+}
+pre.rouge .s2 {
+  color: #d14;
+}
+pre.rouge .se {
+  color: #d14;
+}
+pre.rouge .sh {
+  color: #d14;
+}
+pre.rouge .si {
+  color: #d14;
+}
+pre.rouge .sx {
+  color: #d14;
+}
+pre.rouge .sr {
+  color: #009926;
+}
+pre.rouge .s1 {
+  color: #d14;
+}
+pre.rouge .ss {
+  color: #990073;
+}
+pre.rouge .s, pre.rouge .sa, pre.rouge .dl {
+  color: #d14;
+}
+pre.rouge .na {
+  color: #008080;
+}
+pre.rouge .bp {
+  color: #999999;
+}
+pre.rouge .nb {
+  color: #0086B3;
+}
+pre.rouge .nc {
+  color: #445588;
+  font-weight: bold;
+}
+pre.rouge .no {
+  color: #008080;
+}
+pre.rouge .nd {
+  color: #3c5d5d;
+  font-weight: bold;
+}
+pre.rouge .ni {
+  color: #800080;
+}
+pre.rouge .ne {
+  color: #990000;
+  font-weight: bold;
+}
+pre.rouge .nf, pre.rouge .fm {
+  color: #990000;
+  font-weight: bold;
+}
+pre.rouge .nl {
+  color: #990000;
+  font-weight: bold;
+}
+pre.rouge .nn {
+  color: #555555;
+}
+pre.rouge .nt {
+  color: #000080;
+}
+pre.rouge .vc {
+  color: #008080;
+}
+pre.rouge .vg {
+  color: #008080;
+}
+pre.rouge .vi {
+  color: #008080;
+}
+pre.rouge .nv, pre.rouge .vm {
+  color: #008080;
+}
+pre.rouge .ow {
+  color: #000000;
+  font-weight: bold;
+}
+pre.rouge .o {
+  color: #000000;
+  font-weight: bold;
+}
+pre.rouge .w {
+  color: #bbbbbb;
+}
+pre.rouge {
+  background-color: #f8f8f8;
+}
+</style>
+</body>
+</html>

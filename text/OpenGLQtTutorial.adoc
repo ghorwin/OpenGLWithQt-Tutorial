@@ -13,7 +13,7 @@ v0.1.0, März 2020
 :rouge-style: custom
 :title-page:
 :stylesdir: ./css
-:stylesheet: dark.css
+:stylesheet: roboto_ubuntu.css
 
 
 include::Introduction.adoc[leveloffset=+1]
