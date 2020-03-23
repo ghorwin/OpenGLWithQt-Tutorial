@@ -15,7 +15,6 @@ v0.1.0, März 2020
 :stylesdir: ./css
 :stylesheet: roboto_ubuntu.css
 
-
 include::Introduction.adoc[leveloffset=+1]
 include::Tutorial_01.adoc[leveloffset=+1]
 
