@@ -89,7 +89,7 @@ void TriangleWindow::initialize() {
 
 void TriangleWindow::render() {
 	// this function is called for every frame to be rendered on screen
-	const qreal retinaScale = devicePixelRatio();
+	const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
 	glViewport(0, 0, width() * retinaScale, height() * retinaScale);
 
 	// set the background color = clear color
@@ -98,11 +98,14 @@ void TriangleWindow::render() {
 
 	// use our shader program
 	m_program->bind();
-	// bind the vertex buffer
+	// bind the vertex array object, which in turn binds the vertex buffer object and
+	// sets the attribute buffer in the OpenGL context
 	m_vao.bind();
 	// now draw the triangles:
 	// - GL_TRIANGLES - draw individual triangles
 	// - 0 index of first triangle to draw
 	// - 3 number of vertices to process
 	glDrawArrays(GL_TRIANGLES, 0, 3);
+	// finally release VAO again (not really necessary, just for completeness)
+	m_vao.release();
 }

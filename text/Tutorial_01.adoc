@@ -21,7 +21,7 @@ Das Tutorial selbst basiert zum einen auf dem Qt Beispiel "OpenGLWindow" und auf
 
 Beim Rendern von OpenGL Inhalten mit Qt gibt es verschiedene Möglichkeiten. Hier soll zunächst ein `QWindow` verwendet werden, welches ein natives Fenster des jeweiligen Betriebssystems kapselt. Damit kann man also ziemlich direkt und plattformnah zeichnen.
 
-### QWidget näher betrachtet
+== QWidget näher betrachtet
 
 Um ein QWidget zu verwenden, muss man die Klasse ableiten und sollte dann einige Funktionen implementieren. Eine minimalistische Klassendeklaration sähe z.B. so aus:
 
@@ -227,6 +227,10 @@ Falls wir dennoch animieren wollen (und wenn es nur eine weiche Kamerafahrt wird
 Damit wäre die zentrale Basisklasse für OpenGL-Renderfenster fertig. Wir testen das jetzt mit dem ganz am Anfang erwähnten primitiven Dreiecksbeispiel.
 
 == Implementierung eines konkreten Renderfensters
+[TIP]
+====
+Vor der Lektüre diese Abschnitts sollte man den Tutorialteil https://learnopengl.com/Getting-started/Hello-Triangle überflogen haben (oder sich zumindest soweit mit OpenGL auskennen).
+====
 
 Das konkrete Renderfenster heißt in diesem Beispiel `TriangleWindow` mit der Headerdatei `TriangleWindow.h`. Die Klassendeklaration ist recht kurz:
 [source,c++]
@@ -256,7 +260,7 @@ private:
 
 Interessant sind die privaten Membervariablen, die nachfolgend in der Implementierung der Klasse näher erläutert werden.
 
-== Shaderprogramme
+=== Shaderprogramme
 Die Klasse `QOpenGLShaderProgram` kapselt ein Shaderprogramm und bietet verschiedene Bequemlichkeitsfunktionen, die in nativen OpenGL-Aufrufe umgesetzt werden.
 
 Zuerst wird das Objekt erstellt:
@@ -316,7 +320,7 @@ void main() {
 
 Der Vertexshader schiebt die Vertexkoordinaten (als vec3) einfach als vec4 ohne jede Transformation raus. Und der Fragmentationshader gibt einfach nur die gleiche Farbe (dunkles Rot) aus.
 
-=== Compilieren und Linken von Shaderprogrammen
+==== Compilieren und Linken von Shaderprogrammen
 
 Die nächsten Zeilen in der `initialize()` Funktion übersetzen die Shaderprogramme und linken die Programme:
 
@@ -348,6 +352,7 @@ Letzter Schritt ist das Linken der Shaderprogramme, d.h. das Verknüpfen selbstd
 
 Die Funktionen der Klasse `QOpenGLShaderProgram` kapseln letztlich OpenGL-Befehle der Art:
 
+.Native OpenGL Shaderprogramm-Initialisierung
 [source,c]
 ----
 // create the shader
@@ -384,7 +389,7 @@ glLinkProgram(shaderProgram);
 
 Verglichen damit ist die Qt Variante mit "etwas" weniger Tippaufwand verbunden.
 
-== Vertex-Buffer-Objekte (VBO) und Vertex-Array-Objekte (VBA)
+=== Vertex-Buffer-Objekte (VBO) und Vertex-Array-Objekte (VBA)
 
 Nachdem das Shaderprogramm fertig ist, erstellen wir zunächst ein Vertexpufferobjekt mit den Koordinaten des Dreiecks. Danach werden dann die Zuordnungen der Vertexdaten zu Attributen festgelegt. Und damit man diese Zuordnungen nicht immer wieder neu machen muss, merkt man sich diese in einem VertexArrayObject (VBA). Auf den ersten Blick ist das alles ganz schön kompliziert, daher machen wir das am Besten am Beispiel.
 [TIP]
@@ -467,6 +472,7 @@ glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
 ----
 
 Damit sind alle Daten initialisiert, und die Pufferobjekte können freigegeben werden:
+
 .Funktion: TriangleWindow::initialize(), fortgesetzt
 [source,c++]
 ----
@@ -478,21 +484,91 @@ Damit sind alle Daten initialisiert, und die Pufferobjekte können freigegeben w
 Dies entspricht den OpenGL-Aufrufen:
 [source,c]
 ----
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+glBindBuffer(GL_ARRAY_BUFFER, 0);
+glBindVertexArray(0);
 ----
 
 Man sieht also, dass die Qt-Klassen letztlich die nativen OpenGL-Funktionsaufrufe (mitunter ziemlich direkt) kapseln.
+
 [IMPORTANT]
 ====
-Die Qt API ist hier nicht ganz glücklich gewählt. Aufrufe wie `m_programm->enableAttributeArray(0)` sugggerieren, dass hier tatsächlich Objekteigenschaften geändert werden, dabei wird tatsächlich mit dem OpenGL-Zustandsautomaten gearbeitet. Entsprechend ist bei etlichen Befehlen die Reihenfolge der Aufrufe wichtig, obgleich es bei individuell setzbaren Attributen eines Objekts eigentlich egal sein sollte, welches Attribut man zuerst setzt. Daher habe ich oben im Tutorial auch noch einmal explizit die dahinterliegenden OpenGL-Befehle angegeben.
+Die Qt API fühlt sich hier nicht ganz glücklich gewählt an. Aufrufe wie `m_programm->enableAttributeArray(0)` sugggerieren, dass hier tatsächlich Objekteigenschaften geändert werden, dabei wird tatsächlich mit dem OpenGL-Zustandsautomaten gearbeitet. Entsprechend ist bei etlichen Befehlen die Reihenfolge der Aufrufe wichtig, obgleich es bei individuell setzbaren Attributen eines Objekts eigentlich egal sein sollte, welches Attribut man zuerst setzt. Daher habe ich oben im Tutorial auch noch einmal explizit die dahinterliegenden OpenGL-Befehle angegeben.
 
 Es ist daher empfehlenswert, dass man die Qt API nochmal in eigene Klassen einpackt, und dann eine entsprechend schlange und fehlerunanfällige API entwirft.
 ====
 
 
-== Rendern
+=== Rendern
 
+Das eigentliche Render erfolgt in der Funktion `render()`, die als rein virtuelle Funktion von der Basisklasse `OpenGLWindow` aufgerufen wird. Die Basisklasse prüft ja auch, ob Rendern überhaupt notwendig ist, und setzt den aktuellen OpenGL Context. Dadurch kann man in dieser Funktion direkt losrendern.
 
+Die Implementierung ist (noch) recht selbsterklärend:
 
+.Funktion: TriangleWindow::render()
+[source,c++]
+----
+void TriangleWindow::render() {
+	// this function is called for every frame to be rendered on screen
+	const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
+	glViewport(0, 0, width() * retinaScale, height() * retinaScale);
 
+	// set the background color = clear color
+	glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	// use our shader program
+	m_program->bind();
+	// bind the vertex array object, which in turn binds the vertex buffer object and
+	// sets the attribute buffer in the OpenGL context
+	m_vao.bind();
+	// now draw the triangles:
+	// - GL_TRIANGLES - draw individual triangles
+	// - 0 index of first triangle to draw
+	// - 3 number of vertices to process
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+	// finally release VAO again (not really necessary, just for completeness)
+	m_vao.release();
+}
+----
+
+Die ersten drei `glXXX` Befehle sind native OpenGL-Aufrufe, und sollten eigentlich in dieser Art mehr oder weniger immer auftauchen. Die Anpassung des ViewPort (`glViewport(...)`) ist für resize-Operationen notwendig, das Löschen des Color Buffers (`glClear(...)`) auch (später werden in diesem Aufruf noch andere Puffer gelöscht werden). Die Funktion https://doc.qt.io/qt-5/qwindow.html#devicePixelRatio[devicePixelRatio()] ist für Bildschirme mit angepasster Skalierung interessant (vornehmlich für Macs mit Retina-Display).
+
+Solange sich die Hintergrundfarbe (clear-color) nicht ändert, könnte man diesen Aufruf auch in die Initialisierung verschieben.
+
+Danach kommt der interessante Teil. Es wird das Shader-Programm gebunden (`m_programm->bind()`) und danach das Vertex Array Objekt (VAO) (`m_vao.bind()`). Letzteres sorgt dafür, dass im OpenGL-Kontext auch das Vertex-Buffer-Objekt und die Attributzuordnung gesetzt werden. Damit kann dann einfach gezeichnet werden, wofür mit `glDrawArrays(...)` wieder ein nativer OpenGL-Befehl zum Einsatz kommt.
+
+Dieser Teil des Programms sähe in nativem OpenGL-Code so aus:
+[source,c]
+----
+glUseProgram(shaderProgram);
+glBindVertexArray(VAO);
+glDrawArrays(GL_TRIANGLES, 0, 3);
+glBindVertexArray(0);
+----
+Ist also ziemlich ähnlich. Damit wäre dann die Implementierung des `TriangleWindow` komplett.
+
+== Das Hauptprogramm
+
+Das `TriangleWindow` kann jetzt eigentlich direkt als Top-Level-Fenster verwendet werden. Allerdings ist zu beachten, dass _vor_ dem ersten Anzeigen (und damit vor der OpenGL-Initialisierung und Erstellung des OpenGL-Kontext) die Oberflächeneigenschaften (`QSurfaceFormat`) zu setzen sind:
+[source,c++]
+----
+int main(int argc, char **argv) {
+	QGuiApplication app(argc, argv);
+
+	// Set OpenGL Version information
+	QSurfaceFormat format;
+	format.setRenderableType(QSurfaceFormat::OpenGL);
+	format.setProfile(QSurfaceFormat::CoreProfile);
+	format.setVersion(3,3);
+
+	TriangleWindow window;
+	// Note: The format must be set before show() is called.
+	window.setFormat(format);
+	window.resize(640, 480);
+	window.show();
+
+	return app.exec();
+}
+----
+
+Das wäre dann erstmal eine Grundlage, auf der man aufbauen kann. Allerdings fehlt noch die Einbettung der `QWindow`-basierten Renderklasse in eine Widgets-Anwendung. Das machen wir in Tutorial 02.
