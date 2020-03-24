@@ -103,10 +103,13 @@ table {
 <li><a href="#_verwendung_der_klasse">3.1. Verwendung der Klasse</a></li>
 <li><a href="#_die_implementierung_der_klasse_qopenglwindow">3.2. Die Implementierung der Klasse QOpenGLWindow</a>
 <ul class="sectlevel3">
-<li><a href="#_konstruktor">3.2.1. Konstruktor</a></li>
+<li><a href="#_constructor">3.2.1. Constructor</a></li>
+<li><a href="#_ereignisbehandlungsroutinen">3.2.2. Ereignisbehandlungsroutinen</a></li>
+<li><a href="#_initialisierung">3.2.3. Initialisierung</a></li>
+<li><a href="#_zusammenfassung">3.2.4. Zusammenfassung</a></li>
 </ul>
 </li>
-<li><a href="#_beispielzeichenobjekt_rectanglewindow">3.3. Beispielzeichenobjekt <code>RectangleWindow</code></a></li>
+<li><a href="#_zeichnen_mit_indexpuffern">3.3. Zeichnen mit Indexpuffern</a></li>
 </ul>
 </li>
 <li><a href="#_tutorial_03_renderfenster_eingebettet_in_einen_qdialog">4. Tutorial 03: Renderfenster eingebettet in einen QDialog</a></li>
@@ -1112,9 +1115,9 @@ table {
 <p>Schauen wir uns nun die Gemeinsamkeiten an.</p>
 </div>
 <div class="sect3">
-<h4 id="_konstruktor">3.2.1. Konstruktor</h4>
+<h4 id="_constructor">3.2.1. Constructor</h4>
 <div class="paragraph">
-<p>Der Konstruktor sieht erstmal ähnlich aus, abgesehen davon, dass die Argumente in die private <a href="https://en.wikipedia.org/wiki/Opaque_pointer">Pimpl</a>-Klasse weitergeleitet werden.</p>
+<p>Der Konstruktor sieht erstmal fast genauso aus, wie der unserer <code>OpenGLWindow</code>-Klasse. abgesehen davon, dass die Argumente in die private <a href="https://en.wikipedia.org/wiki/Opaque_pointer">Pimpl</a>-Klasse weitergeleitet werden.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1126,10 +1129,107 @@ table {
 </div>
 </div>
 </div>
+<div class="sect3">
+<h4 id="_ereignisbehandlungsroutinen">3.2.2. Ereignisbehandlungsroutinen</h4>
+<div class="paragraph">
+<p>Interessanter sind schon die Ereignisbehandlungsroutinen:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">QOpenGLWindow</span><span class="o">::</span><span class="n">paintEvent</span><span class="p">(</span><span class="n">QPaintEvent</span> <span class="o">*</span> <span class="cm">/*event*/</span> <span class="p">)</span> <span class="p">{</span>
+    <span class="n">paintGL</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="n">QOpenGLWindow</span><span class="o">::</span><span class="n">resizeEvent</span><span class="p">(</span><span class="n">QResizeEvent</span> <span class="o">*</span> <span class="cm">/*event*/</span> <span class="p">)</span> <span class="p">{</span>
+    <span class="n">Q_D</span><span class="p">(</span><span class="n">QOpenGLWindow</span><span class="p">);</span>
+    <span class="n">d</span><span class="o">-&gt;</span><span class="n">initialize</span><span class="p">();</span>
+    <span class="n">resizeGL</span><span class="p">(</span><span class="n">width</span><span class="p">(),</span> <span class="n">height</span><span class="p">());</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Das <code>paintEvent()</code> wird einfach an die vom Nutzer zu implementierende Funktion <code>paintGL()</code> weitergereicht. Insofern analog zu der Ereignisbehandlung im OpenGLWidget, welches auf <code>QEvent::UpdateRequest</code> wartet. Allerdings sind auf dem Weg bis zum Aufruf der <code>paintEvent()</code> Funktion etliche Zwischenschritte implementiert, bis zum Erzeugen des QPaintEvent-Objekts, welches gar nicht benötigt wird. Der Aufwand wird deutlich, wenn man sich die Aufrufkette anschaut:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">QPaintDeviceWindow</span><span class="o">::</span><span class="n">event</span><span class="p">(</span><span class="n">QEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">)</span>  <span class="c1">// waits for QEvent::UpdateRequest</span>
+<span class="n">QPaintDeviceWindowPrivate</span><span class="o">::</span><span class="n">handleUpdateEvent</span><span class="p">()</span>
+<span class="n">QPaintDeviceWindowPrivate</span><span class="o">::</span><span class="n">doFlush</span><span class="p">()</span>  <span class="c1">// calls QPaintDeviceWindowPrivate::paint()</span>
+
+    <span class="kt">bool</span> <span class="nf">paint</span><span class="p">(</span><span class="k">const</span> <span class="n">QRegion</span> <span class="o">&amp;</span><span class="n">region</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">Q_Q</span><span class="p">(</span><span class="n">QPaintDeviceWindow</span><span class="p">);</span>
+        <span class="n">QRegion</span> <span class="n">toPaint</span> <span class="o">=</span> <span class="n">region</span> <span class="o">&amp;</span> <span class="n">dirtyRegion</span><span class="p">;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">toPaint</span><span class="p">.</span><span class="n">isEmpty</span><span class="p">())</span>
+            <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+
+        <span class="c1">// Clear the region now. The overridden functions may call update().</span>
+        <span class="n">dirtyRegion</span> <span class="o">-=</span> <span class="n">toPaint</span><span class="p">;</span>
+
+        <span class="n">beginPaint</span><span class="p">(</span><span class="n">toPaint</span><span class="p">);</span> <span class="c1">// here we call QOpenGLWindowPrivate::beginPaint()</span>
+
+        <span class="n">QPaintEvent</span> <span class="n">paintEvent</span><span class="p">(</span><span class="n">toPaint</span><span class="p">);</span>
+        <span class="n">q</span><span class="o">-&gt;</span><span class="n">paintEvent</span><span class="p">(</span><span class="o">&amp;</span><span class="n">paintEvent</span><span class="p">);</span> <span class="c1">// here we call QOpenGLWindowPrivate::paintEvent()</span>
+
+        <span class="n">endPaint</span><span class="p">();</span> <span class="c1">// here we call QOpenGLWindowPrivate::endPaint()</span>
+
+        <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Alternativ wird <code>paintGL()</code> noch aus der Ereignisbehandlungsroutine <code>QPaintDeviceWindow::exposeEvent()</code> aufgerufen, wobei dort direkt <code>QPaintDeviceWindowPrivate::doFlush()</code> gerufen wird. Die Funktionen <code>beginPaint()</code> und  <code>endPaint()</code> kümmern sich um den temporären Framebuffer, in dem beim UpdateBehavior <code>QOpenGLWindow::PartialUpdateBlit</code> und <code>QOpenGLWindow::PartialUpdateBlend</code> gerendert wird. Ohne diese Modi passiert in der Funktion sehr wenig.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_initialisierung">3.2.3. Initialisierung</h4>
+<div class="paragraph">
+<p>Interessant ist noch der Initialisierungsaufruf, der in der <code>resizeEvent()</code> Ereignisbehandlungsroutine steckt.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">QOpenGLWindowPrivate</span><span class="o">::</span><span class="n">initialize</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="n">Q_Q</span><span class="p">(</span><span class="n">QOpenGLWindow</span><span class="p">);</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">context</span><span class="p">)</span>
+        <span class="k">return</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">q</span><span class="o">-&gt;</span><span class="n">handle</span><span class="p">())</span>
+        <span class="n">qWarning</span><span class="p">(</span><span class="s">"Attempted to initialize QOpenGLWindow without a platform window"</span><span class="p">);</span>
+
+    <span class="n">context</span><span class="p">.</span><span class="n">reset</span><span class="p">(</span><span class="k">new</span> <span class="n">QOpenGLContext</span><span class="p">);</span>
+    <span class="n">context</span><span class="o">-&gt;</span><span class="n">setShareContext</span><span class="p">(</span><span class="n">shareContext</span><span class="p">);</span>
+    <span class="n">context</span><span class="o">-&gt;</span><span class="n">setFormat</span><span class="p">(</span><span class="n">q</span><span class="o">-&gt;</span><span class="n">requestedFormat</span><span class="p">());</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">context</span><span class="o">-&gt;</span><span class="n">create</span><span class="p">())</span>
+        <span class="n">qWarning</span><span class="p">(</span><span class="s">"QOpenGLWindow::beginPaint: Failed to create context"</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">context</span><span class="o">-&gt;</span><span class="n">makeCurrent</span><span class="p">(</span><span class="n">q</span><span class="p">))</span>
+        <span class="n">qWarning</span><span class="p">(</span><span class="s">"QOpenGLWindow::beginPaint: Failed to make context current"</span><span class="p">);</span>
+
+    <span class="n">paintDevice</span><span class="p">.</span><span class="n">reset</span><span class="p">(</span><span class="k">new</span> <span class="n">QOpenGLWindowPaintDevice</span><span class="p">(</span><span class="n">q</span><span class="p">));</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">updateBehavior</span> <span class="o">==</span> <span class="n">QOpenGLWindow</span><span class="o">::</span><span class="n">PartialUpdateBlit</span><span class="p">)</span>
+        <span class="n">hasFboBlit</span> <span class="o">=</span> <span class="n">QOpenGLFramebufferObject</span><span class="o">::</span><span class="n">hasOpenGLFramebufferBlit</span><span class="p">();</span>
+
+    <span class="n">q</span><span class="o">-&gt;</span><span class="n">initializeGL</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Eigentlich sieht die Funktion fast genauso wie der Initialisierungsteil der Funktion <code>OpenGLWindow::renderNow()</code> aus <em>Tutorial 01</em> aus. Abgesehen natürlich davon, dass noch ein <code>QOpenGLWindowPaintDevice</code> erzeugt wird.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_zusammenfassung">3.2.4. Zusammenfassung</h4>
+<div class="paragraph">
+<p>Das <code>QOpenGLWindow</code> ist im Modus <code>QOpenGLWindow::NoPartialUpdate</code> eigentlich vergleichbar mit unserem minimalistischen <code>OpenGLWindow</code>. Etwas Overhead ist vorhanden, allerdings sollte der in realen Anwendungen keine Rolle spielen.</p>
+</div>
+</div>
 </div>
 <div class="sect2">
-<h3 id="_beispielzeichenobjekt_rectanglewindow">3.3. Beispielzeichenobjekt <code>RectangleWindow</code></h3>
-
+<h3 id="_zeichnen_mit_indexpuffern">3.3. Zeichnen mit Indexpuffern</h3>
+<div class="paragraph">
+<p>Zusätzlich</p>
+</div>
 </div>
 </div>
 </div>

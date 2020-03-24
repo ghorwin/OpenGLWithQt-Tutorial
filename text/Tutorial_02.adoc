@@ -153,5 +153,5 @@ Das `QOpenGLWindow` ist im Modus `QOpenGLWindow::NoPartialUpdate` eigentlich ver
 
 == Zeichnen mit Indexpuffern
 
-Zusätzlich 
+Als Erweiterung zum _Tutorial 01_ soll im Anwendungsbeispiel für `QOpenGLWindow` einmal ein Indexpuffer verwendet werden.
 

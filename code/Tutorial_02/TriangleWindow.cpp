@@ -12,6 +12,7 @@ License    : BSD License,
 #include "TriangleWindow.h"
 
 #include <QDebug>
+std::vector<float> vertexBufferData(2*4*3); // 2 attributes: position and color, 4 vertices, 3 floats each
 
 TriangleWindow::TriangleWindow() :
 	m_program(nullptr)
@@ -57,38 +58,73 @@ void TriangleWindow::initializeGL() {
 	// ------------------------------------------------------------------
 
 	float vertices[] = {
-		-0.5f, -0.5f, 0.0f,
-		 0.5f, -0.5f, 0.0f,
-		 0.0f,  0.5f, 0.0f
+		 0.5f,  0.5f, 0.0f,  // top right
+		 0.5f, -0.5f, 0.0f,  // bottom right
+		-0.5f, -0.5f, 0.0f,  // bottom left
+		-0.5f,  0.5f, 0.0f   // top left
+	};
+	unsigned int indices[] = {  // note that we start from 0!
+		0, 1, 3,   // first triangle
+		1, 2, 3    // second triangle
 	};
 
-	// create a new buffer for the vertices
-	m_vertexBufferObject = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer); // VBO
-	m_vertexBufferObject.create(); // create underlying OpenGL object
-	m_vertexBufferObject.setUsagePattern(QOpenGLBuffer::StaticDraw); // must be called before allocate
 
-	m_vertexBufferObject.bind(); // set it active in the context, so that we can write to it
-	// int bufSize = sizeof(vertices) = 9 * sizeof(float) = 9*4 = 36 bytes
-	m_vertexBufferObject.allocate(vertices, sizeof(vertices) ); // copy data into buffer
+	QColor vertexColors [] = {
+		QColor("#f6a509"),
+		QColor("#cb2dde"),
+		QColor("#0eeed1"),
+		QColor("#068918"),
+	};
+
+	// create a new buffer for the vertices and colors, interleaved storage
+	m_vertexBufferObject = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+	m_vertexBufferObject.create();
+	m_vertexBufferObject.setUsagePattern(QOpenGLBuffer::StaticDraw);
+	m_vertexBufferObject.bind();
+
+#if 0
+	// create new data buffer - the following memory copy stuff should
+	// be placed in some convenience class in later tutorials
+	// copy data in interleaved mode with pattern v0c0|v1c1|v2c2|v3c3
+	float * buf = vertexBufferData.data();
+	for (int v=0; v<4; ++v, buf += 6) {
+		// coordinates
+		buf[0] = vertices[3*v];
+		buf[1] = vertices[3*v+1];
+		buf[2] = vertices[3*v+2];
+		// colors
+		buf[3] = vertexColors[v].redF();
+		buf[4] = vertexColors[v].greenF();
+		buf[5] = vertexColors[v].blueF();
+	}
+#endif
+	// now copy buffer data over
+	m_vertexBufferObject.allocate(vertices, sizeof(vertices) );
+
+	// create a new buffer for the indexes
+	m_indexBufferObject = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer); // Mind: use 'IndexBuffer' here
+	m_indexBufferObject.create();
+	m_indexBufferObject.setUsagePattern(QOpenGLBuffer::StaticDraw);
+	m_indexBufferObject.bind();
+	m_indexBufferObject.allocate(indices, sizeof(indices) );
 
 	// Initialize the Vertex Array Object (VAO) to record and remember subsequent attribute assocations with
 	// generated vertex buffer(s)
 	m_vao.create(); // create underlying OpenGL object
 	m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so it monitors attribute assignments
 
-	// now all following enableAttributeArray(), disableAttributeArray() and setAttributeBuffer() calls are
-	// "recorded" in the currently bound VBA.
-
-	// Enable attribute array at layout location 0
+	// layout location 0 - vec3 with coordinates
+	int stride = 6*sizeof(float); // one vertex data set contains of 3+3 floats = stride
 	m_program->enableAttributeArray(0);
-	m_program->setAttributeBuffer(0, GL_FLOAT, 0, 3);
-	// This maps the data we have set in the VBO to the "position" attribute.
-	// 0 - offset - means the "position" data starts at the begin of the memory array
-	// 3 - size of each vertex (=vec3) - means that each position-tuple has the size of 3 floats (those are the 3 coordinates,
-	//     mind: this is the size of GL_FLOAT, not the size in bytes!
+	m_program->setAttributeBuffer(0, GL_FLOAT, 0, 3, stride);
+	// layout location 1 - vec3 with colors
+//	m_program->enableAttributeArray(1);
+//	int colorOffset = 3*sizeof(float);
+//	m_program->setAttributeBuffer(1, GL_FLOAT, colorOffset, 3, stride);
 
 	// Release (unbind) all
 	m_vertexBufferObject.release();
+//	m_indexBufferObject.release();
 	m_vao.release();
 }
 
@@ -104,11 +140,10 @@ void TriangleWindow::paintGL() {
 	// bind the vertex array object, which in turn binds the vertex buffer object and
 	// sets the attribute buffer in the OpenGL context
 	m_vao.bind();
-	// now draw the triangles:
-	// - GL_TRIANGLES - draw individual triangles
-	// - 0 index of first triangle to draw
-	// - 3 number of vertices to process
-	glDrawArrays(GL_TRIANGLES, 0, 3);
+	m_indexBufferObject.bind();
+	// now draw the two triangles via index drawing
+	// - GL_TRIANGLES - draw individual triangles via elements
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 	// finally release VAO again (not really necessary, just for completeness)
 	m_vao.release();
 }
