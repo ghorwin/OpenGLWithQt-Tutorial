@@ -7,7 +7,7 @@ Das sieht dann so (noch ziemlich langweilig) aus, reicht aber aus, um mehrere Se
 
 
 .Ausgabe: Tutorial_01 (Mac OS Screenshot)
-image::Tutorial_01_mac.png[Tutorial_01]
+image::Tutorial_01_mac.png[Tutorial_01,pdfwidth=8cm]
 
 
 [NOTE]

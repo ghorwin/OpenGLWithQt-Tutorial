@@ -109,7 +109,12 @@ table {
 <li><a href="#_zusammenfassung">3.2.4. Zusammenfassung</a></li>
 </ul>
 </li>
-<li><a href="#_zeichnen_mit_indexpuffern">3.3. Zeichnen mit Indexpuffern</a></li>
+<li><a href="#_zeichnen_mit_indexpuffern">3.3. Zeichnen mit Indexpuffern</a>
+<ul class="sectlevel3">
+<li><a href="#_initialisierung_von_gemischten_vertex_puffern">3.3.1. Initialisierung von gemischten Vertex-Puffern</a></li>
+<li><a href="#_element_indexpuffer">3.3.2. Element-/Indexpuffer</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li><a href="#_tutorial_03_renderfenster_eingebettet_in_einen_qdialog">4. Tutorial 03: Renderfenster eingebettet in einen QDialog</a></li>
@@ -1024,7 +1029,13 @@ table {
 <h2 id="_tutorial_02_alternative_die_klasse_qopenglwindow">3. Tutorial 02: Alternative: die Klasse QOpenGLWindow</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>In diesem Teil schauen wir uns die Klasse <a href="https://doc.qt.io/qt-5/qopenglwindow.html">QOpenGLWindow</a> an. Mit Hilfe dieser Klasse (die letztlich die Klasse OpenGLWindow aus dem <em>Tutorial 01</em> ersetzt) erstellen wir ein leicht modifiziertes Zeichenprogramm (2 Dreiecke, welche ein buntes Rechteck ergeben und via Element-Index-Array gezeichnet werden). Nebenbei schauen wir an, was die Klasse unter der Haube macht.</p>
+<p>In diesem Teil schauen wir uns die Klasse <a href="https://doc.qt.io/qt-5/qopenglwindow.html">QOpenGLWindow</a> an. Mit Hilfe dieser Klasse (die letztlich die Klasse OpenGLWindow aus dem <em>Tutorial 01</em> ersetzt) erstellen wir ein leicht modifiziertes Zeichenprogramm (2 Dreiecke, welche ein buntes Rechteck ergeben und via Element-Index-Array gezeichnet werden). Zuerst aber schauen wir an, was die Klasse unter der Haube macht.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/Tutorial_02_linux.png" alt="Tutorial_02">
+</div>
+<div class="title">Figure 2. Ausgabe: Tutorial_02 (Linux/Ubuntu Screenshot)</div>
 </div>
 <div class="admonitionblock tip">
 <table>
@@ -1221,14 +1232,216 @@ table {
 <div class="sect3">
 <h4 id="_zusammenfassung">3.2.4. Zusammenfassung</h4>
 <div class="paragraph">
-<p>Das <code>QOpenGLWindow</code> ist im Modus <code>QOpenGLWindow::NoPartialUpdate</code> eigentlich vergleichbar mit unserem minimalistischen <code>OpenGLWindow</code>. Etwas Overhead ist vorhanden, allerdings sollte der in realen Anwendungen keine Rolle spielen.</p>
+<p>Das <code>QOpenGLWindow</code> ist im Modus <code>QOpenGLWindow::NoPartialUpdate</code> eigentlich vergleichbar mit unserem minimalistischen <code>OpenGLWindow</code>. Etwas Overhead ist vorhanden, allerdings sollte der in realen Anwendungen keine Rolle spielen. Es spricht also eigentlich nichts dagegen, direkt mit dem <code>QOpenGLWindow</code> anzufangen. Für spätere Erweiterungen (Maus- und Tastatureingabebehandlung) ist dennoch eine von <code>QOpenGLWindow</code> abgeleitete Klasse nötig. Wenn man also die zusätzlichen Funktionen (QPainter-Zeichnen, Buffer-Blenden etc.) von <code>QOpenGLWindow</code> nicht braucht, kann man auch mit dem schlanken <code>OpenGLWindow</code> aus <em>Tutorial 01</em> weitermachen.</p>
 </div>
 </div>
 </div>
 <div class="sect2">
 <h3 id="_zeichnen_mit_indexpuffern">3.3. Zeichnen mit Indexpuffern</h3>
 <div class="paragraph">
-<p>Zusätzlich</p>
+<p>Als Erweiterung zum <em>Tutorial 01</em> soll im Anwendungsbeispiel für <code>QOpenGLWindow</code> einmal ein Indexpuffer verwendet werden. Zwei Erweiterungen werden vorgestellt:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>interleaved Vertex-Puffer (d.h. Koordinaten und Farben zusammen in einem Puffer)</p>
+</li>
+<li>
+<p>indexbasiertes Elementzeichnen (und den dafür benötigten Elementpuffer)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Die Implementierung des <code>RectangleWindow</code> ist zunächst mal fast identisch zum <code>TriangleWindow</code> aus <em>Tutorial 01</em>:</p>
+</div>
+<div class="listingblock">
+<div class="title">RectangleWindow.h</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="cm">/*	This is the window that shows the two triangles to form a rectangle.
+	We derive from our QOpenGLWindow base class and implement the
+	virtual initializeGL() and paintGL() functions.
+*/</span>
+<span class="k">class</span> <span class="nc">RectangleWindow</span> <span class="o">:</span> <span class="k">public</span> <span class="n">QOpenGLWindow</span> <span class="p">{</span>
+<span class="nl">public:</span>
+	<span class="n">RectangleWindow</span><span class="p">();</span>
+	<span class="k">virtual</span> <span class="o">~</span><span class="n">RectangleWindow</span><span class="p">()</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
+
+	<span class="kt">void</span> <span class="n">initializeGL</span><span class="p">()</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
+	<span class="kt">void</span> <span class="n">paintGL</span><span class="p">()</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
+
+<span class="nl">private:</span>
+	<span class="c1">// Wraps an OpenGL VertexArrayObject (VAO)</span>
+	<span class="n">QOpenGLVertexArrayObject</span>	<span class="n">m_vao</span><span class="p">;</span>
+	<span class="c1">// Vertex buffer (positions and colors, interleaved storage mode).</span>
+	<span class="n">QOpenGLBuffer</span>				<span class="n">m_vertexBufferObject</span><span class="p">;</span>
+	<span class="c1">// Index buffer to draw two rectangles</span>
+	<span class="n">QOpenGLBuffer</span>				<span class="n">m_indexBufferObject</span><span class="p">;</span>
+
+	<span class="c1">// Holds the compiled shader programs.</span>
+	<span class="n">QOpenGLShaderProgram</span>		<span class="o">*</span><span class="n">m_program</span><span class="p">;</span>
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die wesentlichsten Erweiterungen sind:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>die Klasse erbt von <code>QOpenGLWindow</code></p>
+</li>
+<li>
+<p>die Initialisierung erfolgt in der Funktion <code>initializeGL()</code> (vormals <code>TriangleWindow::initialize()</code>)</p>
+</li>
+<li>
+<p>das Rendern erfolgt in der Funktion <code>paintGL()</code> (vormals <code>TriangleWindow::render()</code>)</p>
+</li>
+<li>
+<p>es gibt eine neue Variable vom Typ <code>QOpenGLBuffer</code>, welche wir für den Indexpuffer verwenden.</p>
+</li>
+</ul>
+</div>
+<div class="sect3">
+<h4 id="_initialisierung_von_gemischten_vertex_puffern">3.3.1. Initialisierung von gemischten Vertex-Puffern</h4>
+<div class="paragraph">
+<p>Die Initialisierung beginnt wie in <em>Tutorial 01</em> unverändert mit dem Erstellen und Compilieren des Shaderprogramms. Nun wird der Vertex-Buffer erstellt. Diesmal werden nicht nur Koordinaten in den Buffer geschrieben, sondern auch Farben, und zwar abwechselnd (=<em>interleaved</em>) (siehe <a href="https://learnopengl.com/Getting-started/Hello-Triangle" class="bare">https://learnopengl.com/Getting-started/Hello-Triangle</a> für eine Erläuterung).</p>
+</div>
+<div class="paragraph">
+<p>Es wird ein Rechteck gezeichnet, und zwar durch zwei Dreiecke. Dafür brauchen wir 4 Punkte. Der Vertexpuffer-Speicherblock soll am Ende so aussehen: <code>p0c0|p1c1|p2c2|p3c3</code>, wobei p für eine Position (vec3) und c für eine Farbe (vec3) steht. Die Daten werden zunächst in statischen Arrays separat definiert.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="c1">// set up vertex data (and buffer(s)) and configure vertex attributes</span>
+<span class="c1">// ------------------------------------------------------------------</span>
+
+<span class="kt">float</span> <span class="n">vertices</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
+	 <span class="mf">0.8</span><span class="n">f</span><span class="p">,</span>  <span class="mf">0.8</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span>  <span class="c1">// top right</span>
+	 <span class="mf">0.8</span><span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.8</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span>  <span class="c1">// bottom right</span>
+	<span class="o">-</span><span class="mf">0.8</span><span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.8</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span>  <span class="c1">// bottom left</span>
+	<span class="o">-</span><span class="mf">0.8</span><span class="n">f</span><span class="p">,</span>  <span class="mf">0.8</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span>   <span class="c1">// top left</span>
+<span class="p">};</span>
+
+<span class="n">QColor</span> <span class="n">vertexColors</span> <span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
+	<span class="n">QColor</span><span class="p">(</span><span class="s">"#f6a509"</span><span class="p">),</span>
+	<span class="n">QColor</span><span class="p">(</span><span class="s">"#cb2dde"</span><span class="p">),</span>
+	<span class="n">QColor</span><span class="p">(</span><span class="s">"#0eeed1"</span><span class="p">),</span>
+	<span class="n">QColor</span><span class="p">(</span><span class="s">"#068918"</span><span class="p">),</span>
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die noch getrennten Daten werden jetzt in einen gemeinsamen Speicherbereich kopiert.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="c1">// create buffer for 2 interleaved attributes: position and color, 4 vertices, 3 floats each</span>
+<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span> <span class="n">vertexBufferData</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="mi">4</span><span class="o">*</span><span class="mi">3</span><span class="p">);</span>
+<span class="c1">// create new data buffer - the following memory copy stuff should</span>
+<span class="c1">// be placed in some convenience class in later tutorials</span>
+<span class="c1">// copy data in interleaved mode with pattern p0c0|p1c1|p2c2|p3c3</span>
+<span class="kt">float</span> <span class="o">*</span> <span class="n">buf</span> <span class="o">=</span> <span class="n">vertexBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">();</span>
+<span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">v</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">v</span><span class="o">&lt;</span><span class="mi">4</span><span class="p">;</span> <span class="o">++</span><span class="n">v</span><span class="p">,</span> <span class="n">buf</span> <span class="o">+=</span> <span class="mi">6</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// coordinates</span>
+	<span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">vertices</span><span class="p">[</span><span class="mi">3</span><span class="o">*</span><span class="n">v</span><span class="p">];</span>
+	<span class="n">buf</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">vertices</span><span class="p">[</span><span class="mi">3</span><span class="o">*</span><span class="n">v</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>
+	<span class="n">buf</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">vertices</span><span class="p">[</span><span class="mi">3</span><span class="o">*</span><span class="n">v</span><span class="o">+</span><span class="mi">2</span><span class="p">];</span>
+	<span class="c1">// colors</span>
+	<span class="n">buf</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">vertexColors</span><span class="p">[</span><span class="n">v</span><span class="p">].</span><span class="n">redF</span><span class="p">();</span>
+	<span class="n">buf</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">vertexColors</span><span class="p">[</span><span class="n">v</span><span class="p">].</span><span class="n">greenF</span><span class="p">();</span>
+	<span class="n">buf</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="n">vertexColors</span><span class="p">[</span><span class="n">v</span><span class="p">].</span><span class="n">blueF</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Es gibt sicher viele andere Varianten, die Daten in der gewünschten Reihenfolge in den Speicherblock zu kopieren. Es fällt vielleicht auf, dass der gemeinsame Pufferspeicher in einem lokal erstellen <code>std::vector</code> liegt. Das wirft die Frage nach der (benötigten) Lebensdauer für diese Pufferspeicher auf.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="c1">// create a new buffer for the vertices and colors, interleaved storage</span>
+<span class="n">m_vertexBufferObject</span> <span class="o">=</span> <span class="n">QOpenGLBuffer</span><span class="p">(</span><span class="n">QOpenGLBuffer</span><span class="o">::</span><span class="n">VertexBuffer</span><span class="p">);</span>
+<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>
+<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">setUsagePattern</span><span class="p">(</span><span class="n">QOpenGLBuffer</span><span class="o">::</span><span class="n">StaticDraw</span><span class="p">);</span>
+<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+
+<span class="c1">// now copy buffer data over: first argument pointer to data, second argument: size in bytes</span>
+<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">vertexBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span> <span class="n">vertexBufferData</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="o">*</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">)</span> <span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Im letzten Aufruf wird der Pufferspeicher tatsächlich <em>kopiert</em>. Der Aufruf zu <code>allocate()</code> ist sowohl Speicherreservierung im OpenGL-Puffer, als auch kopieren der Daten (wie mit <code>memcpy</code>).</p>
+</div>
+<div class="paragraph">
+<p>Danach wird der Vector <code>vertexBufferData</code> nicht mehr benötigt, oder könnte sogar für weitere Puffer verwendet und verändert werden.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_element_indexpuffer">3.3.2. Element-/Indexpuffer</h4>
+<div class="paragraph">
+<p>In ähnlicher Weise wird nun der Elementpuffer erstellt, allerdings gibt es eine OpenGL-Besonderheit zu beachten:</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Das <em>Vertex Array Object</em> verwaltet nicht nur die Attribute, sondern auch gebundene Puffer. Daher muss das VAO <em>vor</em> dem Elementpuffer gebunden werden, um dann den Zustand korrekt zu speichern.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Deshalb wird nun zuerst das VAO erstellt und gebunden (kann man auch ganz am Anfang machen)</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="c1">// create and bind Vertex Array Object - must be bound *before* the element buffer is bound,</span>
+<span class="c1">// because the VAO remembers and manages element buffers as well</span>
+<span class="n">m_vao</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>
+<span class="n">m_vao</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>und dann erst der Elementpuffer erzeugt:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">indices</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>  <span class="c1">// note that we start from 0!</span>
+	<span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span>   <span class="c1">// first triangle</span>
+	<span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span>    <span class="c1">// second triangle</span>
+<span class="p">};</span>
+
+<span class="c1">// create a new buffer for the indexes</span>
+<span class="n">m_indexBufferObject</span> <span class="o">=</span> <span class="n">QOpenGLBuffer</span><span class="p">(</span><span class="n">QOpenGLBuffer</span><span class="o">::</span><span class="n">IndexBuffer</span><span class="p">);</span> <span class="c1">// Mind: use 'IndexBuffer' here</span>
+<span class="n">m_indexBufferObject</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>
+<span class="n">m_indexBufferObject</span><span class="p">.</span><span class="n">setUsagePattern</span><span class="p">(</span><span class="n">QOpenGLBuffer</span><span class="o">::</span><span class="n">StaticDraw</span><span class="p">);</span>
+<span class="n">m_indexBufferObject</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+<span class="n">m_indexBufferObject</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span> <span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Qt (und auch OpenGL) unterscheidet nicht zwischen Pufferobjekten für verschiedene Aufgaben. Erst beim Binden des Puffers an den OpenGL Kontext (beispielsweise durch den Aufruf <code>glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);</code>) wird die Verwendung des Puffers festgelegt.</p>
+</div>
+<div class="paragraph">
+<p>In Qt muss man die Art des Puffers als Construktor-Argument übergeben, wobei <code>QOpenGLBuffer::VertexBuffer</code> der Standard ist. Für den Index-/Elementpuffer muss man <code>QOpenGLBuffer::IndexBuffer</code> übergeben.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Wie gesagt, es ist lediglich die Reihenfolge des Bindens wichtig, also man könnte auch die Puffer erst erstellen und befüllen und zum Schluss die</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </div>
 </div>
 </div>

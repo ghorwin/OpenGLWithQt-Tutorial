@@ -23,11 +23,11 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11
 
 SOURCES += \
-		main.cpp \
-		TriangleWindow.cpp
+		RectangleWindow.cpp \
+		main.cpp
 
 HEADERS += \
-		TriangleWindow.h
+	RectangleWindow.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

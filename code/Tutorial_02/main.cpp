@@ -9,7 +9,7 @@ License    : BSD License,
 
 ************************************************************************************/
 
-#include "TriangleWindow.h"
+#include "RectangleWindow.h"
 
 #include <QApplication>
 #include <QSurfaceFormat>
@@ -23,7 +23,7 @@ int main(int argc, char **argv) {
 	format.setProfile(QSurfaceFormat::CoreProfile);
 	format.setVersion(3,3);
 
-	TriangleWindow window;
+	RectangleWindow window;
 	// Note: The format must be set before show() is called.
 	window.setFormat(format);
 	window.resize(640, 480);

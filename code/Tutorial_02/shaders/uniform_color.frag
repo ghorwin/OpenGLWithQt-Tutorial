@@ -2,8 +2,9 @@
 
 // fragment shader
 
-out vec4 FragColor;  // output: final color value as rgba-value
+in vec4 fragColor;
+out vec4 finalColor;  // output: final color value as rgba-value
 
 void main() {
-  FragColor = vec4(0.8, 0.2, 0.1, 1);
+  finalColor = fragColor;
 }

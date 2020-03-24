@@ -9,18 +9,17 @@ License    : BSD License,
 
 ************************************************************************************/
 
-#include "TriangleWindow.h"
+#include "RectangleWindow.h"
 
 #include <QDebug>
-std::vector<float> vertexBufferData(2*4*3); // 2 attributes: position and color, 4 vertices, 3 floats each
 
-TriangleWindow::TriangleWindow() :
+RectangleWindow::RectangleWindow() :
 	m_program(nullptr)
 {
 }
 
 
-TriangleWindow::~TriangleWindow() {
+RectangleWindow::~RectangleWindow() {
 	// resource cleanup
 
 	// since we release resources related to an OpenGL context,
@@ -30,11 +29,12 @@ TriangleWindow::~TriangleWindow() {
 	// resource cleanup
 	m_vao.destroy();
 	m_vertexBufferObject.destroy();
+	m_indexBufferObject.destroy();
 	delete m_program;
 }
 
 
-void TriangleWindow::initializeGL() {
+void RectangleWindow::initializeGL() {
 	// this function is called once, when the window is first shown, i.e. when
 	// the the window content is first rendered
 
@@ -58,14 +58,10 @@ void TriangleWindow::initializeGL() {
 	// ------------------------------------------------------------------
 
 	float vertices[] = {
-		 0.5f,  0.5f, 0.0f,  // top right
-		 0.5f, -0.5f, 0.0f,  // bottom right
-		-0.5f, -0.5f, 0.0f,  // bottom left
-		-0.5f,  0.5f, 0.0f   // top left
-	};
-	unsigned int indices[] = {  // note that we start from 0!
-		0, 1, 3,   // first triangle
-		1, 2, 3    // second triangle
+		 0.8f,  0.8f, 0.0f,  // top right
+		 0.8f, -0.8f, 0.0f,  // bottom right
+		-0.8f, -0.8f, 0.0f,  // bottom left
+		-0.8f,  0.8f, 0.0f   // top left
 	};
 
 	QColor vertexColors [] = {
@@ -75,21 +71,11 @@ void TriangleWindow::initializeGL() {
 		QColor("#068918"),
 	};
 
-	// Initialize the Vertex Array Object (VAO) to record and remember subsequent attribute assocations with
-	// generated vertex buffer(s)
-	m_vao.create(); // create underlying OpenGL object
-	m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so it monitors attribute assignments
-
-	// create a new buffer for the vertices and colors, interleaved storage
-	m_vertexBufferObject = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
-	m_vertexBufferObject.create();
-	m_vertexBufferObject.setUsagePattern(QOpenGLBuffer::StaticDraw);
-	m_vertexBufferObject.bind();
-
-#if 0
+	// create buffer for 2 interleaved attributes: position and color, 4 vertices, 3 floats each
+	std::vector<float> vertexBufferData(2*4*3);
 	// create new data buffer - the following memory copy stuff should
 	// be placed in some convenience class in later tutorials
-	// copy data in interleaved mode with pattern v0c0|v1c1|v2c2|v3c3
+	// copy data in interleaved mode with pattern p0c0|p1c1|p2c2|p3c3
 	float * buf = vertexBufferData.data();
 	for (int v=0; v<4; ++v, buf += 6) {
 		// coordinates
@@ -101,9 +87,24 @@ void TriangleWindow::initializeGL() {
 		buf[4] = vertexColors[v].greenF();
 		buf[5] = vertexColors[v].blueF();
 	}
-#endif
-	// now copy buffer data over
-	m_vertexBufferObject.allocate(vertices, sizeof(vertices) );
+
+	// create a new buffer for the vertices and colors, interleaved storage
+	m_vertexBufferObject = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+	m_vertexBufferObject.create();
+	m_vertexBufferObject.setUsagePattern(QOpenGLBuffer::StaticDraw);
+	m_vertexBufferObject.bind();
+	// now copy buffer data over: first argument pointer to data, second argument: size in bytes
+	m_vertexBufferObject.allocate(vertexBufferData.data(), vertexBufferData.size()*sizeof(float) );
+
+	// create and bind Vertex Array Object - must be bound *before* the element buffer is bound,
+	// because the VAO remembers and manages element buffers as well
+	m_vao.create();
+	m_vao.bind();
+
+	unsigned int indices[] = {  // note that we start from 0!
+		0, 1, 3,   // first triangle
+		1, 2, 3    // second triangle
+	};
 
 	// create a new buffer for the indexes
 	m_indexBufferObject = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer); // Mind: use 'IndexBuffer' here
@@ -112,15 +113,14 @@ void TriangleWindow::initializeGL() {
 	m_indexBufferObject.bind();
 	m_indexBufferObject.allocate(indices, sizeof(indices) );
 
-
 	// layout location 0 - vec3 with coordinates
-//	int stride = 6*sizeof(float); // one vertex data set contains of 3+3 floats = stride
+	int stride = 6*sizeof(float); // one vertex data set contains of 3+3 floats = stride
 	m_program->enableAttributeArray(0);
-	m_program->setAttributeBuffer(0, GL_FLOAT, 0, 3);
+	m_program->setAttributeBuffer(0, GL_FLOAT, 0, 3, stride);
 	// layout location 1 - vec3 with colors
-//	m_program->enableAttributeArray(1);
-//	int colorOffset = 3*sizeof(float);
-//	m_program->setAttributeBuffer(1, GL_FLOAT, colorOffset, 3, stride);
+	m_program->enableAttributeArray(1);
+	int colorOffset = 3*sizeof(float);
+	m_program->setAttributeBuffer(1, GL_FLOAT, colorOffset, 3, stride);
 
 	// Release (unbind) all
 	m_vertexBufferObject.release();
@@ -129,7 +129,7 @@ void TriangleWindow::initializeGL() {
 }
 
 
-void TriangleWindow::paintGL() {
+void RectangleWindow::paintGL() {
 
 	// set the background color = clear color
 	glClearColor(0.1f, 0.1f, 0.2f, 1.0f);

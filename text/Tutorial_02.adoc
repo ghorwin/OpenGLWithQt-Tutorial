@@ -1,7 +1,10 @@
 :imagesdir: ./images
 = Tutorial 02: Alternative: die Klasse QOpenGLWindow
 
-In diesem Teil schauen wir uns die Klasse https://doc.qt.io/qt-5/qopenglwindow.html[QOpenGLWindow] an. Mit Hilfe dieser Klasse (die letztlich die Klasse OpenGLWindow aus dem _Tutorial 01_ ersetzt) erstellen wir ein leicht modifiziertes Zeichenprogramm (2 Dreiecke, welche ein buntes Rechteck ergeben und via Element-Index-Array gezeichnet werden). Nebenbei schauen wir an, was die Klasse unter der Haube macht.
+In diesem Teil schauen wir uns die Klasse https://doc.qt.io/qt-5/qopenglwindow.html[QOpenGLWindow] an. Mit Hilfe dieser Klasse (die letztlich die Klasse OpenGLWindow aus dem _Tutorial 01_ ersetzt) erstellen wir ein leicht modifiziertes Zeichenprogramm (2 Dreiecke, welche ein buntes Rechteck ergeben und via Element-Index-Array gezeichnet werden). Zuerst aber schauen wir an, was die Klasse unter der Haube macht.
+
+.Ausgabe: Tutorial_02 (Linux/Ubuntu Screenshot)
+image::Tutorial_02_linux.png[Tutorial_02,pdfwidth=8cm]
 
 [TIP]
 ====
@@ -149,9 +152,157 @@ Eigentlich sieht die Funktion fast genauso wie der Initialisierungsteil der Funk
 
 === Zusammenfassung
 
-Das `QOpenGLWindow` ist im Modus `QOpenGLWindow::NoPartialUpdate` eigentlich vergleichbar mit unserem minimalistischen `OpenGLWindow`. Etwas Overhead ist vorhanden, allerdings sollte der in realen Anwendungen keine Rolle spielen. 
+Das `QOpenGLWindow` ist im Modus `QOpenGLWindow::NoPartialUpdate` eigentlich vergleichbar mit unserem minimalistischen `OpenGLWindow`. Etwas Overhead ist vorhanden, allerdings sollte der in realen Anwendungen keine Rolle spielen. Es spricht also eigentlich nichts dagegen, direkt mit dem `QOpenGLWindow` anzufangen. Für spätere Erweiterungen (Maus- und Tastatureingabebehandlung) ist dennoch eine von `QOpenGLWindow` abgeleitete Klasse nötig. Wenn man also die zusätzlichen Funktionen (QPainter-Zeichnen, Buffer-Blenden etc.) von `QOpenGLWindow` nicht braucht, kann man auch mit dem schlanken `OpenGLWindow` aus _Tutorial 01_ weitermachen.
 
 == Zeichnen mit Indexpuffern
 
-Als Erweiterung zum _Tutorial 01_ soll im Anwendungsbeispiel für `QOpenGLWindow` einmal ein Indexpuffer verwendet werden.
+Als Erweiterung zum _Tutorial 01_ soll im Anwendungsbeispiel für `QOpenGLWindow` einmal ein Indexpuffer verwendet werden. Zwei Erweiterungen werden vorgestellt:
 
+- interleaved Vertex-Puffer (d.h. Koordinaten und Farben zusammen in einem Puffer)
+- indexbasiertes Elementzeichnen (und den dafür benötigten Elementpuffer)
+
+Die Implementierung des `RectangleWindow` ist zunächst mal fast identisch zum `TriangleWindow` aus __Tutorial 01__:
+
+.RectangleWindow.h
+[source,c++]
+----
+/*	This is the window that shows the two triangles to form a rectangle.
+	We derive from our QOpenGLWindow base class and implement the
+	virtual initializeGL() and paintGL() functions.
+*/
+class RectangleWindow : public QOpenGLWindow {
+public:
+	RectangleWindow();
+	virtual ~RectangleWindow() Q_DECL_OVERRIDE;
+
+	void initializeGL() Q_DECL_OVERRIDE;
+	void paintGL() Q_DECL_OVERRIDE;
+
+private:
+	// Wraps an OpenGL VertexArrayObject (VAO)
+	QOpenGLVertexArrayObject	m_vao;
+	// Vertex buffer (positions and colors, interleaved storage mode).
+	QOpenGLBuffer				m_vertexBufferObject;
+	// Index buffer to draw two rectangles
+	QOpenGLBuffer				m_indexBufferObject;
+
+	// Holds the compiled shader programs.
+	QOpenGLShaderProgram		*m_program;
+};
+----
+
+Die wesentlichsten Erweiterungen sind:
+
+- die Klasse erbt von `QOpenGLWindow`
+- die Initialisierung erfolgt in der Funktion `initializeGL()` (vormals `TriangleWindow::initialize()`)
+- das Rendern erfolgt in der Funktion `paintGL()` (vormals `TriangleWindow::render()`)
+- es gibt eine neue Variable vom Typ `QOpenGLBuffer`, welche wir für den Indexpuffer verwenden.
+
+=== Initialisierung von gemischten Vertex-Puffern
+
+Die Initialisierung beginnt wie in _Tutorial 01_ unverändert mit dem Erstellen und Compilieren des Shaderprogramms. Nun wird der Vertex-Buffer erstellt. Diesmal werden nicht nur Koordinaten in den Buffer geschrieben, sondern auch Farben, und zwar abwechselnd (=_interleaved_) (siehe https://learnopengl.com/Getting-started/Hello-Triangle für eine Erläuterung).
+
+Es wird ein Rechteck gezeichnet, und zwar durch zwei Dreiecke. Dafür brauchen wir 4 Punkte. Der Vertexpuffer-Speicherblock soll am Ende so aussehen: `p0c0|p1c1|p2c2|p3c3`, wobei p für eine Position (vec3) und c für eine Farbe (vec3) steht. Die Daten werden zunächst in statischen Arrays separat definiert.
+
+[source,c++]
+----
+// set up vertex data (and buffer(s)) and configure vertex attributes
+// ------------------------------------------------------------------
+
+float vertices[] = {
+	 0.8f,  0.8f, 0.0f,  // top right
+	 0.8f, -0.8f, 0.0f,  // bottom right
+	-0.8f, -0.8f, 0.0f,  // bottom left
+	-0.8f,  0.8f, 0.0f   // top left
+};
+
+QColor vertexColors [] = {
+	QColor("#f6a509"),
+	QColor("#cb2dde"),
+	QColor("#0eeed1"),
+	QColor("#068918"),
+};
+----
+
+Die noch getrennten Daten werden jetzt in einen gemeinsamen Speicherbereich kopiert.
+
+[source,c++]
+----
+// create buffer for 2 interleaved attributes: position and color, 4 vertices, 3 floats each
+std::vector<float> vertexBufferData(2*4*3);
+// create new data buffer - the following memory copy stuff should
+// be placed in some convenience class in later tutorials
+// copy data in interleaved mode with pattern p0c0|p1c1|p2c2|p3c3
+float * buf = vertexBufferData.data();
+for (int v=0; v<4; ++v, buf += 6) {
+	// coordinates
+	buf[0] = vertices[3*v];
+	buf[1] = vertices[3*v+1];
+	buf[2] = vertices[3*v+2];
+	// colors
+	buf[3] = vertexColors[v].redF();
+	buf[4] = vertexColors[v].greenF();
+	buf[5] = vertexColors[v].blueF();
+}
+----
+
+Es gibt sicher viele andere Varianten, die Daten in der gewünschten Reihenfolge in den Speicherblock zu kopieren. Es fällt vielleicht auf, dass der gemeinsame Pufferspeicher in einem lokal erstellen `std::vector` liegt. Das wirft die Frage nach der (benötigten) Lebensdauer für diese Pufferspeicher auf. 
+
+[source,c++]
+----
+// create a new buffer for the vertices and colors, interleaved storage
+m_vertexBufferObject = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
+m_vertexBufferObject.create();
+m_vertexBufferObject.setUsagePattern(QOpenGLBuffer::StaticDraw);
+m_vertexBufferObject.bind();
+
+// now copy buffer data over: first argument pointer to data, second argument: size in bytes
+m_vertexBufferObject.allocate(vertexBufferData.data(), vertexBufferData.size()*sizeof(float) );
+----
+
+Im letzten Aufruf wird der Pufferspeicher tatsächlich _kopiert_. Der Aufruf zu `allocate()` ist sowohl Speicherreservierung im OpenGL-Puffer, als auch kopieren der Daten (wie mit `memcpy`).
+
+Danach wird der Vector `vertexBufferData` nicht mehr benötigt, oder könnte sogar für weitere Puffer verwendet und verändert werden. 
+
+=== Element-/Indexpuffer
+In ähnlicher Weise wird nun der Elementpuffer erstellt, allerdings gibt es eine OpenGL-Besonderheit zu beachten:
+[IMPORTANT]
+====
+Das _Vertex Array Object_ verwaltet nicht nur die Attribute, sondern auch gebundene Puffer. Daher muss das VAO _vor_ dem Elementpuffer gebunden werden, um dann den Zustand korrekt zu speichern.
+====
+
+Deshalb wird nun zuerst das VAO erstellt und gebunden (kann man auch ganz am Anfang machen)
+
+[source,c++]
+----
+// create and bind Vertex Array Object - must be bound *before* the element buffer is bound,
+// because the VAO remembers and manages element buffers as well
+m_vao.create();
+m_vao.bind();
+----
+
+und dann erst der Elementpuffer erzeugt:
+
+[source,c++]
+----
+unsigned int indices[] = {  // note that we start from 0!
+	0, 1, 3,   // first triangle
+	1, 2, 3    // second triangle
+};
+
+// create a new buffer for the indexes
+m_indexBufferObject = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer); // Mind: use 'IndexBuffer' here
+m_indexBufferObject.create();
+m_indexBufferObject.setUsagePattern(QOpenGLBuffer::StaticDraw);
+m_indexBufferObject.bind();
+m_indexBufferObject.allocate(indices, sizeof(indices) );
+----
+
+Qt (und auch OpenGL) unterscheidet nicht zwischen Pufferobjekten für verschiedene Aufgaben. Erst beim Binden des Puffers an den OpenGL Kontext (beispielsweise durch den Aufruf `glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);`) wird die Verwendung des Puffers festgelegt.
+
+In Qt muss man die Art des Puffers als Construktor-Argument übergeben, wobei `QOpenGLBuffer::VertexBuffer` der Standard ist. Für den Index-/Elementpuffer muss man `QOpenGLBuffer::IndexBuffer` übergeben.
+
+[NOTE]
+====
+Wie gesagt, es ist lediglich die Reihenfolge des Bindens wichtig, also man könnte auch die Puffer erst erstellen und befüllen und zum Schluss die 
+====

@@ -9,22 +9,22 @@ License    : BSD License,
 
 ************************************************************************************/
 
-#ifndef TriangleWindow_H
-#define TriangleWindow_H
+#ifndef RectangleWindow_H
+#define RectangleWindow_H
 
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLWindow>
 
-/*	This is the window that shows the triangle.
+/*	This is the window that shows the two triangles to form a rectangle.
 	We derive from our QOpenGLWindow base class and implement the
 	virtual initializeGL() and paintGL() functions.
 */
-class TriangleWindow : public QOpenGLWindow {
+class RectangleWindow : public QOpenGLWindow {
 public:
-	TriangleWindow();
-	virtual ~TriangleWindow() Q_DECL_OVERRIDE;
+	RectangleWindow();
+	virtual ~RectangleWindow() Q_DECL_OVERRIDE;
 
 	void initializeGL() Q_DECL_OVERRIDE;
 	void paintGL() Q_DECL_OVERRIDE;
@@ -41,4 +41,4 @@ private:
 	QOpenGLShaderProgram		*m_program;
 };
 
-#endif // TriangleWindow_H
+#endif // RectangleWindow_H
