@@ -79,7 +79,7 @@ table {
 <li><a href="#_grundlagen">1.3. Grundlagen</a></li>
 </ul>
 </li>
-<li><a href="#_teil_1_opengl_innerhalb_eines_qwindow">2. Teil 1: OpenGL innerhalb eines QWindow</a>
+<li><a href="#_tutorial_01_opengl_innerhalb_eines_qwindow">2. Tutorial 01: OpenGL innerhalb eines QWindow</a>
 <ul class="sectlevel2">
 <li><a href="#_qwidget_näher_betrachtet">2.1. QWidget näher betrachtet</a></li>
 <li><a href="#_allgemeingültige_basisklasse_für_opengl_render_fenster">2.2. Allgemeingültige Basisklasse für OpenGL-Render-Fenster</a>
@@ -92,11 +92,24 @@ table {
 <li><a href="#_shaderprogramme">2.3.1. Shaderprogramme</a></li>
 <li><a href="#_vertex_buffer_objekte_vbo_und_vertex_array_objekte_vba">2.3.2. Vertex-Buffer-Objekte (VBO) und Vertex-Array-Objekte (VBA)</a></li>
 <li><a href="#_rendern">2.3.3. Rendern</a></li>
+<li><a href="#_resourcenfreigabe">2.3.4. Resourcenfreigabe</a></li>
 </ul>
 </li>
 <li><a href="#_das_hauptprogramm">2.4. Das Hauptprogramm</a></li>
 </ul>
 </li>
+<li><a href="#_tutorial_02_alternative_die_klasse_qopenglwindow">3. Tutorial 02: Alternative: die Klasse QOpenGLWindow</a>
+<ul class="sectlevel2">
+<li><a href="#_verwendung_der_klasse">3.1. Verwendung der Klasse</a></li>
+<li><a href="#_die_implementierung_der_klasse_qopenglwindow">3.2. Die Implementierung der Klasse QOpenGLWindow</a>
+<ul class="sectlevel3">
+<li><a href="#_konstruktor">3.2.1. Konstruktor</a></li>
+</ul>
+</li>
+<li><a href="#_beispielzeichenobjekt_rectanglewindow">3.3. Beispielzeichenobjekt <code>RectangleWindow</code></a></li>
+</ul>
+</li>
+<li><a href="#_tutorial_03_renderfenster_eingebettet_in_einen_qdialog">4. Tutorial 03: Renderfenster eingebettet in einen QDialog</a></li>
 </ul>
 </div>
 </div>
@@ -111,7 +124,7 @@ table {
 <p>Es gibt eine PDF-Version des Tutorials:</p>
 </div>
 <div class="paragraph">
-<p><a href="https://github.com/ghorwin/OpenGLWithQt-Tutorial/blob/master/docs/OpenGLQtTutorial.pdf" class="bare">https://github.com/ghorwin/OpenGLWithQt-Tutorial/blob/master/docs/OpenGLQtTutorial.pdf</a></p>
+<p><a href="https://github.com/ghorwin/OpenGLWithQt-Tutorial/raw/master/docs/OpenGLQtTutorial.pdf" class="bare">https://github.com/ghorwin/OpenGLWithQt-Tutorial/raw/master/docs/OpenGLQtTutorial.pdf</a></p>
 </div>
 <div class="sect2">
 <h3 id="_kernthemen">1.1. Kernthemen</h3>
@@ -134,6 +147,23 @@ table {
 </li>
 </ul>
 </div>
+<div class="paragraph">
+<p>Es wird eine hinreichend aktuelle Qt-Version vorausgesetzt, mindestens <strong>Qt 5.4</strong>. Bei meinem Ubuntu 18.04 System ist Qt 5.9 dabei, das dürfte also eine gute Basisversion für dieses Tutorial sein. Funktionen neuerer Qt Versionen betrachte ich nicht.</p>
+</div>
+<div class="admonitionblock caution">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-caution" title="Caution"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Qt enthält aus Kompatibilitätsgründen noch eine Reihe von OpenGL-Implementierungsklassen (im OpenGL Modul), welche alle mit <code>QGL...</code> beginnen. Diese sind veraltet und sollten in neuen Programmen nicht mehr verwendet werden. In aktuellen Qt Programmen sind die Hilfsklassen für OpenGL-Fenster im GUI-Modul enthalten.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </div>
 <div class="sect2">
 <h3 id="_plattformunterstützung_und_opengl_version">1.2. Plattformunterstützung und OpenGL-Version</h3>
@@ -142,6 +172,9 @@ table {
 </div>
 <div class="paragraph">
 <p>Hinsichtlich der OpenGL-Version wird Mac-bedingt Version 3.3 angepeilt. Hinsichtlich der Einbettung von OpenGL in Qt Widgets-Anwendungen spielt die OpenGL-Version eigentlich keine Rolle.</p>
+</div>
+<div class="paragraph">
+<p>Im Rahmen dieses Tutorials wird für die Beispiele das Qt bzw. qmake Buildsystem verwendet. Das Thema <em>Compilieren mit CMake</em> und <em>Deployment von OpenGL-basierten Anwendungen</em> wird in einem speziellen Tutorial erklärt.</p>
 </div>
 </div>
 <div class="sect2">
@@ -176,7 +209,7 @@ table {
 </div>
 </div>
 <div class="sect1">
-<h2 id="_teil_1_opengl_innerhalb_eines_qwindow">2. Teil 1: OpenGL innerhalb eines QWindow</h2>
+<h2 id="_tutorial_01_opengl_innerhalb_eines_qwindow">2. Tutorial 01: OpenGL innerhalb eines QWindow</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Das Ziel ist erstmal einfach: ein einfarbiges Dreieck mit OpenGL in einem <code>QWindow</code> zu zeichnen.</p>
@@ -337,7 +370,6 @@ table {
 	<span class="kt">bool</span> <span class="n">event</span><span class="p">(</span><span class="n">QEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">)</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
 	<span class="kt">void</span> <span class="n">exposeEvent</span><span class="p">(</span><span class="n">QExposeEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">)</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
 
-<span class="nl">private:</span>
 	<span class="n">QOpenGLContext</span> <span class="o">*</span><span class="n">m_context</span><span class="p">;</span> <span class="c1">// wraps the OpenGL context</span>
 <span class="p">};</span></code></pre>
 </div>
@@ -549,13 +581,13 @@ table {
 <span class="k">class</span> <span class="nc">TriangleWindow</span> <span class="o">:</span> <span class="k">public</span> <span class="n">OpenGLWindow</span> <span class="p">{</span>
 <span class="nl">public:</span>
 	<span class="n">TriangleWindow</span><span class="p">();</span>
-	<span class="o">~</span><span class="n">TriangleWindow</span><span class="p">();</span>
+	<span class="o">~</span><span class="n">TriangleWindow</span><span class="p">()</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
 
 	<span class="kt">void</span> <span class="n">initialize</span><span class="p">()</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
 	<span class="kt">void</span> <span class="n">render</span><span class="p">()</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
 
 <span class="nl">private:</span>
-	<span class="c1">// Wraps an OpenGL VertexArrayObject (VAO), that holds the vertex buffer.</span>
+	<span class="c1">// Wraps an OpenGL VertexArrayObject (VAO)</span>
 	<span class="n">QOpenGLVertexArrayObject</span>	<span class="n">m_vao</span><span class="p">;</span>
 	<span class="c1">// Vertex buffer (only positions now).</span>
 	<span class="n">QOpenGLBuffer</span>				<span class="n">m_vertexBufferObject</span><span class="p">;</span>
@@ -922,7 +954,34 @@ table {
 </div>
 </div>
 <div class="paragraph">
-<p>Ist also ziemlich ähnlich. Damit wäre dann die Implementierung des <code>TriangleWindow</code> komplett.</p>
+<p>Ist also ziemlich ähnlich.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_resourcenfreigabe">2.3.4. Resourcenfreigabe</h4>
+<div class="paragraph">
+<p>Bleibt noch das Aufräumen der reservierten Resourcen im Destructor.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">TriangleWindow</span><span class="o">::~</span><span class="n">TriangleWindow</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// resource cleanup</span>
+
+	<span class="c1">// since we release resources related to an OpenGL context,</span>
+	<span class="c1">// we make this context current before cleaning up our resources</span>
+	<span class="n">m_context</span><span class="o">-&gt;</span><span class="n">makeCurrent</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">destroy</span><span class="p">();</span>
+	<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">destroy</span><span class="p">();</span>
+	<span class="k">delete</span> <span class="n">m_program</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Da einige Resourcen dem OpenGL-Kontext des aktuellen Fenster gehören, sollte man vorher den OpenGL-Kontext "aktuell" setzen (<code>m_context-&gt;makeCurrent(this);</code>), damit diese Resourcen sicher freigegeben werden können.</p>
+</div>
+<div class="paragraph">
+<p>Damit wäre dann die Implementierung des <code>TriangleWindow</code> komplett.</p>
 </div>
 </div>
 </div>
@@ -953,8 +1012,135 @@ table {
 </div>
 </div>
 <div class="paragraph">
-<p>Das wäre dann erstmal eine Grundlage, auf der man aufbauen kann. Allerdings fehlt noch die Einbettung der <code>QWindow</code>-basierten Renderklasse in eine Widgets-Anwendung. Das machen wir in Tutorial 02.</p>
+<p>Das wäre dann erstmal eine Grundlage, auf der man aufbauen kann. Interessanterweise bietet Qt selbst eine Klasse an, die unserer OpenGLWindow-Klasse nicht unähnlich ist. Diese schauen wir uns in <em>Tutorial 02</em> an.</p>
 </div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tutorial_02_alternative_die_klasse_qopenglwindow">3. Tutorial 02: Alternative: die Klasse QOpenGLWindow</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In diesem Teil schauen wir uns die Klasse <a href="https://doc.qt.io/qt-5/qopenglwindow.html">QOpenGLWindow</a> an. Mit Hilfe dieser Klasse (die letztlich die Klasse OpenGLWindow aus dem <em>Tutorial 01</em> ersetzt) erstellen wir ein leicht modifiziertes Zeichenprogramm (2 Dreiecke, welche ein buntes Rechteck ergeben und via Element-Index-Array gezeichnet werden). Nebenbei schauen wir an, was die Klasse unter der Haube macht.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Wer mit der Funktionalität des OpenGLWindows aus <em>Tutorial 01</em> zufrieden ist, kann gleich mit <em>Tutorial 03</em> weitermachen.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_verwendung_der_klasse">3.1. Verwendung der Klasse</h3>
+<div class="paragraph">
+<p>Eine interessante Eigenschaft des <code>QOpenGLWindow</code> ist die Möglichkeit, nur einen Teil des Fensters neu zu zeichnen. Das wird über die <code>UpdateBehavior</code>-Eigenschaft gesteuert. Interessant ist das eigentlich nur, wenn man mittels rasterbasiertem QPainter Teile des Bildes aktualisieren möchte. Es gibt 3 Varianten:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>QOpenGLWindow::NoPartialUpdate</code> - das gesamte Bild wird jedes Mal neu gezeichnet (es wird kein zusätzlicher Framebuffer erzeugt und verwendet)</p>
+</li>
+<li>
+<p><code>QOpenGLWindow::PartialUpdateBlit</code> - man zeichnet nur einen Teil des Bildes neu, und das in einem zusätzlichen, automatisch erstellten Framebuffer. Nach Ende des Zeichnens wird einfach der neu gezeichnete Teil in den eigentlichen Framebuffer kopiert.</p>
+</li>
+<li>
+<p><code>QOpenGLWindow::PartialUpdateBlend</code> - im Prinzip wie die 2. Varianten, nur dass diesmal der Inhalt nicht kopiert, sondern überblendet wird.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Ob man die 2. oder 3. Funktion braucht, hängt sicher von der Anwendung ab. Für viele OpenGL-Anwendungen wird das vielleicht nicht notwendig sein, daher schauen wir uns hier mal Variante mit <code>QOpenGLWindow::NoPartialUpdate</code> an.</p>
+</div>
+<div class="paragraph">
+<p>Die Klasse <code>QOpenGLWindow</code> bietet 5 interessante virtuelle Funktionen an:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">virtual</span> <span class="kt">void</span> <span class="nf">initializeGL</span><span class="p">();</span>            <span class="c1">// initialization stuff</span>
+<span class="k">virtual</span> <span class="kt">void</span> <span class="nf">paintGL</span><span class="p">();</span>                 <span class="c1">// actual painting</span>
+<span class="k">virtual</span> <span class="kt">void</span> <span class="nf">paintOverGL</span><span class="p">();</span>             <span class="c1">// not needed for NoPartialUpdate</span>
+<span class="k">virtual</span> <span class="kt">void</span> <span class="nf">paintUnderGL</span><span class="p">();</span>            <span class="c1">// not needed for NoPartialUpdate</span>
+<span class="k">virtual</span> <span class="kt">void</span> <span class="nf">resizeGL</span><span class="p">(</span><span class="kt">int</span> <span class="n">w</span><span class="p">,</span> <span class="kt">int</span> <span class="n">h</span><span class="p">);</span>    <span class="c1">// to update anything related to view port</span>
+                                        <span class="c1">// size (projection matrix etc.)</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Funktion <code>initializeGL()</code> macht eigentlich das Gleiche, wie in Tutorial 01 die Funktion <code>initialize()</code>.</p>
+</div>
+<div class="paragraph">
+<p>Die Funktion <code>paintGL()</code> macht das Gleiche, wie in Tutorial 01 die Funktion <code>render()</code>, d.h. hier wird das Bild mit OpenGL gezeichnet.</p>
+</div>
+<div class="paragraph">
+<p>Die Funktionen <code>paintOverGL()</code> und <code>paintUnderGL()</code> werden im Modus <code>QOpenGLWindow::NoPartialUpdate</code> nicht benötigt.</p>
+</div>
+<div class="paragraph">
+<p>Letztlich ist die Funktion <code>resizeGL(int w, int h)</code> nur eine Bequemlichkeitsfunktion, aufgerufen aus der <code>event()</code> Funktion für das <code>QEvent::ResizeEvent</code>. Hier kann man z.B. die Projektionsmatrix an den neuen Viewport anpassen oder sonstige Größenanpassungen vornehmen.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_die_implementierung_der_klasse_qopenglwindow">3.2. Die Implementierung der Klasse QOpenGLWindow</h3>
+<div class="paragraph">
+<p>Um die Gemeinsamkeiten und Unterschiede zur OpenGLWindow-Klasse aus Tutorial 01 zu verstehen, schauen wir uns mal die Klassenimplementierung an. Die Quelltextschnipsel stammen aus der Qt Version 5.14, sollten aber im Vergleich zu vorherigen Versionen nicht groß verändert sein.</p>
+</div>
+<div class="paragraph">
+<p>Wichtigster Unterschied ist schon die Vererbungshierarchie. <code>QOpenGLWindow</code> leitet von <code>QOpenGLPaintDevice</code> ab, welches hardwarebeschleunigtes Zeichnen mit dem rasterbasierten <code>QPainter</code> erlaubt. Allerdings gibt es einen kleinen Haken. Zitat aus dem Handbuch:</p>
+</div>
+<div class="quoteblock">
+<blockquote>
+<div class="paragraph">
+<p>Antialiasing in the OpenGL paint engine is done using multisampling. Most hardware require significantly more memory to do multisampling and the resulting quality is not on par with the quality of the software paint engine. The OpenGL paint engine&#8217;s strength lies in its performance, not its visual rendering quality.</p>
+</div>
+</blockquote>
+<div class="attribution">
+&#8212; Qt Documentation 5.9 zu QOpenGLPaintDevice
+</div>
+</div>
+<div class="paragraph">
+<p>Das hat insofern Auswirkung auf das Gesamterscheinungsbild der Anwendung, wenn im OpenGL Fenster verwaschene Widgets oder Kontrollen gezeichnet werden, daneben aber klassische Widgets mit scharfen Kanten.  Man kennt das Problem vielleicht von den verwaschenen Fenstern in Windows 10, wenn dort die Anwendungen letztlich in einen Pixelpuffer  zeichnen, welcher dann als Textur in einer 3D Oberfläche interpoliert gerendert wird. Sieht meiner Meinung nach doof aus :-)</p>
+</div>
+<div class="paragraph">
+<p>Hilfreich kann das dennoch sein, wenn man existierende Zeichenfunktionalität (basierend auf QPainter) in einem OpenGL-Widget verwenden möchte. Falls man die Funktionalität nicht braucht, bringt das PaintDevice und die dafür benötigte Funktionalität <em>etwas unnützen Overhead</em> (vor allem Speicherverbrauch) mit sich.</p>
+</div>
+<div class="paragraph">
+<p>Schauen wir uns nun die Gemeinsamkeiten an.</p>
+</div>
+<div class="sect3">
+<h4 id="_konstruktor">3.2.1. Konstruktor</h4>
+<div class="paragraph">
+<p>Der Konstruktor sieht erstmal ähnlich aus, abgesehen davon, dass die Argumente in die private <a href="https://en.wikipedia.org/wiki/Opaque_pointer">Pimpl</a>-Klasse weitergeleitet werden.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">QOpenGLWindow</span><span class="o">::</span><span class="n">QOpenGLWindow</span><span class="p">(</span><span class="n">QOpenGLWindow</span><span class="o">::</span><span class="n">UpdateBehavior</span> <span class="n">updateBehavior</span><span class="p">,</span> <span class="n">QWindow</span> <span class="o">*</span><span class="n">parent</span><span class="p">)</span>
+    <span class="o">:</span> <span class="n">QPaintDeviceWindow</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="k">new</span> <span class="nf">QOpenGLWindowPrivate</span><span class="p">(</span><span class="nb">nullptr</span><span class="p">,</span> <span class="n">updateBehavior</span><span class="p">)),</span> <span class="n">parent</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">setSurfaceType</span><span class="p">(</span><span class="n">QSurface</span><span class="o">::</span><span class="n">OpenGLSurface</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_beispielzeichenobjekt_rectanglewindow">3.3. Beispielzeichenobjekt <code>RectangleWindow</code></h3>
+
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tutorial_03_renderfenster_eingebettet_in_einen_qdialog">4. Tutorial 03: Renderfenster eingebettet in einen QDialog</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In diesem Teil des Tutorials geht es darum, wie das QWindow-basierte Renderfenster (siehe <em>Tutorial 01</em> und <em>02</em>), in eine QWidgets-Anwendung eingebettet wird.</p>
+</div>
+<div class="paragraph">
+<p>Man könnte auch die Bequemlichkeitsklasse <code>QOpenGLWidget</code> verwenden. In <em>Tutorial 04</em> schauen wir uns an, wie diese Klasse intern funktioniert und ob es ggfs. Performancenachteile geben könnte, wenn man diese Klasse verwendet.</p>
 </div>
 </div>
 </div>
@@ -962,7 +1148,7 @@ table {
 <div id="footer">
 <div id="footer-text">
 Version 0.1.0<br>
-Last updated 2020-03-23 14:38:30 +0100
+Last updated 2020-03-23 17:03:52 +0100
 </div>
 </div>
 <style>

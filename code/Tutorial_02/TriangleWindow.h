@@ -15,26 +15,27 @@ License    : BSD License,
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
-
-#include "OpenGLWindow.h"
+#include <QOpenGLWindow>
 
 /*	This is the window that shows the triangle.
-	We derive from our OpenGLWindow base class and implement the
-	virtual initialize() and render() functions.
+	We derive from our QOpenGLWindow base class and implement the
+	virtual initializeGL() and paintGL() functions.
 */
-class TriangleWindow : public OpenGLWindow {
+class TriangleWindow : public QOpenGLWindow {
 public:
 	TriangleWindow();
-	~TriangleWindow() Q_DECL_OVERRIDE;
+	virtual ~TriangleWindow() Q_DECL_OVERRIDE;
 
-	void initialize() Q_DECL_OVERRIDE;
-	void render() Q_DECL_OVERRIDE;
+	void initializeGL() Q_DECL_OVERRIDE;
+	void paintGL() Q_DECL_OVERRIDE;
 
 private:
 	// Wraps an OpenGL VertexArrayObject (VAO)
 	QOpenGLVertexArrayObject	m_vao;
-	// Vertex buffer (only positions now).
+	// Vertex buffer (positions and colors, interleaved storage mode).
 	QOpenGLBuffer				m_vertexBufferObject;
+	// Index buffer to draw two rectangles
+	QOpenGLBuffer				m_indexBufferObject;
 
 	// Holds the compiled shader programs.
 	QOpenGLShaderProgram		*m_program;

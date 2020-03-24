@@ -1,5 +1,5 @@
 :imagesdir: ./images
-= Teil 1: OpenGL innerhalb eines QWindow
+= Tutorial 01: OpenGL innerhalb eines QWindow
 
 Das Ziel ist erstmal einfach: ein einfarbiges Dreieck mit OpenGL in einem `QWindow` zu zeichnen.
 
@@ -110,7 +110,6 @@ protected:
 	bool event(QEvent *event) Q_DECL_OVERRIDE;
 	void exposeEvent(QExposeEvent *event) Q_DECL_OVERRIDE;
 
-private:
 	QOpenGLContext *m_context; // wraps the OpenGL context
 };
 ----
@@ -242,13 +241,13 @@ Das konkrete Renderfenster heißt in diesem Beispiel `TriangleWindow` mit der He
 class TriangleWindow : public OpenGLWindow {
 public:
 	TriangleWindow();
-	~TriangleWindow();
+	~TriangleWindow() Q_DECL_OVERRIDE;
 
 	void initialize() Q_DECL_OVERRIDE;
 	void render() Q_DECL_OVERRIDE;
 
 private:
-	// Wraps an OpenGL VertexArrayObject (VAO), that holds the vertex buffer.
+	// Wraps an OpenGL VertexArrayObject (VAO)
 	QOpenGLVertexArrayObject	m_vao;
 	// Vertex buffer (only positions now).
 	QOpenGLBuffer				m_vertexBufferObject;
@@ -545,7 +544,29 @@ glBindVertexArray(VAO);
 glDrawArrays(GL_TRIANGLES, 0, 3);
 glBindVertexArray(0);
 ----
-Ist also ziemlich ähnlich. Damit wäre dann die Implementierung des `TriangleWindow` komplett.
+Ist also ziemlich ähnlich. 
+
+=== Resourcenfreigabe
+
+Bleibt noch das Aufräumen der reservierten Resourcen im Destructor.
+[source,c++]
+----
+TriangleWindow::~TriangleWindow() {
+	// resource cleanup
+
+	// since we release resources related to an OpenGL context,
+	// we make this context current before cleaning up our resources
+	m_context->makeCurrent(this);
+
+	m_vao.destroy();
+	m_vertexBufferObject.destroy();
+	delete m_program;
+}
+----
+Da einige Resourcen dem OpenGL-Kontext des aktuellen Fenster gehören, sollte man vorher den OpenGL-Kontext "aktuell" setzen (`m_context->makeCurrent(this);`), damit diese Resourcen sicher freigegeben werden können.
+
+
+Damit wäre dann die Implementierung des `TriangleWindow` komplett.
 
 == Das Hauptprogramm
 
@@ -571,4 +592,5 @@ int main(int argc, char **argv) {
 }
 ----
 
-Das wäre dann erstmal eine Grundlage, auf der man aufbauen kann. Allerdings fehlt noch die Einbettung der `QWindow`-basierten Renderklasse in eine Widgets-Anwendung. Das machen wir in Tutorial 02.
+Das wäre dann erstmal eine Grundlage, auf der man aufbauen kann. Interessanterweise bietet Qt selbst eine Klasse an, die unserer OpenGLWindow-Klasse nicht unähnlich ist. Diese schauen wir uns in _Tutorial 02_ an.
+

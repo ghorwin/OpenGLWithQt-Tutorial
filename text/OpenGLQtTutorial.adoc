@@ -17,4 +17,6 @@ v0.1.0, März 2020
 
 include::Introduction.adoc[leveloffset=+1]
 include::Tutorial_01.adoc[leveloffset=+1]
+include::Tutorial_02.adoc[leveloffset=+1]
+include::Tutorial_03.adoc[leveloffset=+1]
 

@@ -1,0 +1,157 @@
+:imagesdir: ./images
+= Tutorial 02: Alternative: die Klasse QOpenGLWindow
+
+In diesem Teil schauen wir uns die Klasse https://doc.qt.io/qt-5/qopenglwindow.html[QOpenGLWindow] an. Mit Hilfe dieser Klasse (die letztlich die Klasse OpenGLWindow aus dem _Tutorial 01_ ersetzt) erstellen wir ein leicht modifiziertes Zeichenprogramm (2 Dreiecke, welche ein buntes Rechteck ergeben und via Element-Index-Array gezeichnet werden). Nebenbei schauen wir an, was die Klasse unter der Haube macht.
+
+[TIP]
+====
+Wer mit der Funktionalität des OpenGLWindows aus _Tutorial 01_ zufrieden ist, kann gleich mit _Tutorial 03_ weitermachen.
+====
+
+== Verwendung der Klasse
+
+Eine interessante Eigenschaft des `QOpenGLWindow` ist die Möglichkeit, nur einen Teil des Fensters neu zu zeichnen. Das wird über die `UpdateBehavior`-Eigenschaft gesteuert. Interessant ist das eigentlich nur, wenn man mittels rasterbasiertem QPainter Teile des Bildes aktualisieren möchte. Es gibt 3 Varianten:
+
+* `QOpenGLWindow::NoPartialUpdate` - das gesamte Bild wird jedes Mal neu gezeichnet (es wird kein zusätzlicher Framebuffer erzeugt und verwendet)
+* `QOpenGLWindow::PartialUpdateBlit` - man zeichnet nur einen Teil des Bildes neu, und das in einem zusätzlichen, automatisch erstellten Framebuffer. Nach Ende des Zeichnens wird einfach der neu gezeichnete Teil in den eigentlichen Framebuffer kopiert.
+* `QOpenGLWindow::PartialUpdateBlend` - im Prinzip wie die 2. Varianten, nur dass diesmal der Inhalt nicht kopiert, sondern überblendet wird.
+
+Ob man die 2. oder 3. Funktion braucht, hängt sicher von der Anwendung ab. Für viele OpenGL-Anwendungen wird das vielleicht nicht notwendig sein, daher schauen wir uns hier mal Variante mit `QOpenGLWindow::NoPartialUpdate` an.
+
+Die Klasse `QOpenGLWindow` bietet 5 interessante virtuelle Funktionen an:
+[source,c++]
+----
+virtual void initializeGL();            // initialization stuff
+virtual void paintGL();                 // actual painting
+virtual void paintOverGL();             // not needed for NoPartialUpdate
+virtual void paintUnderGL();            // not needed for NoPartialUpdate
+virtual void resizeGL(int w, int h);    // to update anything related to view port 
+                                        // size (projection matrix etc.)
+----
+
+Die Funktion `initializeGL()` macht eigentlich das Gleiche, wie in Tutorial 01 die Funktion `initialize()`.
+
+Die Funktion `paintGL()` macht das Gleiche, wie in Tutorial 01 die Funktion `render()`, d.h. hier wird das Bild mit OpenGL gezeichnet.
+
+Die Funktionen `paintOverGL()` und `paintUnderGL()` werden im Modus `QOpenGLWindow::NoPartialUpdate` nicht benötigt.
+
+Letztlich ist die Funktion `resizeGL(int w, int h)` nur eine Bequemlichkeitsfunktion, aufgerufen aus der `event()` Funktion für das `QEvent::ResizeEvent`. Hier kann man z.B. die Projektionsmatrix an den neuen Viewport anpassen oder sonstige Größenanpassungen vornehmen.
+
+== Die Implementierung der Klasse QOpenGLWindow 
+
+Um die Gemeinsamkeiten und Unterschiede zur OpenGLWindow-Klasse aus Tutorial 01 zu verstehen, schauen wir uns mal die Klassenimplementierung an. Die Quelltextschnipsel stammen aus der Qt Version 5.14, sollten aber im Vergleich zu vorherigen Versionen nicht groß verändert sein.
+
+Wichtigster Unterschied ist schon die Vererbungshierarchie. `QOpenGLWindow` leitet von `QOpenGLPaintDevice` ab, welches hardwarebeschleunigtes Zeichnen mit dem rasterbasierten `QPainter` erlaubt. Allerdings gibt es einen kleinen Haken. Zitat aus dem Handbuch:
+
+[quote,Qt Documentation 5.9 zu QOpenGLPaintDevice]
+____
+Antialiasing in the OpenGL paint engine is done using multisampling. Most hardware require significantly more memory to do multisampling and the resulting quality is not on par with the quality of the software paint engine. The OpenGL paint engine's strength lies in its performance, not its visual rendering quality. 
+____
+
+Das hat insofern Auswirkung auf das Gesamterscheinungsbild der Anwendung, wenn im OpenGL Fenster verwaschene Widgets oder Kontrollen gezeichnet werden, daneben aber klassische Widgets mit scharfen Kanten.  Man kennt das Problem vielleicht von den verwaschenen Fenstern in Windows 10, wenn dort die Anwendungen letztlich in einen Pixelpuffer  zeichnen, welcher dann als Textur in einer 3D Oberfläche interpoliert gerendert wird. Sieht meiner Meinung nach doof aus :-)
+
+Hilfreich kann das dennoch sein, wenn man existierende Zeichenfunktionalität (basierend auf QPainter) in einem OpenGL-Widget verwenden möchte. Falls man die Funktionalität nicht braucht, bringt das PaintDevice und die dafür benötigte Funktionalität _etwas unnützen Overhead_ (vor allem Speicherverbrauch) mit sich.
+
+Schauen wir uns nun die Gemeinsamkeiten an.
+
+=== Constructor
+
+Der Konstruktor sieht erstmal fast genauso aus, wie der unserer `OpenGLWindow`-Klasse. abgesehen davon, dass die Argumente in die private https://en.wikipedia.org/wiki/Opaque_pointer[Pimpl]-Klasse weitergeleitet werden.
+[source,c++]
+----
+QOpenGLWindow::QOpenGLWindow(QOpenGLWindow::UpdateBehavior updateBehavior, QWindow *parent)
+    : QPaintDeviceWindow(*(new QOpenGLWindowPrivate(nullptr, updateBehavior)), parent)
+{
+    setSurfaceType(QSurface::OpenGLSurface);
+}
+----
+
+=== Ereignisbehandlungsroutinen
+
+Interessanter sind schon die Ereignisbehandlungsroutinen:
+
+[source,c++]
+----
+void QOpenGLWindow::paintEvent(QPaintEvent * /*event*/ ) {
+    paintGL();
+}
+
+void QOpenGLWindow::resizeEvent(QResizeEvent * /*event*/ ) {
+    Q_D(QOpenGLWindow);
+    d->initialize();
+    resizeGL(width(), height());
+}
+----
+
+Das `paintEvent()` wird einfach an die vom Nutzer zu implementierende Funktion `paintGL()` weitergereicht. Insofern analog zu der Ereignisbehandlung im OpenGLWidget, welches auf `QEvent::UpdateRequest` wartet. Allerdings sind auf dem Weg bis zum Aufruf der `paintEvent()` Funktion etliche Zwischenschritte implementiert, bis zum Erzeugen des QPaintEvent-Objekts, welches gar nicht benötigt wird. Der Aufwand wird deutlich, wenn man sich die Aufrufkette anschaut:
+
+[source,c++]
+----
+QPaintDeviceWindow::event(QEvent *event)  // waits for QEvent::UpdateRequest
+QPaintDeviceWindowPrivate::handleUpdateEvent()
+QPaintDeviceWindowPrivate::doFlush()  // calls QPaintDeviceWindowPrivate::paint()
+
+    bool paint(const QRegion &region)
+    {
+        Q_Q(QPaintDeviceWindow);
+        QRegion toPaint = region & dirtyRegion;
+        if (toPaint.isEmpty())
+            return false;
+
+        // Clear the region now. The overridden functions may call update().
+        dirtyRegion -= toPaint;
+
+        beginPaint(toPaint); // here we call QOpenGLWindowPrivate::beginPaint()
+
+        QPaintEvent paintEvent(toPaint);
+        q->paintEvent(&paintEvent); // here we call QOpenGLWindowPrivate::paintEvent()
+
+        endPaint(); // here we call QOpenGLWindowPrivate::endPaint()
+
+        return true;
+    }
+----
+
+Alternativ wird `paintGL()` noch aus der Ereignisbehandlungsroutine `QPaintDeviceWindow::exposeEvent()` aufgerufen, wobei dort direkt `QPaintDeviceWindowPrivate::doFlush()` gerufen wird. Die Funktionen `beginPaint()` und  `endPaint()` kümmern sich um den temporären Framebuffer, in dem beim UpdateBehavior `QOpenGLWindow::PartialUpdateBlit` und `QOpenGLWindow::PartialUpdateBlend` gerendert wird. Ohne diese Modi passiert in der Funktion sehr wenig.
+
+=== Initialisierung
+
+Interessant ist noch der Initialisierungsaufruf, der in der `resizeEvent()` Ereignisbehandlungsroutine steckt.
+
+[source,c++]
+----
+void QOpenGLWindowPrivate::initialize()
+{
+    Q_Q(QOpenGLWindow);
+
+    if (context)
+        return;
+
+    if (!q->handle())
+        qWarning("Attempted to initialize QOpenGLWindow without a platform window");
+
+    context.reset(new QOpenGLContext);
+    context->setShareContext(shareContext);
+    context->setFormat(q->requestedFormat());
+    if (!context->create())
+        qWarning("QOpenGLWindow::beginPaint: Failed to create context");
+    if (!context->makeCurrent(q))
+        qWarning("QOpenGLWindow::beginPaint: Failed to make context current");
+
+    paintDevice.reset(new QOpenGLWindowPaintDevice(q));
+    if (updateBehavior == QOpenGLWindow::PartialUpdateBlit)
+        hasFboBlit = QOpenGLFramebufferObject::hasOpenGLFramebufferBlit();
+
+    q->initializeGL();
+}
+----
+Eigentlich sieht die Funktion fast genauso wie der Initialisierungsteil der Funktion `OpenGLWindow::renderNow()` aus _Tutorial 01_ aus. Abgesehen natürlich davon, dass noch ein `QOpenGLWindowPaintDevice` erzeugt wird.
+
+=== Zusammenfassung
+
+Das `QOpenGLWindow` ist im Modus `QOpenGLWindow::NoPartialUpdate` eigentlich vergleichbar mit unserem minimalistischen `OpenGLWindow`. Etwas Overhead ist vorhanden, allerdings sollte der in realen Anwendungen keine Rolle spielen. 
+
+== Zeichnen mit Indexpuffern
+
+Zusätzlich 
+

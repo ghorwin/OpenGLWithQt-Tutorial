@@ -24,7 +24,7 @@ QT_END_NAMESPACE
 class OpenGLWindow : public QWindow, protected QOpenGLFunctions {
 	Q_OBJECT
 public:
-	explicit OpenGLWindow(QWindow *parent = nullptr);
+	explicit OpenGLWindow(QWindow *parent = 0);
 
 	virtual void render() = 0;
 	virtual void initialize() = 0;
@@ -37,6 +37,7 @@ protected:
 	bool event(QEvent *event) Q_DECL_OVERRIDE;
 	void exposeEvent(QExposeEvent *event) Q_DECL_OVERRIDE;
 
+private:
 	QOpenGLContext *m_context;
 };
 

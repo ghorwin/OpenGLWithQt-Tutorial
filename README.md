@@ -8,7 +8,7 @@ The generated documentation can be found on:
 
 The offline-PDF version can be downloaded from the repo: 
 
-- https://github.com/ghorwin/OpenGLWithQt-Tutorial/blob/master/docs/OpenGLQtTutorial.pdf
+https://github.com/ghorwin/OpenGLWithQt-Tutorial/raw/master/docs/OpenGLQtTutorial.pdf
 
 
 ## Writing and generating the docs

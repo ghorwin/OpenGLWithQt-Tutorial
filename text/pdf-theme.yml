@@ -31,7 +31,7 @@ footer:
   line-height: 1
   recto:
     left:
-      content: '_MasterSim {revnumber}, {revdate}_'
+      content: '_OpenGL+Qt Tutorial {revnumber}, {revdate}_'
     right:
       content: '{section-or-chapter-title} | *{page-number}*'
   verso:

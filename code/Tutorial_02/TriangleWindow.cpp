@@ -24,15 +24,16 @@ TriangleWindow::~TriangleWindow() {
 
 	// since we release resources related to an OpenGL context,
 	// we make this context current before cleaning up our resources
-	m_context->makeCurrent(this);
+	makeCurrent();
 
+	// resource cleanup
 	m_vao.destroy();
 	m_vertexBufferObject.destroy();
 	delete m_program;
 }
 
 
-void TriangleWindow::initialize() {
+void TriangleWindow::initializeGL() {
 	// this function is called once, when the window is first shown, i.e. when
 	// the the window content is first rendered
 
@@ -92,10 +93,7 @@ void TriangleWindow::initialize() {
 }
 
 
-void TriangleWindow::render() {
-	// this function is called for every frame to be rendered on screen
-	const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
-	glViewport(0, 0, width() * retinaScale, height() * retinaScale);
+void TriangleWindow::paintGL() {
 
 	// set the background color = clear color
 	glClearColor(0.1f, 0.1f, 0.2f, 1.0f);

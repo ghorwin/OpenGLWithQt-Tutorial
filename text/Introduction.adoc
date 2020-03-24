@@ -4,7 +4,7 @@ Dieses Tutorial ist *_kein_* OpenGL Tutorial. Man sollte also OpenGL selbst scho
 
 Es gibt eine PDF-Version des Tutorials:
 
-https://github.com/ghorwin/OpenGLWithQt-Tutorial/blob/master/docs/OpenGLQtTutorial.pdf
+https://github.com/ghorwin/OpenGLWithQt-Tutorial/raw/master/docs/OpenGLQtTutorial.pdf
 
 
 == Kernthemen
@@ -15,12 +15,21 @@ In diesem Tutorial geht es primär um folgende Themen:
 - Implementierung von Keyboard- und Maussteuerung
 - Rendering-on-Demand mit Fokus auf CAD/Virtual Design Anwendungen, d.h. batterieschonendes Rendern nur, wenn sich Camera oder Scene ändern
 
+Es wird eine hinreichend aktuelle Qt-Version vorausgesetzt, mindestens *Qt 5.4*. Bei meinem Ubuntu 18.04 System ist Qt 5.9 dabei, das dürfte also eine gute Basisversion für dieses Tutorial sein. Funktionen neuerer Qt Versionen betrachte ich nicht.
+
+[CAUTION]
+====
+Qt enthält aus Kompatibilitätsgründen noch eine Reihe von OpenGL-Implementierungsklassen (im OpenGL Modul), welche alle mit `QGL...` beginnen. Diese sind veraltet und sollten in neuen Programmen nicht mehr verwendet werden. In aktuellen Qt Programmen sind die Hilfsklassen für OpenGL-Fenster im GUI-Modul enthalten.
+====
+
 
 == Plattformunterstützung und OpenGL-Version
 
 Das Tutorial addressiert Desktopanwendungen, d.h. _Linux_, _Windows_ und _MacOS_ Widgets-Anwendungen. Daher ist OpenGL ES (ES für Embedded Systems) kein Thema für dieses Tutorial. Das Wesentliche sollte aber übertragbar sein.
 
 Hinsichtlich der OpenGL-Version wird Mac-bedingt Version 3.3 angepeilt. Hinsichtlich der Einbettung von OpenGL in Qt Widgets-Anwendungen spielt die OpenGL-Version eigentlich keine Rolle.
+
+Im Rahmen dieses Tutorials wird für die Beispiele das Qt bzw. qmake Buildsystem verwendet. Das Thema _Compilieren mit CMake_ und _Deployment von OpenGL-basierten Anwendungen_ wird in einem speziellen Tutorial erklärt.
 
 == Grundlagen
 

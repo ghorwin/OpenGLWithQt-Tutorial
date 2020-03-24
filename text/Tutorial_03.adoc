@@ -1,0 +1,8 @@
+:imagesdir: ./images
+= Tutorial 03: Renderfenster eingebettet in einen QDialog
+
+In diesem Teil des Tutorials geht es darum, wie das QWindow-basierte Renderfenster (siehe _Tutorial 01_ und __02__), in eine QWidgets-Anwendung eingebettet wird.
+
+Man könnte auch die Bequemlichkeitsklasse `QOpenGLWidget` verwenden. In _Tutorial 04_ schauen wir uns an, wie diese Klasse intern funktioniert und ob es ggfs. Performancenachteile geben könnte, wenn man diese Klasse verwendet.
+
+
