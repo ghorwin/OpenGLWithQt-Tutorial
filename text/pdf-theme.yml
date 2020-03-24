@@ -31,7 +31,7 @@ title-page:
   authors:
     content:
       name_only: "{author}"
-      with_email: "{author} <{email}>"
+      with_email: "{author}\n{email}"
 
 page:
   margin: [0.5in, 0.67in, 1.4in, 0.67in]

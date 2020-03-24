@@ -3,7 +3,6 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QRandomGenerator>
 
 #include "RectangleWindow.h"
 

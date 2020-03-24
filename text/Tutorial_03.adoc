@@ -1,8 +1,26 @@
 :imagesdir: ./images
-= Tutorial 03: Renderfenster eingebettet in einen QDialog
+= Tutorial 03: Renderfenster in einem QDialog eingebettet
 
-In diesem Teil des Tutorials geht es darum, wie das QWindow-basierte Renderfenster (siehe _Tutorial 01_ und __02__), in eine QWidgets-Anwendung eingebettet wird.
+In diesem Teil des Tutorials geht es darum, ein QWindow-basiertes OpenGL-Renderfenster (siehe _Tutorial 01_ und _02_), in eine QWidgets-Anwendung einzubetten.
 
+Der erste Teil des Tutorials beschäftigt sich allein mit der Einbettung (und ist recht kurz). Damit das Tutorial aber noch etwas interessanter wird, gibt es im 2. Abschnitt noch zwei Interaktionsvarianten mit und ohne Animation.
+
+[TIP]
+====
 Man könnte auch die Bequemlichkeitsklasse `QOpenGLWidget` verwenden. In _Tutorial 04_ schauen wir uns an, wie diese Klasse intern funktioniert und ob es ggfs. Performancenachteile geben könnte, wenn man diese Klasse verwendet.
+====
+
+.Tutorial_03 (Windows 10 Screenshot)
+image::Tutorial_03_win10.png[Tutorial_03,pdfwidth=8cm]
+
+[NOTE]
+====
+Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_03[Tutorial_03]
+====
+
+== Window Container Widgets
+
+
+
 
 

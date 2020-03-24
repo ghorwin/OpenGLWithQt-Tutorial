@@ -18,7 +18,8 @@ RectangleWindow::RectangleWindow() :
 							QColor("#cb2dde"),
 							QColor("#0eeed1"),
 							QColor("#068918") },
-	m_program(nullptr)
+	m_program(nullptr),
+	m_frameCount(5000)
 {
 }
 

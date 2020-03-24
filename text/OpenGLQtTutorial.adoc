@@ -5,6 +5,7 @@ v0.1.0, März 2020
 :Author Initials: AN
 :toc: left
 :toclevels: 3
+:toc-title: Inhaltsverzeichnis
 :icons: font
 :imagesdir: ./images
 :numbered:
@@ -15,7 +16,9 @@ v0.1.0, März 2020
 :stylesdir: ./css
 :stylesheet: roboto_ubuntu.css
 
+:numbered!:
 include::Introduction.adoc[leveloffset=+1]
+:numbered:
 include::Tutorial_01.adoc[leveloffset=+1]
 include::Tutorial_02.adoc[leveloffset=+1]
 include::Tutorial_03.adoc[leveloffset=+1]
