@@ -40,12 +40,16 @@ TestDialog::TestDialog() :
 	hlay->setMargin(0);
 
 	QPushButton * changeColorBtn = new QPushButton(tr("Change colors"), this);
-	connect(changeColorBtn, &QPushButton::clicked, this, &TestDialog::onChangeColorsClicked);
+	connect(changeColorBtn, &QPushButton::clicked, this, &TestDialog::onChangeColors);
+
+	QPushButton * changeColorAnimationBtn = new QPushButton(tr("Animate colors"), this);
+	connect(changeColorAnimationBtn, &QPushButton::clicked, this, &TestDialog::onAnimateColors);
 
 	QPushButton * closeBtn = new QPushButton(tr("Close"), this);
 	connect(closeBtn, &QPushButton::clicked, this, &QDialog::accept);
 
 	hlay->addWidget(changeColorBtn);
+	hlay->addWidget(changeColorAnimationBtn);
 	hlay->addStretch();
 	hlay->addWidget(closeBtn);
 
@@ -57,7 +61,7 @@ TestDialog::TestDialog() :
 }
 
 
-void TestDialog::onChangeColorsClicked() {
+void TestDialog::onChangeColors() {
 	// randomize the colors and change them in the OpenGL window
 
 	for (unsigned int i=0; i<4; ++i) {
@@ -66,4 +70,17 @@ void TestDialog::onChangeColorsClicked() {
 
 	// now update the scene -> this will also request an update
 	m_rectangleWindow->updateScene();
+}
+
+
+void TestDialog::onAnimateColors() {
+	// randomize the colors and change them in the OpenGL window
+
+	std::vector<QColor> newCols(4);
+	for (unsigned int i=0; i<4; ++i) {
+		newCols[i].setRgbF(rand()*1.0/RAND_MAX, rand()*1.0/RAND_MAX, rand()*1.0/RAND_MAX);
+	}
+
+	// now update the scene -> this will also request an update
+	m_rectangleWindow->animateColorsTo(newCols);
 }

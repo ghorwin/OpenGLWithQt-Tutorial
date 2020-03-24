@@ -143,6 +143,8 @@ void RectangleWindow::paintGL() {
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 	// finally release VAO again (not really necessary, just for completeness)
 	m_vao.release();
+
+	animate();
 }
 
 
@@ -169,4 +171,43 @@ void RectangleWindow::updateScene() {
 
 	// and request an update
 	update();
+}
+
+
+void RectangleWindow::animateColorsTo(const std::vector<QColor> & toColors) {
+	qDebug() << "Animation started";
+	// current colors are set to "fromColors", toColors are store in m_toColors and
+	// animation counter is reset
+
+	m_fromColors = m_vertexColors;
+	m_toColors = toColors;
+	m_frameCount = 0;
+
+	animate();
+}
+
+
+void RectangleWindow::animate() {
+	const unsigned int FRAMECOUNT = 120;
+	// if already at framecount end, stop
+	if (++m_frameCount > FRAMECOUNT) {
+		qDebug() << "Animation stopped";
+		return; // this will also stop the frame rendering
+	}
+	// update the colors
+	double alpha = double(m_frameCount)/FRAMECOUNT;
+
+	// linear blending in HSV space will probably look "interesting", but it's simple
+	for (unsigned int i=0; i<m_vertexColors.size(); ++i) {
+		double fromH, fromS, fromV;
+		m_fromColors[i].getHsvF(&fromH, &fromS, &fromV);
+		double toH, toS, toV;
+		m_toColors[i].getHsvF(&toH, &toS, &toV);
+
+		m_vertexColors[i] = QColor::fromHsvF(toH*alpha + fromH*(1-alpha),
+											  toS*alpha + fromS*(1-alpha),
+											  toV*alpha + fromV*(1-alpha));
+	}
+
+	updateScene();
 }

@@ -12,7 +12,8 @@ public:
 	TestDialog();
 
 private slots:
-	void onChangeColorsClicked();
+	void onChangeColors();
+	void onAnimateColors();
 
 private:
 	RectangleWindow * m_rectangleWindow;
