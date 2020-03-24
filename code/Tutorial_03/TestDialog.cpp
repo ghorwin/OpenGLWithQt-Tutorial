@@ -18,7 +18,7 @@ TestDialog::TestDialog() {
 
 	// we now create a widget container
 	QWidget *container = QWidget::createWindowContainer(m_rectangleWindow);
-	container->setMinimumSize(QSize(640,480));
+	container->setMinimumSize(QSize(600,400));
 	container->setFocusPolicy(Qt::TabFocus);
 
 	// create the layout and insert widget container

@@ -22,6 +22,10 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 CONFIG += c++11
 
+win32 {
+	LIBS += -lopengl32
+}
+
 SOURCES += \
 		RectangleWindow.cpp \
 		TestDialog.cpp \
