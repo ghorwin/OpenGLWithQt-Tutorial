@@ -68,13 +68,17 @@ void TriangleWindow::initializeGL() {
 		1, 2, 3    // second triangle
 	};
 
-
 	QColor vertexColors [] = {
 		QColor("#f6a509"),
 		QColor("#cb2dde"),
 		QColor("#0eeed1"),
 		QColor("#068918"),
 	};
+
+	// Initialize the Vertex Array Object (VAO) to record and remember subsequent attribute assocations with
+	// generated vertex buffer(s)
+	m_vao.create(); // create underlying OpenGL object
+	m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so it monitors attribute assignments
 
 	// create a new buffer for the vertices and colors, interleaved storage
 	m_vertexBufferObject = QOpenGLBuffer(QOpenGLBuffer::VertexBuffer);
@@ -108,15 +112,11 @@ void TriangleWindow::initializeGL() {
 	m_indexBufferObject.bind();
 	m_indexBufferObject.allocate(indices, sizeof(indices) );
 
-	// Initialize the Vertex Array Object (VAO) to record and remember subsequent attribute assocations with
-	// generated vertex buffer(s)
-	m_vao.create(); // create underlying OpenGL object
-	m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so it monitors attribute assignments
 
 	// layout location 0 - vec3 with coordinates
-	int stride = 6*sizeof(float); // one vertex data set contains of 3+3 floats = stride
+//	int stride = 6*sizeof(float); // one vertex data set contains of 3+3 floats = stride
 	m_program->enableAttributeArray(0);
-	m_program->setAttributeBuffer(0, GL_FLOAT, 0, 3, stride);
+	m_program->setAttributeBuffer(0, GL_FLOAT, 0, 3);
 	// layout location 1 - vec3 with colors
 //	m_program->enableAttributeArray(1);
 //	int colorOffset = 3*sizeof(float);
@@ -124,8 +124,8 @@ void TriangleWindow::initializeGL() {
 
 	// Release (unbind) all
 	m_vertexBufferObject.release();
-//	m_indexBufferObject.release();
 	m_vao.release();
+	//	m_indexBufferObject.release();
 }
 
 
@@ -140,7 +140,7 @@ void TriangleWindow::paintGL() {
 	// bind the vertex array object, which in turn binds the vertex buffer object and
 	// sets the attribute buffer in the OpenGL context
 	m_vao.bind();
-	m_indexBufferObject.bind();
+//	m_indexBufferObject.bind();
 	// now draw the two triangles via index drawing
 	// - GL_TRIANGLES - draw individual triangles via elements
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
