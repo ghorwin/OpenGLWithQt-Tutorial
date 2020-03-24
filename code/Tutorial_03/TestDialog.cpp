@@ -7,9 +7,12 @@
 #include "RectangleWindow.h"
 
 TestDialog::TestDialog() :
+#ifdef Q_OS_WIN
 	QDialog(nullptr, Qt::WindowSystemMenuHint | Qt::WindowMinMaxButtonsHint | Qt::WindowCloseButtonHint)
+#else
+	QDialog(nullptr, Qt::Window)
+#endif
 {
-
 	// *** create OpenGL window
 
 	QSurfaceFormat format;
@@ -24,7 +27,6 @@ TestDialog::TestDialog() :
 
 	QWidget *container = QWidget::createWindowContainer(m_rectangleWindow);
 	container->setMinimumSize(QSize(600,400));
-	container->setFocusPolicy(Qt::TabFocus);
 
 	// *** create the layout and insert widget container
 

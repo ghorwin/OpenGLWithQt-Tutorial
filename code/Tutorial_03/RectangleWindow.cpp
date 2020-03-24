@@ -69,7 +69,7 @@ void RectangleWindow::initializeGL() {
 		-0.8f,  0.8f, 0.0f   // top left
 	};
 
-	// create buffer for 2 interleaved attributes: position and color, 4 vertices, 3 floats each
+	// resize buffer for 2 interleaved attributes: position and color, 4 vertices, 3 floats each
 	m_vertexBufferData.resize(2*4*3);
 	// create new data buffer - the following memory copy stuff should
 	// be placed in some convenience class in later tutorials
@@ -152,8 +152,7 @@ void RectangleWindow::paintGL() {
 void RectangleWindow::updateScene() {
 	// for now we only update colors
 
-	// first update our vertex buffer memory
-
+	// first update our vertex buffer memory, but only those locations that are actually changed
 	float * buf = m_vertexBufferData.data();
 	for (int v=0; v<4; ++v, buf += 6) {
 		// colors
@@ -176,7 +175,6 @@ void RectangleWindow::updateScene() {
 
 
 void RectangleWindow::animateColorsTo(const std::vector<QColor> & toColors) {
-	qDebug() << "Animation started";
 	// current colors are set to "fromColors", toColors are store in m_toColors and
 	// animation counter is reset
 
@@ -191,10 +189,9 @@ void RectangleWindow::animateColorsTo(const std::vector<QColor> & toColors) {
 void RectangleWindow::animate() {
 	const unsigned int FRAMECOUNT = 120;
 	// if already at framecount end, stop
-	if (++m_frameCount > FRAMECOUNT) {
-		qDebug() << "Animation stopped";
+	if (++m_frameCount > FRAMECOUNT)
 		return; // this will also stop the frame rendering
-	}
+
 	// update the colors
 	double alpha = double(m_frameCount)/FRAMECOUNT;
 

@@ -28,7 +28,8 @@ p{font-family: "Roboto Condensed",sans-serif ! important}
 #toc.toc2 a{font-family:"Roboto Condensed",sans-serif;}
 #toc.toc2 a:link{color:white;}
 a:visited {color: #ffdbad;}
-a:hover {color: #f1b464;}
+a.bare:visited {color: #204f83;}
+a:hover {color: #317ed4;}
 #toc.toc2 a:hover {color: #f1b464;}
 /* code{background-color: var(--secondarycolor) !important;color:var(--white)} */
 code,kbd,pre,samp{font-family:monospace;font-size:0.8em}

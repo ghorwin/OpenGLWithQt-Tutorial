@@ -38,7 +38,8 @@ p{font-family: "Roboto Condensed",sans-serif ! important}
 #toc.toc2 a{font-family:"Roboto Condensed",sans-serif;}
 #toc.toc2 a:link{color:white;}
 a:visited {color: #ffdbad;}
-a:hover {color: #f1b464;}
+a.bare:visited {color: #204f83;}
+a:hover {color: #317ed4;}
 #toc.toc2 a:hover {color: #f1b464;}
 /* code{background-color: var(--secondarycolor) !important;color:var(--white)} */
 code,kbd,pre,samp{font-family:monospace;font-size:0.8em}
@@ -125,7 +126,18 @@ table {
 <li><a href="#_zusammenfassung">2.4. Zusammenfassung</a></li>
 </ul>
 </li>
-<li><a href="#_tutorial_03_renderfenster_eingebettet_in_einen_qdialog">3. Tutorial 03: Renderfenster eingebettet in einen QDialog</a></li>
+<li><a href="#_tutorial_03_renderfenster_in_einem_qdialog_eingebettet">3. Tutorial 03: Renderfenster in einem QDialog eingebettet</a>
+<ul class="sectlevel2">
+<li><a href="#_window_container_widgets">3.1. Window Container Widgets</a></li>
+<li><a href="#_interaktion_und_synchronisation_mit_dem_zeichnen">3.2. Interaktion und Synchronisation mit dem Zeichnen</a>
+<ul class="sectlevel3">
+<li><a href="#_einmalige_änderungen_farbwechsel_auf_knopfdruck">3.2.1. Einmalige Änderungen: Farbwechsel auf Knopfdruck</a></li>
+<li><a href="#_animierte_farbänderung">3.2.2. Animierte Farbänderung</a></li>
+<li><a href="#_zusammenfassung_2">3.2.3. Zusammenfassung</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -1681,7 +1693,7 @@ table {
 </div>
 </div>
 <div class="sect1">
-<h2 id="_tutorial_03_renderfenster_eingebettet_in_einen_qdialog">3. Tutorial 03: Renderfenster eingebettet in einen QDialog</h2>
+<h2 id="_tutorial_03_renderfenster_in_einem_qdialog_eingebettet">3. Tutorial 03: Renderfenster in einem QDialog eingebettet</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>In diesem Teil des Tutorials geht es darum, ein QWindow-basiertes OpenGL-Renderfenster (siehe <em>Tutorial 01</em> und <em>02</em>), in eine QWidgets-Anwendung einzubetten.</p>
@@ -1723,8 +1735,336 @@ table {
 </tr>
 </table>
 </div>
+<div class="sect2">
+<h3 id="_window_container_widgets">3.1. Window Container Widgets</h3>
 <div class="paragraph">
-<p>==</p>
+<p>Die Funktion <code>QWidget::createWindowContainer</code> erstellt ein <code>QWidget</code>, welches das als Argument übergebene <code>QWindow</code> einbettet. So einfach kann&#8217;s sein:</p>
+</div>
+<div class="listingblock">
+<div class="title">TestDialog.cpp:Konstruktor</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="c1">// *** create OpenGL window</span>
+
+<span class="n">QSurfaceFormat</span> <span class="n">format</span><span class="p">;</span>
+<span class="n">format</span><span class="p">.</span><span class="n">setRenderableType</span><span class="p">(</span><span class="n">QSurfaceFormat</span><span class="o">::</span><span class="n">OpenGL</span><span class="p">);</span>
+<span class="n">format</span><span class="p">.</span><span class="n">setProfile</span><span class="p">(</span><span class="n">QSurfaceFormat</span><span class="o">::</span><span class="n">CoreProfile</span><span class="p">);</span>
+<span class="n">format</span><span class="p">.</span><span class="n">setVersion</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">);</span>
+
+<span class="n">m_rectangleWindow</span> <span class="o">=</span> <span class="k">new</span> <span class="n">RectangleWindow</span><span class="p">;</span>
+<span class="n">m_rectangleWindow</span><span class="o">-&gt;</span><span class="n">setFormat</span><span class="p">(</span><span class="n">format</span><span class="p">);</span>
+
+<span class="c1">// *** create window container widget</span>
+
+<span class="n">QWidget</span> <span class="o">*</span><span class="n">container</span> <span class="o">=</span> <span class="n">QWidget</span><span class="o">::</span><span class="n">createWindowContainer</span><span class="p">(</span><span class="n">m_rectangleWindow</span><span class="p">);</span>
+<span class="n">container</span><span class="o">-&gt;</span><span class="n">setMinimumSize</span><span class="p">(</span><span class="n">QSize</span><span class="p">(</span><span class="mi">600</span><span class="p">,</span><span class="mi">400</span><span class="p">));</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><code>m_rectangleWindow</code> ist ein Zeiger auf die aus Tutorial 02 bekannte <code>RectangleWindow</code> Klasse. Das so erstellte Container-Widget muss natürlich noch in ein Layout gesteckt werden. Aber mehr ist eigentlich nicht zu tun.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_interaktion_und_synchronisation_mit_dem_zeichnen">3.2. Interaktion und Synchronisation mit dem Zeichnen</h3>
+<div class="paragraph">
+<p>Grundsätzlich ist folgende Aktualisierungslogik anzustreben:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code>OpenGL zeichnet Bild
+
+&lt;Anwendung wartet in Ereignis-Schleife&gt;
+
+Ein Event wird abgearbeitet, ändert für die Darstellung relevante Daten. Registriert ein "UpdateRequest" in der Ereignisschleife.
+
+&lt;Anwendung wartet in Ereignis-Schleife&gt;
+
+Ein Event wird abgearbeitet, ändert für die Darstellung relevante Daten. Registriert ein "UpdateRequest" in der Ereignisschleife. Dieses wird mit dem bereits existierenden "UpdateRequest" verschmolzen.
+
+Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Rendern führt. Und wieder von vorne...</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>D.h., das potenziell zeitaufwändige Aktualisieren der Puffer und Zeichendaten erfolgt stets dann, wenn noch auf den nächsten VSync gewartet wird. So hat man ca. 16 ms Zeit (by üblichen 60 FPS), alles Notwendige zu erledigen.</p>
+</div>
+<div class="sect3">
+<h4 id="_einmalige_änderungen_farbwechsel_auf_knopfdruck">3.2.1. Einmalige Änderungen: Farbwechsel auf Knopfdruck</h4>
+<div class="paragraph">
+<p>Eine typische Anwendung, vor allem in technischen Anwendungen (d.h. nicht in Spielen), ist die diskrete Änderung der 3D Szene, sei es durch eine Kamerabewegung, Auswahl und Hervorhebung einzelner Elemente, oder Transformation der dargestellten Geometrie. Innerhalb des Qt Frameworks wird also zunächst ein Ereignis (OnClick, Maus- oder Tastatureingabe, &#8230;&#8203;) in die Ereignisschleife gelangen und dort abgearbeitet werden.</p>
+</div>
+<div class="paragraph">
+<p>Ein Beispiel ist der "Change Color" Button im Dialog im Tutorial 03. Es gibt eine OnClick-Ereignisbehandlungsroutine:</p>
+</div>
+<div class="listingblock">
+<div class="title">TestDialog.cpp:TestDialog::onChangeColors()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="c1">// randomize the colors and change them in the OpenGL window</span>
+<span class="k">for</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="mi">4</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
+	<span class="n">m_rectangleWindow</span><span class="o">-&gt;</span><span class="n">m_vertexColors</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">setRgbF</span><span class="p">(</span>
+	        <span class="n">rand</span><span class="p">()</span><span class="o">*</span><span class="mf">1.0</span><span class="o">/</span><span class="n">RAND_MAX</span><span class="p">,</span> <span class="n">rand</span><span class="p">()</span><span class="o">*</span><span class="mf">1.0</span><span class="o">/</span><span class="n">RAND_MAX</span><span class="p">,</span> <span class="n">rand</span><span class="p">()</span><span class="o">*</span><span class="mf">1.0</span><span class="o">/</span><span class="n">RAND_MAX</span> <span class="p">);</span>
+
+<span class="c1">// now update the scene -&gt; this will also request an update</span>
+<span class="n">m_rectangleWindow</span><span class="o">-&gt;</span><span class="n">updateScene</span><span class="p">();</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Membervariable <code>m_vertexColors</code> wird mit zufälligen Farbwerten befüllt. Dann wird die Funktion <code>updateScene()</code> aufgerufen.</p>
+</div>
+<div class="paragraph">
+<p>Zum Verständnis kann man noch einmal die geänderte Klassendeklaration von <code>RectangleWindow</code> anschauen:</p>
+</div>
+<div class="listingblock">
+<div class="title">RectangleWindow.h</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">class</span> <span class="nc">RectangleWindow</span> <span class="o">:</span> <span class="k">public</span> <span class="n">QOpenGLWindow</span> <span class="p">{</span>
+<span class="nl">public:</span>
+    <span class="p">....</span>
+
+	<span class="c1">// updates the scene and requests a paint update</span>
+	<span class="kt">void</span> <span class="n">updateScene</span><span class="p">();</span>
+
+	<span class="c1">// holds the vertex colors set on next call to updateScene()</span>
+	<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">QColor</span><span class="o">&gt;</span>			<span class="n">m_vertexColors</span><span class="p">;</span>
+
+<span class="nl">private:</span>
+
+    <span class="c1">// ....</span>
+
+	<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span>			<span class="n">m_vertexBufferData</span><span class="p">;</span>
+
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Der im <em>Tutorial 02</em> noch als temporärer lokaler Speicherbereich verwendete Vector <code>m_vertexBufferData</code> ist jetzt eine Membervariable. Die zu verwendenden Farben sind in dem öffentlichen Vector <code>m_vertexColors</code> abgelegt.</p>
+</div>
+<div class="admonitionblock caution">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-caution" title="Caution"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Der Quelltext in diesem Tutorial-Beispiel ist natürlich sehr fehleranfällig und unsicher. Darauf kommt es aber nicht an und die notwendigen Fehlerprüfungen wurden der Übersichtlichkeit wegen weggelassen.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Die Vertexfarben werden im Konstruktor mittels C++11 Initialisierungsliste initialisiert:</p>
+</div>
+<div class="listingblock">
+<div class="title">RectangleWindow.cpp: Konstruktor</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">RectangleWindow</span><span class="o">::</span><span class="n">RectangleWindow</span><span class="p">()</span> <span class="o">:</span>
+	<span class="n">m_vertexColors</span><span class="p">{</span> 		<span class="n">QColor</span><span class="p">(</span><span class="s">"#f6a509"</span><span class="p">),</span>
+							<span class="n">QColor</span><span class="p">(</span><span class="s">"#cb2dde"</span><span class="p">),</span>
+							<span class="n">QColor</span><span class="p">(</span><span class="s">"#0eeed1"</span><span class="p">),</span>
+							<span class="n">QColor</span><span class="p">(</span><span class="s">"#068918"</span><span class="p">)</span> <span class="p">},</span>
+	<span class="n">m_program</span><span class="p">(</span><span class="nb">nullptr</span><span class="p">),</span>
+	<span class="n">m_frameCount</span><span class="p">(</span><span class="mi">5000</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die OpenGL-Initialisierung ist minimal verändert:</p>
+</div>
+<div class="listingblock">
+<div class="title">RectangleWindow.cpp:initializeGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="p">....</span>
+
+<span class="c1">// resize buffer for 2 interleaved attributes: position and color, 4 vertices, 3 floats each</span>
+<span class="n">m_vertexBufferData</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="mi">4</span><span class="o">*</span><span class="mi">3</span><span class="p">);</span>
+<span class="c1">// create new data buffer - the following memory copy stuff should</span>
+<span class="c1">// be placed in some convenience class in later tutorials</span>
+<span class="c1">// copy data in interleaved mode with pattern p0c0|p1c1|p2c2|p3c3</span>
+<span class="kt">float</span> <span class="o">*</span> <span class="n">buf</span> <span class="o">=</span> <span class="n">m_vertexBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">();</span>
+<span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">v</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">v</span><span class="o">&lt;</span><span class="mi">4</span><span class="p">;</span> <span class="o">++</span><span class="n">v</span><span class="p">,</span> <span class="n">buf</span> <span class="o">+=</span> <span class="mi">6</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// coordinates</span>
+	<span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">vertices</span><span class="p">[</span><span class="mi">3</span><span class="o">*</span><span class="n">v</span><span class="p">];</span>
+	<span class="n">buf</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">vertices</span><span class="p">[</span><span class="mi">3</span><span class="o">*</span><span class="n">v</span><span class="o">+</span><span class="mi">1</span><span class="p">];</span>
+	<span class="n">buf</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">vertices</span><span class="p">[</span><span class="mi">3</span><span class="o">*</span><span class="n">v</span><span class="o">+</span><span class="mi">2</span><span class="p">];</span>
+	<span class="c1">// colors</span>
+	<span class="n">buf</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">m_vertexColors</span><span class="p">[</span><span class="n">v</span><span class="p">].</span><span class="n">redF</span><span class="p">();</span>
+	<span class="n">buf</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">m_vertexColors</span><span class="p">[</span><span class="n">v</span><span class="p">].</span><span class="n">greenF</span><span class="p">();</span>
+	<span class="n">buf</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="n">m_vertexColors</span><span class="p">[</span><span class="n">v</span><span class="p">].</span><span class="n">blueF</span><span class="p">();</span>
+<span class="p">}</span>
+
+<span class="p">....</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Der Vertex-Puffer wird auf die richtige Größe gebracht (und bleibt so), und wird dann wie bisher belegt, wobei diesmal die Farben aus der Membervariable <code>m_vertexColors</code> kommen. Sonst ändert sich nichts.</p>
+</div>
+<div class="paragraph">
+<p>Wenn jetzt in der Ereignisbehandlungsroutine der "Change Color" Schaltfläche die Farben in <code>m_vertexColors</code> geändert werden, hat das keinerlei Einfluss auf das OpenGL-Zeichnen. Die neuen Werte müssen erst in den OpenGL-Vertexpuffer kopiert werden.</p>
+</div>
+<div class="paragraph">
+<p>Das passiert in der Funktion <code>updateScene()</code> (hätte auch <code>updateColors()</code> heißen können):</p>
+</div>
+<div class="listingblock">
+<div class="title">RectangleWindow.cpp:updateScene()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">RectangleWindow</span><span class="o">::</span><span class="n">updateScene</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// for now we only update colors</span>
+
+	<span class="c1">// first update our vertex buffer memory, but only those locations that are actually changed</span>
+	<span class="kt">float</span> <span class="o">*</span> <span class="n">buf</span> <span class="o">=</span> <span class="n">m_vertexBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">();</span>
+	<span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">v</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">v</span><span class="o">&lt;</span><span class="mi">4</span><span class="p">;</span> <span class="o">++</span><span class="n">v</span><span class="p">,</span> <span class="n">buf</span> <span class="o">+=</span> <span class="mi">6</span><span class="p">)</span> <span class="p">{</span>
+		<span class="c1">// colors</span>
+		<span class="n">buf</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">m_vertexColors</span><span class="p">[</span><span class="n">v</span><span class="p">].</span><span class="n">redF</span><span class="p">();</span>
+		<span class="n">buf</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">m_vertexColors</span><span class="p">[</span><span class="n">v</span><span class="p">].</span><span class="n">greenF</span><span class="p">();</span>
+		<span class="n">buf</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="n">m_vertexColors</span><span class="p">[</span><span class="n">v</span><span class="p">].</span><span class="n">blueF</span><span class="p">();</span>
+	<span class="p">}</span>
+
+	<span class="c1">// make this OpenGL context current</span>
+	<span class="n">makeCurrent</span><span class="p">();</span>
+
+	<span class="c1">// bind the vertex buffer</span>
+	<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+	<span class="c1">// now copy buffer data over: first argument pointer to data, second argument: size in bytes</span>
+	<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">m_vertexBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span> <span class="n">m_vertexBufferData</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="o">*</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">)</span> <span class="p">);</span>
+
+	<span class="c1">// and request an update</span>
+	<span class="n">update</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Erst wird der Puffer aktualisiert. Aber anstelle diesen komplett neu aufzubauen (und eventuell noch Speicherbereiche neu zu reservieren), verändern wir einfach nur die Farbwerte.</p>
+</div>
+<div class="paragraph">
+<p>Danach muss der OpenGL-Vertexpuffer die Daten bekommen. Damit der OpenGL-Context stimmt, wird <code>QOpenGLWindow::makeCurrent()</code> aufgerufen. Dann wird der Vertexpuffer eingebunden und schließlich die Daten kopiert.</p>
+</div>
+<div class="paragraph">
+<p>Ganz zuletzt wird <code>QPaintDeviceWindow::update()</code> aufgerufen (<code>QOpenGLWindow</code> ist durch Vererbung auch ein <code>QPaintDeviceWindow</code>). Dies hängt letztlich ein <code>QEvent::UpdateRequest</code> an die Ereignisliste an, wodurch beim nächsten VSync neu gezeichnet wird.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Man kann mal eine Test-Debug-Ausgabe in die Zeichenroutine einfügen. Wenn man nun in der OnClick-Ereignisbehandlungsroutine die Funktion <code>updateScene()</code> mehrfach aufruft, wird dennoch stets nur einmal je VSync gezeichnet.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_animierte_farbänderung">3.2.2. Animierte Farbänderung</h4>
+<div class="paragraph">
+<p>Anstelle neue Farben sofort zu setzen, kann man diese auch animiert verändern, d.h. in jedem Frame nur ein Stück von der Ursprungsfarbe zur Zielfarbe gehen.</p>
+</div>
+<div class="paragraph">
+<p>Man benötigt zusätzliche Membervariablen und zwei neue Funktionen:</p>
+</div>
+<div class="listingblock">
+<div class="title">RectangleWindow.h</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">class</span> <span class="nc">RectangleWindow</span> <span class="o">:</span> <span class="k">public</span> <span class="n">QOpenGLWindow</span> <span class="p">{</span>
+<span class="nl">public:</span>
+
+    <span class="p">....</span>
+
+	<span class="kt">void</span> <span class="n">animateColorsTo</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">QColor</span><span class="o">&gt;</span> <span class="o">&amp;</span> <span class="n">toColors</span><span class="p">);</span>
+
+<span class="nl">private:</span>
+	<span class="c1">// modifies the scene a bit and call updateScene() afterwards</span>
+	<span class="c1">// when already in the final state, doesn't do anything</span>
+	<span class="kt">void</span> <span class="n">animate</span><span class="p">();</span>
+
+    <span class="p">....</span>
+
+    <span class="c1">// Stores the target colors that we animate towards</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">QColor</span><span class="o">&gt;</span>			<span class="n">m_toColors</span><span class="p">;</span>
+    <span class="c1">// Stores the target colors that we animate from</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">QColor</span><span class="o">&gt;</span>			<span class="n">m_fromColors</span><span class="p">;</span>
+    <span class="c1">// number of frames used for the animation</span>
+    <span class="kt">unsigned</span> <span class="kt">int</span>				<span class="n">m_frameCount</span><span class="p">;</span>
+
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Funktion <code>animateColorsTo()</code> wird wieder durch eine Schaltfläche angestoßen. Die Implementierung überträgt nur die Daten in die Membervariablen und ruft <code>animate()</code> auf:</p>
+</div>
+<div class="listingblock">
+<div class="title">RectangleWindow.cpp:animateColorsTo()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">RectangleWindow</span><span class="o">::</span><span class="n">animateColorsTo</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">QColor</span><span class="o">&gt;</span> <span class="o">&amp;</span> <span class="n">toColors</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// current colors are set to "fromColors", toColors are store in m_toColors and</span>
+	<span class="c1">// animation counter is reset</span>
+
+	<span class="n">m_fromColors</span> <span class="o">=</span> <span class="n">m_vertexColors</span><span class="p">;</span>
+	<span class="n">m_toColors</span> <span class="o">=</span> <span class="n">toColors</span><span class="p">;</span>
+	<span class="n">m_frameCount</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+	<span class="n">animate</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Variable <code>m_frameCount</code> zählt die animierten Frames seit Beginn der Animation. In der Funktion <code>animate()</code> wird dann zwischen den Anfangsfarbwerten <code>m_fromColors</code> und Zielfarbwerten <code>m_toColors</code> linear (im HSV Farbraum) interpoliert:</p>
+</div>
+<div class="listingblock">
+<div class="title">RectangleWindow.cpp:animate()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">RectangleWindow</span><span class="o">::</span><span class="n">animate</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">const</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">FRAMECOUNT</span> <span class="o">=</span> <span class="mi">120</span><span class="p">;</span>
+	<span class="c1">// if already at framecount end, stop</span>
+	<span class="k">if</span> <span class="p">(</span><span class="o">++</span><span class="n">m_frameCount</span> <span class="o">&gt;</span> <span class="n">FRAMECOUNT</span><span class="p">)</span>
+		<span class="k">return</span><span class="p">;</span> <span class="c1">// this will also stop the frame rendering</span>
+
+	<span class="c1">// update the colors</span>
+	<span class="kt">double</span> <span class="n">alpha</span> <span class="o">=</span> <span class="kt">double</span><span class="p">(</span><span class="n">m_frameCount</span><span class="p">)</span><span class="o">/</span><span class="n">FRAMECOUNT</span><span class="p">;</span>
+
+	<span class="c1">// linear blending in HSV space will probably look "interesting", but it's simple</span>
+	<span class="k">for</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">m_vertexColors</span><span class="p">.</span><span class="n">size</span><span class="p">();</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+		<span class="kt">double</span> <span class="n">fromH</span><span class="p">,</span> <span class="n">fromS</span><span class="p">,</span> <span class="n">fromV</span><span class="p">;</span>
+		<span class="n">m_fromColors</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">getHsvF</span><span class="p">(</span><span class="o">&amp;</span><span class="n">fromH</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fromS</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">fromV</span><span class="p">);</span>
+		<span class="kt">double</span> <span class="n">toH</span><span class="p">,</span> <span class="n">toS</span><span class="p">,</span> <span class="n">toV</span><span class="p">;</span>
+		<span class="n">m_toColors</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">getHsvF</span><span class="p">(</span><span class="o">&amp;</span><span class="n">toH</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">toS</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">toV</span><span class="p">);</span>
+
+		<span class="n">m_vertexColors</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">QColor</span><span class="o">::</span><span class="n">fromHsvF</span><span class="p">(</span> <span class="n">toH</span><span class="o">*</span><span class="n">alpha</span> <span class="o">+</span> <span class="n">fromH</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">alpha</span><span class="p">),</span>
+											  <span class="n">toS</span><span class="o">*</span><span class="n">alpha</span> <span class="o">+</span> <span class="n">fromS</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">alpha</span><span class="p">),</span>
+											  <span class="n">toV</span><span class="o">*</span><span class="n">alpha</span> <span class="o">+</span> <span class="n">fromV</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">alpha</span><span class="p">));</span>
+	<span class="p">}</span>
+
+	<span class="n">updateScene</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Wichtig ist die Abfrage nach dem Überschreiten der Animationslänge (Anzahl von Frames). Sobald das Animationsende erreicht ist, wird die Funktion sofort verlassen und es finden keine weiteren Farbanpassungen und, was vielleicht wichtiger ist, keine weiteren UpdateRequest-Events statt. Dann wartet die Anwendung wieder einfach auf Nutzerinteraktion und verbraucht keine Resourcen.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Diese Art der Animation ist gekoppelt an <em>tatsächlich gezeichnete Frames</em>. Wenn das Fenster im Hintergrund ist (d.h. nicht <em>exposed</em>) wird die Ausführung des UpdateRequest-Events ausgesetzt, bis das Fenster wieder sichtbar ist. Damit wartet auch die Animation.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_zusammenfassung_2">3.2.3. Zusammenfassung</h4>
+<div class="paragraph">
+<p>Die Einbettung eines QWindow in eine Widgets-Anwendung ist dank Widget-Container denkbar einfach. Und was das Zusammenspiel zwischen normalen QWidget-basierten Eingabeereignissen und der Aktualisierung der OpenGL-Ausgabe (synchron zur Bildwiederholfrequenz) betrifft, so sind die beiden Farbanpassungsvarianten in diesem Tutorial Beispiele, wie man das machen kann.</p>
+</div>
+</div>
 </div>
 </div>
 </div>
