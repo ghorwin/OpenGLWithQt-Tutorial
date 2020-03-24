@@ -6,6 +6,9 @@ Es gibt eine PDF-Version des Tutorials:
 
 https://github.com/ghorwin/OpenGLWithQt-Tutorial/raw/master/docs/OpenGLQtTutorial.pdf
 
+Die Quelltexte (und Inhalte dieses Tutorials) liegen auf github:
+
+https://github.com/ghorwin/OpenGLWithQt-Tutorial
 
 == Kernthemen
 In diesem Tutorial geht es primär um folgende Themen:
