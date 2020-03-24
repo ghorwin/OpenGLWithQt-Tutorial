@@ -292,6 +292,6 @@ Diese Art der Animation ist gekoppelt an _tatsächlich gezeichnete Frames_. Wenn
 
 === Zusammenfassung
 
-Die Einbettung eines QWindow in eine Widgets-Anwendung ist dank Widget-Container denkbar einfach. Und was das Zusammenspiel zwischen normalen QWidget-basierten Eingabeereignissen und der Aktualisierung der OpenGL-Ausgabe (synchron zur Bildwiederholfrequenz) betrifft, so sind die beiden Farbanpassungsvarianten in diesem Tutorial Beispiele, wie man das machen kann.
+Die Einbettung eines `QWindow` in eine Widgets-Anwendung ist dank Widget-Container denkbar einfach. Und was das Zusammenspiel zwischen normalen `QWidget`-basierten Eingabeereignissen und der Aktualisierung der OpenGL-Ausgabe (synchron zur Bildwiederholfrequenz) betrifft, so sind die beiden Farbanpassungsvarianten in diesem Tutorial Beispiele, wie man das machen kann.
 
 
