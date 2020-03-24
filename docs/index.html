@@ -106,15 +106,19 @@ table {
 <li><a href="#_constructor">3.2.1. Constructor</a></li>
 <li><a href="#_ereignisbehandlungsroutinen">3.2.2. Ereignisbehandlungsroutinen</a></li>
 <li><a href="#_initialisierung">3.2.3. Initialisierung</a></li>
-<li><a href="#_zusammenfassung">3.2.4. Zusammenfassung</a></li>
 </ul>
 </li>
 <li><a href="#_zeichnen_mit_indexpuffern">3.3. Zeichnen mit Indexpuffern</a>
 <ul class="sectlevel3">
-<li><a href="#_initialisierung_von_gemischten_vertex_puffern">3.3.1. Initialisierung von gemischten Vertex-Puffern</a></li>
-<li><a href="#_element_indexpuffer">3.3.2. Element-/Indexpuffer</a></li>
+<li><a href="#_shaderprogramm">3.3.1. Shaderprogramm</a></li>
+<li><a href="#_initialisierung_von_gemischten_vertex_puffern">3.3.2. Initialisierung von gemischten Vertex-Puffern</a></li>
+<li><a href="#_element_indexpuffer">3.3.3. Element-/Indexpuffer</a></li>
+<li><a href="#_attribute_im_gemischten_vertexarray">3.3.4. Attribute im gemischten Vertexarray</a></li>
+<li><a href="#_freigabe_der_puffer">3.3.5. Freigabe der Puffer</a></li>
+<li><a href="#_rendern_2">3.3.6. Rendern</a></li>
 </ul>
 </li>
+<li><a href="#_zusammenfassung">3.4. Zusammenfassung</a></li>
 </ul>
 </li>
 <li><a href="#_tutorial_03_renderfenster_eingebettet_in_einen_qdialog">4. Tutorial 03: Renderfenster eingebettet in einen QDialog</a></li>
@@ -1028,15 +1032,6 @@ table {
 <div class="sect1">
 <h2 id="_tutorial_02_alternative_die_klasse_qopenglwindow">3. Tutorial 02: Alternative: die Klasse QOpenGLWindow</h2>
 <div class="sectionbody">
-<div class="paragraph">
-<p>In diesem Teil schauen wir uns die Klasse <a href="https://doc.qt.io/qt-5/qopenglwindow.html">QOpenGLWindow</a> an. Mit Hilfe dieser Klasse (die letztlich die Klasse OpenGLWindow aus dem <em>Tutorial 01</em> ersetzt) erstellen wir ein leicht modifiziertes Zeichenprogramm (2 Dreiecke, welche ein buntes Rechteck ergeben und via Element-Index-Array gezeichnet werden). Zuerst aber schauen wir an, was die Klasse unter der Haube macht.</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="./images/Tutorial_02_linux.png" alt="Tutorial_02">
-</div>
-<div class="title">Figure 2. Ausgabe: Tutorial_02 (Linux/Ubuntu Screenshot)</div>
-</div>
 <div class="admonitionblock tip">
 <table>
 <tr>
@@ -1050,6 +1045,35 @@ table {
 </td>
 </tr>
 </table>
+</div>
+<div class="paragraph">
+<p>In diesem Teil schauen wir uns die Klasse <a href="https://doc.qt.io/qt-5/qopenglwindow.html">QOpenGLWindow</a> an. Mit Hilfe dieser Klasse (die letztlich die Klasse <code>OpenGLWindow</code> aus dem <em>Tutorial 01</em> ersetzt) erstellen wir ein leicht modifiziertes Zeichenprogramm (2 Dreiecke, welche ein buntes Rechteck ergeben und via Element-Index-Puffer gezeichnet werden).</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/Tutorial_02_linux.png" alt="Tutorial_02">
+</div>
+<div class="title">Figure 2. Ausgabe: Tutorial_02 (Linux/Ubuntu Screenshot)</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Quelltext für dieses Tutorial liegt im github repo:  <a href="https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_02">Tutorial_02</a></p>
+</div>
+<div class="paragraph">
+<p><code>.pro</code>-Datei in Qt Creator öffnen und compilieren.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Zuerst schauen wir an, was die Klasse <code>OpenGLWindow</code> unter der Haube macht.</p>
 </div>
 <div class="sect2">
 <h3 id="_verwendung_der_klasse">3.1. Verwendung der Klasse</h3>
@@ -1229,17 +1253,11 @@ table {
 <p>Eigentlich sieht die Funktion fast genauso wie der Initialisierungsteil der Funktion <code>OpenGLWindow::renderNow()</code> aus <em>Tutorial 01</em> aus. Abgesehen natürlich davon, dass noch ein <code>QOpenGLWindowPaintDevice</code> erzeugt wird.</p>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_zusammenfassung">3.2.4. Zusammenfassung</h4>
-<div class="paragraph">
-<p>Das <code>QOpenGLWindow</code> ist im Modus <code>QOpenGLWindow::NoPartialUpdate</code> eigentlich vergleichbar mit unserem minimalistischen <code>OpenGLWindow</code>. Etwas Overhead ist vorhanden, allerdings sollte der in realen Anwendungen keine Rolle spielen. Es spricht also eigentlich nichts dagegen, direkt mit dem <code>QOpenGLWindow</code> anzufangen. Für spätere Erweiterungen (Maus- und Tastatureingabebehandlung) ist dennoch eine von <code>QOpenGLWindow</code> abgeleitete Klasse nötig. Wenn man also die zusätzlichen Funktionen (QPainter-Zeichnen, Buffer-Blenden etc.) von <code>QOpenGLWindow</code> nicht braucht, kann man auch mit dem schlanken <code>OpenGLWindow</code> aus <em>Tutorial 01</em> weitermachen.</p>
-</div>
-</div>
 </div>
 <div class="sect2">
 <h3 id="_zeichnen_mit_indexpuffern">3.3. Zeichnen mit Indexpuffern</h3>
 <div class="paragraph">
-<p>Als Erweiterung zum <em>Tutorial 01</em> soll im Anwendungsbeispiel für <code>QOpenGLWindow</code> einmal ein Indexpuffer verwendet werden. Zwei Erweiterungen werden vorgestellt:</p>
+<p>Als Erweiterung zum <em>Tutorial 01</em> soll im Anwendungsbeispiel für <code>QOpenGLWindow</code> ein Indexpuffer verwendet werden. Zwei Erweiterungen werden vorgestellt:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -1302,9 +1320,68 @@ table {
 </ul>
 </div>
 <div class="sect3">
-<h4 id="_initialisierung_von_gemischten_vertex_puffern">3.3.1. Initialisierung von gemischten Vertex-Puffern</h4>
+<h4 id="_shaderprogramm">3.3.1. Shaderprogramm</h4>
 <div class="paragraph">
-<p>Die Initialisierung beginnt wie in <em>Tutorial 01</em> unverändert mit dem Erstellen und Compilieren des Shaderprogramms. Nun wird der Vertex-Buffer erstellt. Diesmal werden nicht nur Koordinaten in den Buffer geschrieben, sondern auch Farben, und zwar abwechselnd (=<em>interleaved</em>) (siehe <a href="https://learnopengl.com/Getting-started/Hello-Triangle" class="bare">https://learnopengl.com/Getting-started/Hello-Triangle</a> für eine Erläuterung).</p>
+<p>Die Initialisierung beginnt wie in <em>Tutorial 01</em> unverändert mit dem Erstellen und Compilieren des Shaderprogramms. Da diesmal Farben verwendet werden, müssen beide Shaderprogramme angepasst werden:</p>
+</div>
+<div class="listingblock">
+<div class="title">Vertexshader "shaders/pass_through.vert"</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="cp">#version 330 core
+</span>
+<span class="c1">// vertex shader</span>
+
+<span class="c1">// input:  attribute named 'position' with 3 floats per vertex</span>
+<span class="n">layout</span> <span class="p">(</span><span class="n">location</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="n">in</span> <span class="n">vec3</span> <span class="n">position</span><span class="p">;</span>
+<span class="n">layout</span> <span class="p">(</span><span class="n">location</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="n">in</span> <span class="n">vec3</span> <span class="n">color</span><span class="p">;</span>
+
+<span class="n">out</span> <span class="n">vec4</span> <span class="n">fragColor</span><span class="p">;</span>
+
+<span class="kt">void</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">gl_Position</span> <span class="o">=</span> <span class="n">vec4</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+  <span class="n">fragColor</span> <span class="o">=</span> <span class="n">vec4</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Es gibt nun zwei Vertex-Attribute:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>layout location 0 = Position (als vec3 Koordinate)</p>
+</li>
+<li>
+<p>layout location 1 = Farbe (auch als vec3, rgb Farbwerte je im Bereich 0..1)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Der Farbwert eines Vertex wird als Ausgabevariable <em>fragColor</em> einfach als vec4 weitergereicht und kommt dann, bereits fertig interpoliert, als <em>fragColor</em> im Fragmentshader an. Dort wird er unverändert ausgegeben.</p>
+</div>
+<div class="listingblock">
+<div class="title">Fragmentshader "shaders/simple.frag"</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="cp">#version 330 core
+</span>
+<span class="c1">// fragment shader</span>
+
+<span class="n">in</span> <span class="n">vec4</span> <span class="n">fragColor</span><span class="p">;</span>    <span class="c1">// input: interpolated color as rgba-value</span>
+<span class="n">out</span> <span class="n">vec4</span> <span class="n">finalColor</span><span class="p">;</span>  <span class="c1">// output: final color value as rgba-value</span>
+
+<span class="kt">void</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">finalColor</span> <span class="o">=</span> <span class="n">fragColor</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Das Laden, Compilieren und Linken der Shader im Shaderprogramm wird genauso wie in <em>Tutorial 01</em> gemacht.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_initialisierung_von_gemischten_vertex_puffern">3.3.2. Initialisierung von gemischten Vertex-Puffern</h4>
+<div class="paragraph">
+<p>Als nächstes der Vertex-Buffer erstellt. Diesmal werden nicht nur Koordinaten in den Buffer geschrieben, sondern auch Farben, und zwar abwechselnd (=<em>interleaved</em>) (siehe <a href="https://learnopengl.com/Getting-started/Hello-Triangle" class="bare">https://learnopengl.com/Getting-started/Hello-Triangle</a> für eine Erläuterung).</p>
 </div>
 <div class="paragraph">
 <p>Es wird ein Rechteck gezeichnet, und zwar durch zwei Dreiecke. Dafür brauchen wir 4 Punkte. Der Vertexpuffer-Speicherblock soll am Ende so aussehen: <code>p0c0|p1c1|p2c2|p3c3</code>, wobei p für eine Position (vec3) und c für eine Farbe (vec3) steht. Die Daten werden zunächst in statischen Arrays separat definiert.</p>
@@ -1353,7 +1430,10 @@ table {
 </div>
 </div>
 <div class="paragraph">
-<p>Es gibt sicher viele andere Varianten, die Daten in der gewünschten Reihenfolge in den Speicherblock zu kopieren. Es fällt vielleicht auf, dass der gemeinsame Pufferspeicher in einem lokal erstellen <code>std::vector</code> liegt. Das wirft die Frage nach der (benötigten) Lebensdauer für diese Pufferspeicher auf.</p>
+<p>Es gibt sicher viele andere Varianten, die Daten in der gewünschten Reihenfolge in den Speicherblock zu kopieren.</p>
+</div>
+<div class="paragraph">
+<p>Es fällt vielleicht auf, dass der gemeinsame Pufferspeicher in einem lokal erstellen <code>std::vector</code> liegt. Das wirft die Frage nach der (benötigten) Lebensdauer für diese Pufferspeicher auf.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1368,14 +1448,14 @@ table {
 </div>
 </div>
 <div class="paragraph">
-<p>Im letzten Aufruf wird der Pufferspeicher tatsächlich <em>kopiert</em>. Der Aufruf zu <code>allocate()</code> ist sowohl Speicherreservierung im OpenGL-Puffer, als auch kopieren der Daten (wie mit <code>memcpy</code>).</p>
+<p>Im letzten Aufruf wird der Pufferspeicher tatsächlich <em>kopiert</em>. Der Aufruf zu <code>allocate()</code> ist sowohl Speicherreservierung im OpenGL-Puffer, als auch Kopieren der Daten (wie mit <code>memcpy</code>).</p>
 </div>
 <div class="paragraph">
 <p>Danach wird der Vector <code>vertexBufferData</code> nicht mehr benötigt, oder könnte sogar für weitere Puffer verwendet und verändert werden.</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_element_indexpuffer">3.3.2. Element-/Indexpuffer</h4>
+<h4 id="_element_indexpuffer">3.3.3. Element-/Indexpuffer</h4>
 <div class="paragraph">
 <p>In ähnlicher Weise wird nun der Elementpuffer erstellt, allerdings gibt es eine OpenGL-Besonderheit zu beachten:</p>
 </div>
@@ -1423,10 +1503,34 @@ table {
 </div>
 </div>
 <div class="paragraph">
-<p>Qt (und auch OpenGL) unterscheidet nicht zwischen Pufferobjekten für verschiedene Aufgaben. Erst beim Binden des Puffers an den OpenGL Kontext (beispielsweise durch den Aufruf <code>glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);</code>) wird die Verwendung des Puffers festgelegt.</p>
+<p>Qt (und auch OpenGL) unterscheidet nicht zwischen Pufferobjekten für verschiedene Aufgaben. Erst beim Binden des Puffers an den OpenGL Kontext (beispielsweise durch den Aufruf <code>glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)</code>) wird die Verwendung des Puffers festgelegt.</p>
 </div>
 <div class="paragraph">
-<p>In Qt muss man die Art des Puffers als Construktor-Argument übergeben, wobei <code>QOpenGLBuffer::VertexBuffer</code> der Standard ist. Für den Index-/Elementpuffer muss man <code>QOpenGLBuffer::IndexBuffer</code> übergeben.</p>
+<p>In Qt muss man die Art des Puffers als Construktor-Argument übergeben, wobei <code>QOpenGLBuffer::VertexBuffer</code> der Standard ist. Für den Index-/Elementpuffer muss man <code>QOpenGLBuffer::IndexBuffer</code> übergeben. Der eigentliche Pufferinhalt wird wieder beim Aufruf von <code>allocate()</code> kopiert.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_attribute_im_gemischten_vertexarray">3.3.4. Attribute im gemischten Vertexarray</h4>
+<div class="paragraph">
+<p>Bei der Verwendung gemischter Vertexarrays (mehrer Attribute je Vertex) muss man dem Shaderprogramm die Speicherstruktur und die Abbildung der Attribute angeben (zur Erläuterung siehe wiederum <a href="https://learnopengl.com/Getting-started/Hello-Triangle">Hello-Triangle Tutorial</a>).</p>
+</div>
+<div class="paragraph">
+<p>Die Syntax von <code>QOpenGLShaderProgram::setAttributeBuffer</code> entspricht im wesentlichen dem nativen OpenGL-Aufruf <code>glVertexAttribPointer</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="c1">// stride = number of bytes for one vertex (with all its attributes) = 3+3 floats = 6*4 = 24 Bytes</span>
+<span class="kt">int</span> <span class="n">stride</span> <span class="o">=</span> <span class="mi">6</span><span class="o">*</span><span class="nf">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">);</span>
+
+<span class="c1">// layout location 0 - vec3 with coordinates</span>
+<span class="n">m_program</span><span class="o">-&gt;</span><span class="n">enableAttributeArray</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="n">m_program</span><span class="o">-&gt;</span><span class="n">setAttributeBuffer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">GL_FLOAT</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="p">);</span>
+
+<span class="c1">// layout location 1 - vec3 with colors</span>
+<span class="n">m_program</span><span class="o">-&gt;</span><span class="n">enableAttributeArray</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="kt">int</span> <span class="n">colorOffset</span> <span class="o">=</span> <span class="mi">3</span><span class="o">*</span><span class="nf">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">);</span>
+<span class="n">m_program</span><span class="o">-&gt;</span><span class="n">setAttributeBuffer</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">GL_FLOAT</span><span class="p">,</span> <span class="n">colorOffset</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">stride</span><span class="p">);</span></code></pre>
+</div>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -1436,12 +1540,135 @@ table {
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Wie gesagt, es ist lediglich die Reihenfolge des Bindens wichtig, also man könnte auch die Puffer erst erstellen und befüllen und zum Schluss die</p>
+<p>Wie gesagt, für die korrekte Komposition des VAO es ist lediglich die Reihenfolge des Bindens und der <code>setAttributeBuffer()</code>-Aufrufe wichtig. Man könnte also auch die Puffer erst erstellen und befüllen und zum Schluss die folgenden Aufrufe in der geforderten Reihenfolge schreiben:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">m_vao</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span> <span class="c1">// VAO binden</span>
+<span class="c1">// Puffer binden und Daten kopieren</span>
+<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">vertexBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span> <span class="n">vertexBufferData</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="o">*</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">)</span> <span class="p">);</span>
+<span class="n">m_indexBufferObject</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+<span class="n">m_indexBufferObject</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">indices</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">indices</span><span class="p">)</span> <span class="p">);</span>
+<span class="c1">// Attribute setzen</span>
+<span class="n">m_program</span><span class="o">-&gt;</span><span class="n">setAttributeBuffer</span><span class="p">(...)</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In ähnlicher Art und Weise werden Bufferdaten auch aktualisiert (wird noch in einem späteren Tutorial besprochen).</p>
 </div>
 </td>
 </tr>
 </table>
 </div>
+</div>
+<div class="sect3">
+<h4 id="_freigabe_der_puffer">3.3.5. Freigabe der Puffer</h4>
+<div class="paragraph">
+<p>Bei der Freigabe der Puffer ist die Reihenfolge wichtig. Damit sich das VAO den Zustand des eingebundenden Elementpuffers merkt, darf man diesen <em>nicht vor</em> Freigabe des VAO freigeben. Am Besten man gibt nur Vertexbuffer und VAO frei, und auch das nur, wenn es notwendig ist. Es wird im Beispiel auch nur der Vollständigkeithalber gemacht.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="c1">// Release (unbind) all</span>
+<span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+<span class="n">m_vao</span><span class="p">.</span><span class="n">release</span><span class="p">();</span></code></pre>
+</div>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Explizites Freigeben von VBO oder VAO ist eigentlich nur notwendig, wenn man mit verschiedenen VAOs arbeitet und/oder verschiedenen Shadern. Dann sollte man auf Zustand im aktuellen OpenGL-Kontext achten und bewusst OpenGL-Objekte einbinden und freigeben.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_rendern_2">3.3.6. Rendern</h4>
+<div class="paragraph">
+<p>Das eigentliche Zeichnen erfolgt in der <code>paintGL()</code> Funktion, welche fast genauso aussieht wie die <code>TriangleWindow::render()</code> Funktion aus <em>Tutorial 01</em>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">RectangleWindow</span><span class="o">::</span><span class="n">paintGL</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// set the background color = clear color</span>
+	<span class="n">glClearColor</span><span class="p">(</span><span class="mf">0.1</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.1</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.2</span><span class="n">f</span><span class="p">,</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
+	<span class="n">glClear</span><span class="p">(</span><span class="n">GL_COLOR_BUFFER_BIT</span><span class="p">);</span>
+
+	<span class="c1">// use our shader program</span>
+	<span class="n">m_program</span><span class="o">-&gt;</span><span class="n">bind</span><span class="p">();</span>
+	<span class="c1">// bind the vertex array object, which in turn binds the vertex buffer object and</span>
+	<span class="c1">// sets the attribute buffer in the OpenGL context</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+	<span class="c1">// For old Intel drivers you may need to explicitely re-bind the index buffer, because</span>
+	<span class="c1">// these drivers do not remember the binding-state of the index/element-buffer in the VAO</span>
+	<span class="c1">//	m_indexBufferObject.bind();</span>
+
+	<span class="c1">// now draw the two triangles via index drawing</span>
+	<span class="c1">// - GL_TRIANGLES - draw individual triangles via elements</span>
+	<span class="n">glDrawElements</span><span class="p">(</span><span class="n">GL_TRIANGLES</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="n">GL_UNSIGNED_INT</span><span class="p">,</span> <span class="nb">nullptr</span><span class="p">);</span>
+	<span class="c1">// finally release VAO again (not really necessary, just for completeness)</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Das Anpassen des Viewports (OpenGL-Aufruf <code>glViewport()</code>) kann entfallen, da das bereits in der Basisklasse gemacht wurde.</p>
+</div>
+<div class="paragraph">
+<p>Dann folgen eigentlich die üblichen 4 Schritte:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Shaderprogramm binden</p>
+</li>
+<li>
+<p>Vertex Array Objekt binden (und damit Binden des Vertex- und Elementpuffers, und setzen der Attribut-Zeiger)</p>
+</li>
+<li>
+<p>Rendern, diesmal mit <code>glDrawElements</code> statt <code>glDrawArrays</code>, und</p>
+</li>
+<li>
+<p>freigeben des VAO (damit danach weitere Objekte gezeichnet werden können).</p>
+</li>
+</ol>
+</div>
+<div class="admonitionblock caution">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-caution" title="Caution"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Bei einigen älteren Intel-Treibern wurde der Zustand des eingebundenen Elementpuffers noch nicht korrekt im VAO gespeichert und wiederhergestellt. Daher musste man den Index-/Elementpuffer vor dem Zeichnen immer nochmal explizit einbinden (siehe auskommentierter Quelltext).</p>
+</div>
+<div class="paragraph">
+<p>Bei aktuellen Treibern scheint das aber kein Problem mehr zu sein (zumindest nicht unter Ubuntu).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_zusammenfassung">3.4. Zusammenfassung</h3>
+<div class="paragraph">
+<p>Das <code>QOpenGLWindow</code> ist im Modus <code>QOpenGLWindow::NoPartialUpdate</code> eigentlich vergleichbar mit unserem minimalistischen <code>OpenGLWindow</code> aus <em>Tutorial 01</em>. Etwas Overhead ist vorhanden, allerdings sollte der in realen Anwendungen keine Rolle spielen. Es spricht also eigentlich nichts dagegen, direkt mit dem <code>QOpenGLWindow</code> anzufangen.</p>
+</div>
+<div class="paragraph">
+<p>Für spätere Erweiterungen (Maus- und Tastatureingabebehandlung) ist dennoch eine von <code>QOpenGLWindow</code> abgeleitete Klasse nötig. Wenn man also die zusätzlichen Funktionen (QPainter-Zeichnen, Buffer-Blenden etc.) von <code>QOpenGLWindow</code> nicht braucht, kann man auch mit dem schlanken <code>OpenGLWindow</code> aus <em>Tutorial 01</em> weitermachen.</p>
+</div>
+<div class="paragraph">
+<p>Wie man nun ein solches QWindow-basiertes (natives) OpenGL-Fenster in eine Widgets-Anwendung integriert bekommt, beschreibt <em>Tutorial 03</em>.</p>
 </div>
 </div>
 </div>

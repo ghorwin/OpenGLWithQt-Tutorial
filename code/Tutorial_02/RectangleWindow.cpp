@@ -47,7 +47,7 @@ void RectangleWindow::initializeGL() {
 	if (!m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/pass_through.vert"))
 		qDebug() << "Vertex shader errors:\n" << m_program->log();
 
-	if (!m_program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/uniform_color.frag"))
+	if (!m_program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/simple.frag"))
 		qDebug() << "Fragment shader errors:\n" << m_program->log();
 
 	if (!m_program->link())
@@ -113,24 +113,21 @@ void RectangleWindow::initializeGL() {
 	m_indexBufferObject.bind();
 	m_indexBufferObject.allocate(indices, sizeof(indices) );
 
+	// stride = number of bytes for one vertex (with all its attributes) = 3+3 floats = 6*4 = 24 Bytes
+	int stride = 6*sizeof(float);
+
 	// layout location 0 - vec3 with coordinates
-	int stride = 6*sizeof(float); // one vertex data set contains of 3+3 floats = stride
 	m_program->enableAttributeArray(0);
 	m_program->setAttributeBuffer(0, GL_FLOAT, 0, 3, stride);
+
 	// layout location 1 - vec3 with colors
 	m_program->enableAttributeArray(1);
 	int colorOffset = 3*sizeof(float);
 	m_program->setAttributeBuffer(1, GL_FLOAT, colorOffset, 3, stride);
-
-	// Release (unbind) all
-	m_vertexBufferObject.release();
-	m_vao.release();
-	//	m_indexBufferObject.release();
 }
 
 
 void RectangleWindow::paintGL() {
-
 	// set the background color = clear color
 	glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -140,7 +137,10 @@ void RectangleWindow::paintGL() {
 	// bind the vertex array object, which in turn binds the vertex buffer object and
 	// sets the attribute buffer in the OpenGL context
 	m_vao.bind();
-//	m_indexBufferObject.bind();
+	// For old Intel drivers you may need to explicitely re-bind the index buffer, because
+	// these drivers do not remember the binding-state of the index/element-buffer in the VAO
+	//	m_indexBufferObject.bind();
+
 	// now draw the two triangles via index drawing
 	// - GL_TRIANGLES - draw individual triangles via elements
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);

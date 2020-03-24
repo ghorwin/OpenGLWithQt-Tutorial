@@ -1,6 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>shaders/pass_through.vert</file>
-        <file>shaders/uniform_color.frag</file>
+        <file>shaders/simple.frag</file>
     </qresource>
 </RCC>
