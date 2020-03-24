@@ -12,7 +12,6 @@ License    : BSD License,
 #include "RectangleWindow.h"
 
 #include <QDebug>
-#include <QOpenGLFunctions>
 
 RectangleWindow::RectangleWindow(QWidget * parent) :
 	QOpenGLWidget(parent),
@@ -43,6 +42,8 @@ RectangleWindow::~RectangleWindow() {
 
 
 void RectangleWindow::initializeGL() {
+	initializeOpenGLFunctions();
+
 	// this function is called once, when the window is first shown, i.e. when
 	// the the window content is first rendered
 
@@ -129,10 +130,9 @@ void RectangleWindow::initializeGL() {
 
 
 void RectangleWindow::paintGL() {
-	QOpenGLFunctions *f = QOpenGLContext::currentContext()->functions();
 	// set the background color = clear color
-	f->glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
-	f->glClear(GL_COLOR_BUFFER_BIT);
+	glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
 
 	// use our shader program
 	m_program->bind();
@@ -145,7 +145,7 @@ void RectangleWindow::paintGL() {
 
 	// now draw the two triangles via index drawing
 	// - GL_TRIANGLES - draw individual triangles via elements
-	f->glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 	// finally release VAO again (not really necessary, just for completeness)
 	m_vao.release();
 

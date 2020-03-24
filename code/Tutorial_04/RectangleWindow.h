@@ -16,12 +16,13 @@ License    : BSD License,
 #include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLWidget>
+#include <QOpenGLFunctions>
 
 /*	This is the window that shows the two triangles to form a rectangle.
 	We derive from our QOpenGLWidget base class and implement the
 	virtual initializeGL() and paintGL() functions.
 */
-class RectangleWindow : public QOpenGLWidget {
+class RectangleWindow : public QOpenGLWidget, protected QOpenGLFunctions {
 public:
 	RectangleWindow(QWidget * parent = nullptr);
 	virtual ~RectangleWindow() Q_DECL_OVERRIDE;
