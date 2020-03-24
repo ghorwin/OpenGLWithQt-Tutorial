@@ -29,6 +29,10 @@ public:
 	void initializeGL() Q_DECL_OVERRIDE;
 	void paintGL() Q_DECL_OVERRIDE;
 
+	void updateScene();
+
+	std::vector<QColor>			m_vertexColors;
+
 private:
 	// Wraps an OpenGL VertexArrayObject (VAO)
 	QOpenGLVertexArrayObject	m_vao;
@@ -39,6 +43,8 @@ private:
 
 	// Holds the compiled shader programs.
 	QOpenGLShaderProgram		*m_program;
+
+	std::vector<float>			m_vertexBufferData;
 };
 
 #endif // RectangleWindow_H

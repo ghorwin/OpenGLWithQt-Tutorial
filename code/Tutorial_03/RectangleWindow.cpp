@@ -14,6 +14,10 @@ License    : BSD License,
 #include <QDebug>
 
 RectangleWindow::RectangleWindow() :
+	m_vertexColors{ 		QColor("#f6a509"),
+							QColor("#cb2dde"),
+							QColor("#0eeed1"),
+							QColor("#068918") },
 	m_program(nullptr)
 {
 }
@@ -64,28 +68,21 @@ void RectangleWindow::initializeGL() {
 		-0.8f,  0.8f, 0.0f   // top left
 	};
 
-	QColor vertexColors [] = {
-		QColor("#f6a509"),
-		QColor("#cb2dde"),
-		QColor("#0eeed1"),
-		QColor("#068918"),
-	};
-
 	// create buffer for 2 interleaved attributes: position and color, 4 vertices, 3 floats each
-	std::vector<float> vertexBufferData(2*4*3);
+	m_vertexBufferData.resize(2*4*3);
 	// create new data buffer - the following memory copy stuff should
 	// be placed in some convenience class in later tutorials
 	// copy data in interleaved mode with pattern p0c0|p1c1|p2c2|p3c3
-	float * buf = vertexBufferData.data();
+	float * buf = m_vertexBufferData.data();
 	for (int v=0; v<4; ++v, buf += 6) {
 		// coordinates
 		buf[0] = vertices[3*v];
 		buf[1] = vertices[3*v+1];
 		buf[2] = vertices[3*v+2];
 		// colors
-		buf[3] = vertexColors[v].redF();
-		buf[4] = vertexColors[v].greenF();
-		buf[5] = vertexColors[v].blueF();
+		buf[3] = m_vertexColors[v].redF();
+		buf[4] = m_vertexColors[v].greenF();
+		buf[5] = m_vertexColors[v].blueF();
 	}
 
 	// create a new buffer for the vertices and colors, interleaved storage
@@ -94,7 +91,7 @@ void RectangleWindow::initializeGL() {
 	m_vertexBufferObject.setUsagePattern(QOpenGLBuffer::StaticDraw);
 	m_vertexBufferObject.bind();
 	// now copy buffer data over: first argument pointer to data, second argument: size in bytes
-	m_vertexBufferObject.allocate(vertexBufferData.data(), vertexBufferData.size()*sizeof(float) );
+	m_vertexBufferObject.allocate(m_vertexBufferData.data(), m_vertexBufferData.size()*sizeof(float) );
 
 	// create and bind Vertex Array Object - must be bound *before* the element buffer is bound,
 	// because the VAO remembers and manages element buffers as well
@@ -146,4 +143,30 @@ void RectangleWindow::paintGL() {
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 	// finally release VAO again (not really necessary, just for completeness)
 	m_vao.release();
+}
+
+
+void RectangleWindow::updateScene() {
+	// for now we only update colors
+
+	// first update our vertex buffer memory
+
+	float * buf = m_vertexBufferData.data();
+	for (int v=0; v<4; ++v, buf += 6) {
+		// colors
+		buf[3] = m_vertexColors[v].redF();
+		buf[4] = m_vertexColors[v].greenF();
+		buf[5] = m_vertexColors[v].blueF();
+	}
+
+	// make this OpenGL context current
+	makeCurrent();
+
+	// bind the vertex buffer
+	m_vertexBufferObject.bind();
+	// now copy buffer data over: first argument pointer to data, second argument: size in bytes
+	m_vertexBufferObject.allocate(m_vertexBufferData.data(), m_vertexBufferData.size()*sizeof(float) );
+
+	// and request an update
+	update();
 }
