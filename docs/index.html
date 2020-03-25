@@ -138,6 +138,24 @@ table {
 </li>
 </ul>
 </li>
+<li><a href="#_tutorial_04_verwendung_des_qopenglwidget">4. Tutorial 04: Verwendung des QOpenGLWidget</a>
+<ul class="sectlevel2">
+<li><a href="#_was_bietet_das_qopenglwidget">4.1. Was bietet das QOpenGLWidget</a>
+<ul class="sectlevel3">
+<li><a href="#_anpassung_der_vererbungshierarchie">4.1.1. Anpassung der Vererbungshierarchie</a></li>
+<li><a href="#_initialisierung_2">4.1.2. Initialisierung</a></li>
+<li><a href="#_einbettung_in_ein_anderes_qwidget">4.1.3. Einbettung in ein anderes QWidget</a></li>
+</ul>
+</li>
+<li><a href="#_performance_vergleich">4.2. Performance-Vergleich</a></li>
+<li><a href="#_transparenz">4.3. Transparenz</a>
+<ul class="sectlevel3">
+<li><a href="#_mit_qopenglwidget">4.3.1. Mit QOpenGLWidget</a></li>
+<li><a href="#_mit_qwindow_basierten_opengl_renderfenstern">4.3.2. Mit QWindow-basierten OpenGL Renderfenstern</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -2068,11 +2086,391 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="_tutorial_04_verwendung_des_qopenglwidget">4. Tutorial 04: Verwendung des QOpenGLWidget</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In Tutorialteil wird das <a href="https://doc.qt.io/qt-5/qopenglwidget.html">QOpenGLWidget</a> anstelle des <code>QOpenGLWindow</code> verwendet. Das Programm macht das Gleiche wie in <em>Tutorial 03</em> (nur etwas langsamer :-), aber dazu kommen wir gleich).</p>
+</div>
+<div class="paragraph">
+<p>Damit der Screenshot nicht ganz genauso wie im letzten Tutorial aussieht, habe ich mal einen halbdurchsichtigen Hintergrund eingeschaltet - das geht aber mit dem bisherigen Implementierungsvarianten auch (siehe letzter Teil des Tutorials).</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/Tutorial_04_linux.png" alt="Tutorial_04">
+</div>
+<div class="title">Figure 4. Tutorial_04 (Linux Screenshot, mit Transparenz)</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Quelltext für dieses Tutorial liegt im github repo:  <a href="https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_04">Tutorial_04</a></p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_was_bietet_das_qopenglwidget">4.1. Was bietet das QOpenGLWidget</h3>
+<div class="paragraph">
+<p>Von den ganzen Qt OpenGL-Klassen ist das <code>QOpenGLWidget</code> die mit Abstand am besten dokumentierte Klasse. Es gibt ein paar interessante Details in der Dokumentation, hier ein paar Zitate:</p>
+</div>
+<div class="quoteblock">
+<blockquote>
+<div class="paragraph">
+<p>All rendering happens into an OpenGL framebuffer object.</p>
+</div>
+</blockquote>
+</div>
+<div class="paragraph">
+<p>&#8230;&#8203;</p>
+</div>
+<div class="quoteblock">
+<blockquote>
+<div class="paragraph">
+<p>Due to being backed by a framebuffer object, the behavior of QOpenGLWidget is very similar to QOpenGLWindow with the update behavior set to PartialUpdateBlit or PartialUpdateBlend. This means that the contents are preserved between paintGL() calls so that incremental rendering is possible.</p>
+</div>
+</blockquote>
+</div>
+<div class="paragraph">
+<p>&#8230;&#8203;</p>
+</div>
+<div class="quoteblock">
+<blockquote>
+<div class="paragraph">
+<p><strong>Note:</strong> Most applications do not need incremental rendering because they will render everything in the view on every paint call.</p>
+</div>
+</blockquote>
+</div>
+<div class="paragraph">
+<p>Und vielleicht am Interessantesten:</p>
+</div>
+<div class="quoteblock">
+<blockquote>
+<div class="paragraph">
+<p>Adding a QOpenGLWidget into a window turns on OpenGL-based compositing for the entire window. In some special cases this may not be ideal, and the old QGLWidget-style behavior with a separate, native child window is desired. Desktop applications that understand the limitations of this approach (for example when it comes to overlaps, transparency, scroll views and MDI areas), can use QOpenGLWindow with QWidget::createWindowContainer(). This is a modern alternative to QGLWidget and is faster than QOpenGLWidget due to the lack of the additional composition step. It is strongly recommended to limit the usage of this approach to cases where there is no other choice. Note that this option is not suitable for most embedded and mobile platforms, and it is known to have issues on certain desktop platforms (e.g. macOS) too. The stable, cross-platform solution is always QOpenGLWidget.</p>
+</div>
+</blockquote>
+<div class="attribution">
+&#8212; Qt Documentation (5.9)
+</div>
+</div>
+<div class="paragraph">
+<p>Grundlegend: Ein OpenGL bild wird beim <code>QOpenGLWidget</code> <em>immer</em> erst in einen Buffer gerendert, und dann entsprechend der Zusammensetzungsregeln (Compositing) auf den Bildschirm gezeichnet. Das dauert natürlich entsprechend länger als direktes Zeichnen (siehe Performance-Test unten).</p>
+</div>
+<div class="paragraph">
+<p>Der wesentliche Vorteil des gepufferten Zeichnens ist die Möglichkeit des inkrementellen Renderns. Ob man das braucht, hängt wesentlich von der eigentlichen Anwendung ab. Eigentlich ist dies nur von Belang, wenn das zu rendernde Fenster aus mehreren individuellen Teilbereichen besteht. In diesem Fall könnte man aber auch die Anwendung aus mehreren OpenGL-Fenstern zusammensetzen, in in jedem Fenster individuell zeichnen.</p>
+</div>
+<div class="paragraph">
+<p>Die letzte Anmerkung über die Portabilität und Stabilität ist vielleicht nicht ganz unwichtig. Man kann das Ganze also von 2 Seiten betrachten:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>mit <code>QOpenGLWidget</code> beginnen, und beim Auftreten von Performanceproblemen wechseln,</p>
+</li>
+<li>
+<p>mit <code>QOpenGLWindow</code> oder einer selbstgeschriebenen leichtgewichtigen Klasse wie in <em>Tutorial 01</em>, beginnen, und im Falle von Kompatibilitätsproblemen auf <code>QOpenGLWidget</code> wechseln</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Hinsichtlich der Programmierschnittstelle sind die verschiedenen Klassen sich sehr ähnlich. Nachfolgend sind die einzelnen Anpassungen von <em>Tutorial 03</em> zur Verwendung von <code>QOpenGLWidget</code> aufgeführt.</p>
+</div>
+<div class="sect3">
+<h4 id="_anpassung_der_vererbungshierarchie">4.1.1. Anpassung der Vererbungshierarchie</h4>
+<div class="paragraph">
+<p>Der erste Schritt ist das Austauschen der Basisklasse.</p>
+</div>
+<div class="listingblock">
+<div class="title">RectangleWidget.h</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">class</span> <span class="nc">RectangleWindow</span> <span class="o">:</span> <span class="k">public</span> <span class="n">QOpenGLWidget</span><span class="p">,</span> <span class="k">protected</span> <span class="n">QOpenGLFunctions</span> <span class="p">{</span>
+<span class="nl">public:</span>
+    <span class="n">RectangleWindow</span><span class="p">(</span><span class="n">QWidget</span> <span class="o">*</span> <span class="n">parent</span> <span class="o">=</span> <span class="nb">nullptr</span><span class="p">);</span>
+
+    <span class="p">....</span>
+
+<span class="nl">protected:</span>
+	<span class="kt">void</span> <span class="n">initializeGL</span><span class="p">()</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
+	<span class="kt">void</span> <span class="n">paintGL</span><span class="p">()</span> <span class="n">Q_DECL_OVERRIDE</span><span class="p">;</span>
+
+    <span class="p">....</span>
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Klasse <code>QOpenGLWidget</code> erbt selbst nicht von <code>QOpenGLFunctions</code>, weswegen man diese Klasse als weitere Basisklasse angeben muss (geht auch noch anders, aber so muss im Quelltext sonst nicht viel angepasst werden). Der Konstruktor nimmt, wie andere Widgets auch, ein parent-Zeiger als Argument.</p>
+</div>
+<div class="paragraph">
+<p>Die Funktionen <code>initializeGL()</code> und  <code>paintGL()</code> sind bei <code>QOpenGLWidget</code> protected. Das war&#8217;s auch schon.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_initialisierung_2">4.1.2. Initialisierung</h4>
+<div class="paragraph">
+<p>Der Konstruktor ist entsprechend zu erweitern, sodass der <code>parent</code> Zeiger an die Basisklasse weitergereicht wird:</p>
+</div>
+<div class="listingblock">
+<div class="title">RectangleWidget.cpp:Konstruktor</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">RectangleWindow</span><span class="o">::</span><span class="n">RectangleWindow</span><span class="p">(</span><span class="n">QWidget</span> <span class="o">*</span> <span class="n">parent</span><span class="p">)</span> <span class="o">:</span>
+	<span class="n">QOpenGLWidget</span><span class="p">(</span><span class="n">parent</span><span class="p">),</span>
+	<span class="n">m_vertexColors</span><span class="p">{</span> 		<span class="n">QColor</span><span class="p">(</span><span class="s">"#f6a509"</span><span class="p">),</span>
+							<span class="n">QColor</span><span class="p">(</span><span class="s">"#cb2dde"</span><span class="p">),</span>
+							<span class="n">QColor</span><span class="p">(</span><span class="s">"#0eeed1"</span><span class="p">),</span>
+							<span class="n">QColor</span><span class="p">(</span><span class="s">"#068918"</span><span class="p">)</span> <span class="p">},</span>
+	<span class="n">m_program</span><span class="p">(</span><span class="nb">nullptr</span><span class="p">),</span>
+	<span class="n">m_frameCount</span><span class="p">(</span><span class="mi">5000</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="n">setMinimumSize</span><span class="p">(</span><span class="mi">600</span><span class="p">,</span><span class="mi">400</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Da die Klasse nun ein Widget ist, kann man die minimale Größe auch gleich hier setzen.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Das Setzen der Größe muss vor dem ersten Anzeigen gemacht werden, da sonst das Widget nicht sichtbar ist (und auch nicht vergrößert werden kann).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Die Verwendung der vererbten <code>QOpenGLFunctions</code> Funktionen verlangt auch eine Initialisierung, die muss aber durch Aufruf der Funktion in <code>initializeOpenGLFunctions()</code> in <code>initializeGL()</code> erfolgen.</p>
+</div>
+<div class="listingblock">
+<div class="title">RectangleWidget.cpp:initializeGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">RectangleWindow</span><span class="o">::</span><span class="n">initializeGL</span><span class="p">()</span> <span class="p">{</span>
+	<span class="n">initializeOpenGLFunctions</span><span class="p">();</span>
+
+    <span class="p">....</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Mehr ist nicht zu machen, und schon ist das <code>RectangleWindow</code> ein vollständiges Widget.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Das <code>UpdateBehavior</code> ist beim <code>QOpenGLWidget</code> standardmäßig auf <code>QOpenGLWidget::NoPartialUpdate</code> gesetzt, muss also nicht extra angepasst werden.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_einbettung_in_ein_anderes_qwidget">4.1.3. Einbettung in ein anderes QWidget</h4>
+<div class="paragraph">
+<p>Der Widget-Container (siehe <em>Tutorial 03</em>) kann entfallen, und die Einbettung des Widgets wird wie mit jedem anderen Widget gemacht.</p>
+</div>
+<div class="listingblock">
+<div class="title">TestDialog.cpp:Konstruktor</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="p">....</span>
+
+<span class="n">m_rectangleWindow</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">RectangleWindow</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+<span class="n">m_rectangleWindow</span><span class="o">-&gt;</span><span class="n">setFormat</span><span class="p">(</span><span class="n">format</span><span class="p">);</span>
+
+<span class="c1">// *** create the layout and insert widget container</span>
+
+<span class="n">QVBoxLayout</span> <span class="o">*</span> <span class="n">vlay</span> <span class="o">=</span> <span class="k">new</span> <span class="n">QVBoxLayout</span><span class="p">;</span>
+<span class="n">vlay</span><span class="o">-&gt;</span><span class="n">setMargin</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="n">vlay</span><span class="o">-&gt;</span><span class="n">setSpacing</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="n">vlay</span><span class="o">-&gt;</span><span class="n">addWidget</span><span class="p">(</span><span class="n">m_rectangleWindow</span><span class="p">);</span>
+
+<span class="p">....</span></code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_performance_vergleich">4.2. Performance-Vergleich</h3>
+<div class="paragraph">
+<p>Die spannende Frage ist, wieviel langsamer ist das <code>QOpenGLWidget</code> im Vergleich zum direkten Zeichnen via <code>QOpenGLWindow</code> oder der eigenen <code>OpenGLWindow</code> Klasse aus <em>Tutorial 01</em>?</p>
+</div>
+<div class="paragraph">
+<p>Im direkter Vergleich zwischen <em>Tutorial 03</em> und <em>Tutorial 04</em> fällt sofort auffällt auf, dass das Resize-Verhalten unterschiedlich ist. Es gibt eine merkliche Verzögerung bei der Größenänderung eines Widgets (sowohl unter Windows, als auch auf anderen Plattformen) und auch, wenn die Programme im Releasemodus kompiliert sind.</p>
+</div>
+<div class="paragraph">
+<p>Da in diesen Testfällen nicht gerendert wird, liegt der Unterschied nur allein in der Widget-Compositing-Funktionalität im <code>QOpenGLWidget</code>.</p>
+</div>
+<div class="paragraph">
+<p>Bei einem kleinen Benchmarktest (ca. 30 Sekunden lang mit dem Mauszeiger die Fenstergröße verändern, dabei die Anzahl der paintEvents() aufzeichnen und dann durch die Laufzeit teilen) kommt man auf:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>25 Fensteraktualisierungen/Sekunde bei der Variante mit <code>QOpenGLWindow</code>, und</p>
+</li>
+<li>
+<p>15 Fensteraktualisierungen/Sekunde bei der Variante mit <code>QOpenGLWidget</code>.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Das wohlgemerkt ohne OpenGL Zeichenaufrufe.</p>
+</div>
+<div class="paragraph">
+<p>Interessant wird es, wenn man OpenGL-Animationen dazuschaltet. Dies kann man bei den Beispielen ganz einfach machen, wenn man die Frames für die Farbanimation von 120 auf, ca. 800 ändert. Dann läuft die Animation nach Klick auf "Animate Colors" ein paar Sekunden länger und man kann den CPU Overhead testen.</p>
+</div>
+<div class="paragraph">
+<p>Bei beiden Varianten dauert die Animation exakt gleich lang, da jeweils mit nahezu 60 Frames pro Sekunde gerendert wird (bei mir zumindest).</p>
+</div>
+<div class="paragraph">
+<p>Allerdings zeigen beide Varianten unterschiedliche CPU Auslastungen:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>2.4% (single-core) CPU Load bei der Variante mit <code>QOpenGLWindow</code>, und</p>
+</li>
+<li>
+<p>7.9% (single-core) CPU Load bei der Variante mit <code>QOpenGLWidget</code>.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Ein Unterschied ist da, aber sicher nicht der Rede wert. Da dürfte der optimische Verzögerungseffekt beim Vergrößern/Verkleinern eines Fensters während der Animation eher noch stören.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_transparenz">4.3. Transparenz</h3>
+<div class="paragraph">
+<p>Wie schon im Screenshot zu sehen, kann man auch halb-transparente Widgetanwendungen bauen, oder auch Anwendungen mit recht unregelmäßigen Formen.</p>
+</div>
+<div class="sect3">
+<h4 id="_mit_qopenglwidget">4.3.1. Mit QOpenGLWidget</h4>
+<div class="paragraph">
+<p>Bei Verwendung des <code>QOpenGLWidgets</code> ist das recht einfach. Zunächst gibt man dem obersten Widget das Attribut <code>Qt::WA_TranslucentBackground</code>. Wer keine Titelleiste und keine Rahmen um das Fenster haben möchte, muss dem obersten Widget auch noch die Eigenschaft <code>Qt::FramelessWindowHint</code> geben, also z.B.:</p>
+</div>
+<div class="listingblock">
+<div class="title">main.cpp</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+	<span class="n">QApplication</span> <span class="n">app</span><span class="p">(</span><span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
+
+	<span class="n">TestDialog</span> <span class="n">dlg</span><span class="p">;</span>
+	<span class="c1">// transparent window</span>
+	<span class="n">dlg</span><span class="p">.</span><span class="n">setAttribute</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">WA_TranslucentBackground</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>
+	<span class="c1">// no frame and flags.</span>
+	<span class="n">dlg</span><span class="p">.</span><span class="n">setWindowFlag</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">FramelessWindowHint</span><span class="p">,</span> <span class="nb">true</span><span class="p">);</span>
+	<span class="n">dlg</span><span class="p">.</span><span class="n">show</span><span class="p">();</span>
+
+	<span class="k">return</span> <span class="n">app</span><span class="p">.</span><span class="n">exec</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In der eigentlichen Zeichenfunktion muss man nur noch die Hintergrundfarbe auf Transparent umstellen (zumindest einen Alpha-Wert &lt; 1):</p>
+</div>
+<div class="listingblock">
+<div class="title">RectangleWindow.cpp:paintGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">RectangleWindow</span><span class="o">::</span><span class="n">paintGL</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// set the background color = clear color</span>
+	<span class="n">glClearColor</span><span class="p">(</span><span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">);</span> <span class="c1">// fully transparent</span>
+	<span class="n">glClear</span><span class="p">(</span><span class="n">GL_COLOR_BUFFER_BIT</span><span class="p">);</span>
+
+	<span class="p">....</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Normalerweise würde man bei einem Alpha-Wert von 0 erwarten, dass der Hintergrund unverändert durchscheint, auch wenn die RGB Farbanteile der Hintergrundfarbe (clear color) irgendwelche Werte haben. Das ist aber nicht so - die Farben des Hintergrundes erscheinen etwas verblasst. Daher sollte man, wenn man wirklich den Hintergrund unverändert durchscheinen lassen möchte, die clear Color stets auf 0,0,0,0 setzen.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_mit_qwindow_basierten_opengl_renderfenstern">4.3.2. Mit QWindow-basierten OpenGL Renderfenstern</h4>
+<div class="paragraph">
+<p>Bei den Varianten aus <em>Tutorial 01 .. 03</em> geht Transparenz auch, allerdings mit minimal mehr Aufwand. Bei der Konfiguration des <code>QSurfaceFormat</code> muss man einen AlphaBuffer festlegen (hier gezeigt beim Beispiel aus <em>Tutorial 01</em>).</p>
+</div>
+<div class="listingblock">
+<div class="title">main.cpp</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">int</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span><span class="n">argv</span><span class="p">)</span> <span class="p">{</span>
+	<span class="n">QGuiApplication</span> <span class="n">app</span><span class="p">(</span><span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">);</span>
+
+	<span class="c1">// Set OpenGL Version information</span>
+	<span class="n">QSurfaceFormat</span> <span class="n">format</span><span class="p">;</span>
+	<span class="n">format</span><span class="p">.</span><span class="n">setRenderableType</span><span class="p">(</span><span class="n">QSurfaceFormat</span><span class="o">::</span><span class="n">OpenGL</span><span class="p">);</span>
+	<span class="n">format</span><span class="p">.</span><span class="n">setProfile</span><span class="p">(</span><span class="n">QSurfaceFormat</span><span class="o">::</span><span class="n">CoreProfile</span><span class="p">);</span>
+	<span class="n">format</span><span class="p">.</span><span class="n">setVersion</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">3</span><span class="p">);</span>
+	<span class="n">format</span><span class="p">.</span><span class="n">setAlphaBufferSize</span><span class="p">(</span><span class="mi">8</span><span class="p">);</span>
+
+	<span class="n">TriangleWindow</span> <span class="n">window</span><span class="p">;</span>
+	<span class="c1">// Note: The format must be set before show() is called.</span>
+	<span class="n">window</span><span class="p">.</span><span class="n">setFormat</span><span class="p">(</span><span class="n">format</span><span class="p">);</span>
+	<span class="n">window</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="mi">640</span><span class="p">,</span> <span class="mi">480</span><span class="p">);</span>
+	<span class="n">window</span><span class="p">.</span><span class="n">show</span><span class="p">();</span>
+	<span class="n">window</span><span class="p">.</span><span class="n">setFlag</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">FramelessWindowHint</span><span class="p">);</span>
+
+	<span class="k">return</span> <span class="n">app</span><span class="p">.</span><span class="n">exec</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In der Render-Funktion muss man noch Alphablending einschalten, hier gezeigt am Beispiel aus <em>Tutorial 01</em>.</p>
+</div>
+<div class="listingblock">
+<div class="title">TriangleWindow.cpp:render()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">TriangleWindow</span><span class="o">::</span><span class="n">render</span><span class="p">()</span> <span class="p">{</span>
+    <span class="p">....</span>
+
+	<span class="c1">// Set the transparency to the scene to use the transparency of the fragment shader</span>
+	<span class="n">glEnable</span><span class="p">(</span><span class="n">GL_BLEND</span><span class="p">);</span>
+	<span class="n">glBlendFunc</span><span class="p">(</span><span class="n">GL_SRC_ALPHA</span><span class="p">,</span> <span class="n">GL_ONE_MINUS_SRC_ALPHA</span><span class="p">);</span>
+
+	<span class="c1">// set the background color = clear color</span>
+	<span class="n">glClearColor</span><span class="p">(</span><span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">.0</span><span class="n">f</span><span class="p">);</span>
+	<span class="n">glClear</span><span class="p">(</span><span class="n">GL_COLOR_BUFFER_BIT</span><span class="p">);</span>
+
+    <span class="p">....</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
 Version 0.1.0<br>
-Last updated 2020-03-25 09:21:47 +0100
+Last updated 2020-03-25 17:17:52 +0100
 </div>
 </div>
 <style>

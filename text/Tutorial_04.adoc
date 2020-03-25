@@ -22,10 +22,14 @@ ____
 All rendering happens into an OpenGL framebuffer object.
 ____
 
+...
+
 [quote,]
 ____
 Due to being backed by a framebuffer object, the behavior of QOpenGLWidget is very similar to QOpenGLWindow with the update behavior set to PartialUpdateBlit or PartialUpdateBlend. This means that the contents are preserved between paintGL() calls so that incremental rendering is possible.
 ____
+
+...
 
 [quote,]
 ____
@@ -33,6 +37,141 @@ ____
 ____
 
 
+Und vielleicht am Interessantesten:
+
+[quote, Qt Documentation (5.9)]
+____
+
+Adding a QOpenGLWidget into a window turns on OpenGL-based compositing for the entire window. In some special cases this may not be ideal, and the old QGLWidget-style behavior with a separate, native child window is desired. Desktop applications that understand the limitations of this approach (for example when it comes to overlaps, transparency, scroll views and MDI areas), can use QOpenGLWindow with QWidget::createWindowContainer(). This is a modern alternative to QGLWidget and is faster than QOpenGLWidget due to the lack of the additional composition step. It is strongly recommended to limit the usage of this approach to cases where there is no other choice. Note that this option is not suitable for most embedded and mobile platforms, and it is known to have issues on certain desktop platforms (e.g. macOS) too. The stable, cross-platform solution is always QOpenGLWidget.
+____
+
+Grundlegend: Ein OpenGL bild wird beim `QOpenGLWidget` _immer_ erst in einen Buffer gerendert, und dann entsprechend der Zusammensetzungsregeln (Compositing) auf den Bildschirm gezeichnet. Das dauert natürlich entsprechend länger als direktes Zeichnen (siehe Performance-Test unten).
+
+Der wesentliche Vorteil des gepufferten Zeichnens ist die Möglichkeit des inkrementellen Renderns. Ob man das braucht, hängt wesentlich von der eigentlichen Anwendung ab. Eigentlich ist dies nur von Belang, wenn das zu rendernde Fenster aus mehreren individuellen Teilbereichen besteht. In diesem Fall könnte man aber auch die Anwendung aus mehreren OpenGL-Fenstern zusammensetzen, in in jedem Fenster individuell zeichnen.
+
+Die letzte Anmerkung über die Portabilität und Stabilität ist vielleicht nicht ganz unwichtig. Man kann das Ganze also von 2 Seiten betrachten:
+
+- mit `QOpenGLWidget` beginnen, und beim Auftreten von Performanceproblemen wechseln,
+- mit `QOpenGLWindow` oder einer selbstgeschriebenen leichtgewichtigen Klasse wie in _Tutorial 01_, beginnen, und im Falle von Kompatibilitätsproblemen auf `QOpenGLWidget` wechseln
+
+Hinsichtlich der Programmierschnittstelle sind die verschiedenen Klassen sich sehr ähnlich. Nachfolgend sind die einzelnen Anpassungen von _Tutorial 03_ zur Verwendung von `QOpenGLWidget` aufgeführt.
+
+=== Anpassung der Vererbungshierarchie
+
+Der erste Schritt ist das Austauschen der Basisklasse.
+
+.RectangleWidget.h
+[source,c++]
+----
+class RectangleWindow : public QOpenGLWidget, protected QOpenGLFunctions {
+public:
+    RectangleWindow(QWidget * parent = nullptr);
+	
+    ....
+
+protected:
+	void initializeGL() Q_DECL_OVERRIDE;
+	void paintGL() Q_DECL_OVERRIDE;
+
+    ....
+};
+----
+
+Die Klasse `QOpenGLWidget` erbt selbst nicht von `QOpenGLFunctions`, weswegen man diese Klasse als weitere Basisklasse angeben muss (geht auch noch anders, aber so muss im Quelltext sonst nicht viel angepasst werden). Der Konstruktor nimmt, wie andere Widgets auch, ein parent-Zeiger als Argument.
+
+Die Funktionen `initializeGL()` und  `paintGL()` sind bei `QOpenGLWidget` protected. Das war's auch schon. 
+
+=== Initialisierung
+
+Der Konstruktor ist entsprechend zu erweitern, sodass der `parent` Zeiger an die Basisklasse weitergereicht wird:
+
+.RectangleWidget.cpp:Konstruktor
+[source,c++]
+----
+RectangleWindow::RectangleWindow(QWidget * parent) :
+	QOpenGLWidget(parent),
+	m_vertexColors{ 		QColor("#f6a509"),
+							QColor("#cb2dde"),
+							QColor("#0eeed1"),
+							QColor("#068918") },
+	m_program(nullptr),
+	m_frameCount(5000)
+{
+	setMinimumSize(600,400);
+}
+----
+Da die Klasse nun ein Widget ist, kann man die minimale Größe auch gleich hier setzen.
+[IMPORTANT]
+====
+Das Setzen der Größe muss vor dem ersten Anzeigen gemacht werden, da sonst das Widget nicht sichtbar ist (und auch nicht vergrößert werden kann).
+====
+
+Die Verwendung der vererbten `QOpenGLFunctions` Funktionen verlangt auch eine Initialisierung, die muss aber durch Aufruf der Funktion in `initializeOpenGLFunctions()` in `initializeGL()` erfolgen.
+
+.RectangleWidget.cpp:initializeGL()
+[source,c++]
+----
+void RectangleWindow::initializeGL() {
+	initializeOpenGLFunctions();
+
+    ....
+}
+----
+
+Mehr ist nicht zu machen, und schon ist das `RectangleWindow` ein vollständiges Widget.
+[NOTE]
+====
+Das `UpdateBehavior` ist beim `QOpenGLWidget` standardmäßig auf `QOpenGLWidget::NoPartialUpdate` gesetzt, muss also nicht extra angepasst werden.
+====
+
+=== Einbettung in ein anderes QWidget
+
+Der Widget-Container (siehe _Tutorial 03_) kann entfallen, und die Einbettung des Widgets wird wie mit jedem anderen Widget gemacht.
+
+.TestDialog.cpp:Konstruktor
+[source,c++]
+----
+....
+
+m_rectangleWindow = new RectangleWindow(this);
+m_rectangleWindow->setFormat(format);
+
+// *** create the layout and insert widget container
+
+QVBoxLayout * vlay = new QVBoxLayout;
+vlay->setMargin(0);
+vlay->setSpacing(0);
+vlay->addWidget(m_rectangleWindow);
+
+....
+----
+
+
+== Performance-Vergleich
+
+Die spannende Frage ist, wieviel langsamer ist das `QOpenGLWidget` im Vergleich zum direkten Zeichnen via `QOpenGLWindow` oder der eigenen `OpenGLWindow` Klasse aus _Tutorial 01_?
+
+Im direkter Vergleich zwischen _Tutorial 03_ und _Tutorial 04_ fällt sofort auffällt auf, dass das Resize-Verhalten unterschiedlich ist. Es gibt eine merkliche Verzögerung bei der Größenänderung eines Widgets (sowohl unter Windows, als auch auf anderen Plattformen) und auch, wenn die Programme im Releasemodus kompiliert sind.
+
+Da in diesen Testfällen nicht gerendert wird, liegt der Unterschied nur allein in der Widget-Compositing-Funktionalität im `QOpenGLWidget`.
+
+Bei einem kleinen Benchmarktest (ca. 30 Sekunden lang mit dem Mauszeiger die Fenstergröße verändern, dabei die Anzahl der paintEvents() aufzeichnen und dann durch die Laufzeit teilen) kommt man auf:
+
+- 25 Fensteraktualisierungen/Sekunde bei der Variante mit `QOpenGLWindow`, und
+- 15 Fensteraktualisierungen/Sekunde bei der Variante mit `QOpenGLWidget`.
+
+Das wohlgemerkt ohne OpenGL Zeichenaufrufe.
+
+Interessant wird es, wenn man OpenGL-Animationen dazuschaltet. Dies kann man bei den Beispielen ganz einfach machen, wenn man die Frames für die Farbanimation von 120 auf, ca. 800 ändert. Dann läuft die Animation nach Klick auf "Animate Colors" ein paar Sekunden länger und man kann den CPU Overhead testen.
+
+Bei beiden Varianten dauert die Animation exakt gleich lang, da jeweils mit nahezu 60 Frames pro Sekunde gerendert wird (bei mir zumindest).
+
+Allerdings zeigen beide Varianten unterschiedliche CPU Auslastungen:
+
+- 2.4% (single-core) CPU Load bei der Variante mit `QOpenGLWindow`, und
+- 7.9% (single-core) CPU Load bei der Variante mit `QOpenGLWidget`.
+
+Ein Unterschied ist da, aber sicher nicht der Rede wert. Da dürfte der optimische Verzögerungseffekt beim Vergrößern/Verkleinern eines Fensters während der Animation eher noch stören.
 
 
 == Transparenz
