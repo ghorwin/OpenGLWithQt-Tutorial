@@ -1,0 +1,128 @@
+:imagesdir: ./images
+= Tutorial 04: Verwendung des QOpenGLWidget
+
+In Tutorialteil wird das https://doc.qt.io/qt-5/qopenglwidget.html[QOpenGLWidget] anstelle des `QOpenGLWindow` verwendet. Das Programm macht das Gleiche wie in _Tutorial 03_ (nur etwas langsamer :-), aber dazu kommen wir gleich).
+
+Damit der Screenshot nicht ganz genauso wie im letzten Tutorial aussieht, habe ich mal einen halbdurchsichtigen Hintergrund eingeschaltet - das geht aber mit dem bisherigen Implementierungsvarianten auch (siehe letzter Teil des Tutorials).
+
+.Tutorial_04 (Linux Screenshot, mit Transparenz)
+image::Tutorial_04_linux.png[Tutorial_04,pdfwidth=8cm]
+
+[NOTE]
+====
+Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_04[Tutorial_04]
+====
+
+== Was bietet das QOpenGLWidget
+
+Von den ganzen Qt OpenGL-Klassen ist das `QOpenGLWidget` die mit Abstand am besten dokumentierte Klasse. Es gibt ein paar interessante Details in der Dokumentation, hier ein paar Zitate:
+
+[quote,]
+____
+All rendering happens into an OpenGL framebuffer object.
+____
+
+[quote,]
+____
+Due to being backed by a framebuffer object, the behavior of QOpenGLWidget is very similar to QOpenGLWindow with the update behavior set to PartialUpdateBlit or PartialUpdateBlend. This means that the contents are preserved between paintGL() calls so that incremental rendering is possible.
+____
+
+[quote,]
+____
+*Note:* Most applications do not need incremental rendering because they will render everything in the view on every paint call.
+____
+
+
+
+
+== Transparenz
+
+Wie schon im Screenshot zu sehen, kann man auch halb-transparente Widgetanwendungen bauen, oder auch Anwendungen mit recht unregelmäßigen Formen. 
+
+=== Mit QOpenGLWidget
+
+Bei Verwendung des `QOpenGLWidgets` ist das recht einfach. Zunächst gibt man dem obersten Widget das Attribut `Qt::WA_TranslucentBackground`. Wer keine Titelleiste und keine Rahmen um das Fenster haben möchte, muss dem obersten Widget auch noch die Eigenschaft `Qt::FramelessWindowHint` geben, also z.B.:
+
+.main.cpp
+[source,c++]
+----
+int main(int argc, char **argv) {
+	QApplication app(argc, argv);
+
+	TestDialog dlg;
+	// transparent window
+	dlg.setAttribute(Qt::WA_TranslucentBackground, true);
+	// no frame and flags.
+	dlg.setWindowFlag(Qt::FramelessWindowHint, true);
+	dlg.show();
+
+	return app.exec();
+}
+----
+
+In der eigentlichen Zeichenfunktion muss man nur noch die Hintergrundfarbe auf Transparent umstellen (zumindest einen Alpha-Wert < 1):
+
+.RectangleWindow.cpp:paintGL()
+[source,c++]
+----
+void RectangleWindow::paintGL() {
+	// set the background color = clear color
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f); // fully transparent
+	glClear(GL_COLOR_BUFFER_BIT);
+	
+	....
+}
+----
+[NOTE]
+====
+Normalerweise würde man bei einem Alpha-Wert von 0 erwarten, dass der Hintergrund unverändert durchscheint, auch wenn die RGB Farbanteile der Hintergrundfarbe (clear color) irgendwelche Werte haben. Das ist aber nicht so - die Farben des Hintergrundes erscheinen etwas verblasst. Daher sollte man, wenn man wirklich den Hintergrund unverändert durchscheinen lassen möchte, die clear Color stets auf 0,0,0,0 setzen.
+====
+
+=== Mit QWindow-basierten OpenGL Renderfenstern
+
+Bei den Varianten aus _Tutorial 01 .. 03_ geht Transparenz auch, allerdings mit minimal mehr Aufwand. Bei der Konfiguration des `QSurfaceFormat` muss man einen AlphaBuffer festlegen (hier gezeigt beim Beispiel aus _Tutorial 01_).
+
+.main.cpp
+[source,c++]
+----
+int main(int argc, char **argv) {
+	QGuiApplication app(argc, argv);
+
+	// Set OpenGL Version information
+	QSurfaceFormat format;
+	format.setRenderableType(QSurfaceFormat::OpenGL);
+	format.setProfile(QSurfaceFormat::CoreProfile);
+	format.setVersion(3,3);
+	format.setAlphaBufferSize(8);
+
+	TriangleWindow window;
+	// Note: The format must be set before show() is called.
+	window.setFormat(format);
+	window.resize(640, 480);
+	window.show();
+	window.setFlag(Qt::FramelessWindowHint);
+
+	return app.exec();
+}
+----
+
+In der Render-Funktion muss man noch Alphablending einschalten, hier gezeigt am Beispiel aus _Tutorial 01_.
+
+.TriangleWindow.cpp:render()
+[source,c++]
+----
+void TriangleWindow::render() {
+    ....
+
+	// Set the transparency to the scene to use the transparency of the fragment shader
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	// set the background color = clear color
+	glClearColor(0.0f, 0.0f, 0.0f, .0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+    ....
+}
+----
+
