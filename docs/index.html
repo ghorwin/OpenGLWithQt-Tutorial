@@ -18,7 +18,7 @@
 
 :root{
 --maincolor:#FFFFFF;
---primarycolor:#E95420;
+--primarycolor:#a90e22;
 --secondarycolor:#333333;
 --tertiarycolor: #772953;
 --sidebarbackground:#CCC;
@@ -36,20 +36,22 @@ h3,h4,h5,h6{color:var(--secondarycolor);font-family: "Roboto Condensed",sans-ser
 .title{color:(--primarycolor) !important;font-family:"Roboto Condensed",sans-serif;font-style: normal; font-weight: normal;}
 p{font-family: "Roboto Condensed",sans-serif ! important}
 #toc.toc2 a{font-family:"Roboto Condensed",sans-serif;}
-#toc.toc2 a:link{color:white;}
+/*#toc.toc2 a:link{color:(--linkcolor) !important}
 a:visited {color: #ffdbad;}
 a.bare:visited {color: #204f83;}
 a:hover {color: #317ed4;}
-#toc.toc2 a:hover {color: #f1b464;}
+#toc.toc2 a:hover {color: #f1b464;}*/
 /* code{background-color: var(--secondarycolor) !important;color:var(--white)} */
 code,kbd,pre,samp{font-family:monospace;font-size:0.8em}
 
 /* Table styles */
 th{background-color: var(--tertiarycolor);color:var(--white) !important;}
 
-#toc.toc2{background-color:#2C001E;color:white;}
+#toctitle{color:var(--primarycolor);font-family: "Roboto Condensed",sans-serif;font-size: 1.6875em;}
+#toc.toc2{background-color:#f4f8fd;}
+/*#toc.toc2{background-color:#2C001E;color:white;}
 #toc.toc2.a{color:white;}
-#toctitle{color:#E95420;}
+*/
 
 /* Responsiveness fixes */
 video {
@@ -156,6 +158,7 @@ table {
 </li>
 </ul>
 </li>
+<li><a href="#_tutorial_05_maus_und_tastatureingaben">5. Tutorial 05: Maus- und Tastatureingaben</a></li>
 </ul>
 </div>
 </div>
@@ -2466,11 +2469,58 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="_tutorial_05_maus_und_tastatureingaben">5. Tutorial 05: Maus- und Tastatureingaben</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In diesem Tutorial geht es primär um Maus- und Tastatureingaben. Und damit das auch interessant wird, erstellen wir ein 3D Modell.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/Tutorial_05_mac.png" alt="Tutorial_05">
+</div>
+<div class="title">Figure 5. Tutorial_05 (Mac Screenshot)</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Quelltext für dieses Tutorial liegt im github repo:  <a href="https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_05">Tutorial_05</a></p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>In diesem Tutorial werden viele Dinge verwendet:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>zwei Modelle (eins für die Häuser und eins für das Gitter), nebst dazugehörigen, unterschiedlichen Shaderprogrammen (das vom Gitter verwendet in die Tiefe abgeblendete Farben)</p>
+</li>
+<li>
+<p>Tiefenpuffer, sodass Gitterlinien/Häuser korrekt vor/hintereinander gezeichnet werden</p>
+</li>
+<li>
+<p>Model2World und World2View-Matrizen (mit perspektivischer Projektion)</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Als Grundlage für die Implementierung wird die Klasse <code>QOpenGLWindow</code> aus <em>Tutorial 02</em> verwendet.</p>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
 Version 0.1.0<br>
-Last updated 2020-03-25 17:17:52 +0100
+Last updated 2020-03-25 20:37:20 +0100
 </div>
 </div>
 <style>

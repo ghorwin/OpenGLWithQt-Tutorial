@@ -1,0 +1,22 @@
+:imagesdir: ./images
+= Tutorial 05: Maus- und Tastatureingaben
+
+In diesem Tutorial geht es primär um Maus- und Tastatureingaben. Und damit das auch interessant wird, erstellen wir ein 3D Modell.
+
+.Tutorial_05 (Mac Screenshot)
+image::Tutorial_05_mac.png[Tutorial_05,pdfwidth=8cm]
+
+[NOTE]
+====
+Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_05[Tutorial_05]
+====
+
+In diesem Tutorial werden viele Dinge verwendet:
+
+- zwei Modelle (eins für die Häuser und eins für das Gitter), nebst dazugehörigen, unterschiedlichen Shaderprogrammen (das vom Gitter verwendet in die Tiefe abgeblendete Farben)
+- Tiefenpuffer, sodass Gitterlinien/Häuser korrekt vor/hintereinander gezeichnet werden
+- Model2World und World2View-Matrizen (mit perspektivischer Projektion)
+
+Als Grundlage für die Implementierung wird die Klasse `QOpenGLWindow` aus _Tutorial 02_ verwendet.
+
+

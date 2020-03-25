@@ -8,7 +8,7 @@
 
 :root{
 --maincolor:#FFFFFF;
---primarycolor:#E95420;
+--primarycolor:#a90e22;
 --secondarycolor:#333333;
 --tertiarycolor: #772953;
 --sidebarbackground:#CCC;
@@ -26,20 +26,22 @@ h3,h4,h5,h6{color:var(--secondarycolor);font-family: "Roboto Condensed",sans-ser
 .title{color:(--primarycolor) !important;font-family:"Roboto Condensed",sans-serif;font-style: normal; font-weight: normal;}
 p{font-family: "Roboto Condensed",sans-serif ! important}
 #toc.toc2 a{font-family:"Roboto Condensed",sans-serif;}
-#toc.toc2 a:link{color:white;}
+/*#toc.toc2 a:link{color:(--linkcolor) !important}
 a:visited {color: #ffdbad;}
 a.bare:visited {color: #204f83;}
 a:hover {color: #317ed4;}
-#toc.toc2 a:hover {color: #f1b464;}
+#toc.toc2 a:hover {color: #f1b464;}*/
 /* code{background-color: var(--secondarycolor) !important;color:var(--white)} */
 code,kbd,pre,samp{font-family:monospace;font-size:0.8em}
 
 /* Table styles */
 th{background-color: var(--tertiarycolor);color:var(--white) !important;}
 
-#toc.toc2{background-color:#2C001E;color:white;}
+#toctitle{color:var(--primarycolor);font-family: "Roboto Condensed",sans-serif;font-size: 1.6875em;}
+#toc.toc2{background-color:#f4f8fd;}
+/*#toc.toc2{background-color:#2C001E;color:white;}
 #toc.toc2.a{color:white;}
-#toctitle{color:#E95420;}
+*/
 
 /* Responsiveness fixes */
 video {
