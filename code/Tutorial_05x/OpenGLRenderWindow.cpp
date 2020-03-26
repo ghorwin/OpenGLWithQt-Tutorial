@@ -103,23 +103,14 @@ void OpenGLRenderWindow::initializeGL() {
 		int elementMemSize = m_boxObject.m_elementBufferData.size()*sizeof(GLuint);
 		m_boxObject.m_elementBuffer.allocate(m_boxObject.m_elementBufferData.data(), elementMemSize);
 
-		// tell shader program we have two data arrays to be used as input to the shaders
-		// the two calls to setAttributeBuffer() reference again the 'vertex' buffer whose allocate() function was called last,
-		// in this case m_vertexDataBuffer.
 
-		// index 0 = position
-		SHADER(0)->enableAttributeArray(0); // array with index/id 0
-		SHADER(0)->setAttributeBuffer(0, GL_FLOAT, Vertex::positionOffset(), Vertex::PositionTupleSize, Vertex::stride());
-		// index 1 = color
-		SHADER(0)->enableAttributeArray(1); // array with index/id 1
-		SHADER(0)->setAttributeBuffer(1, GL_FLOAT, Vertex::colorOffset(), Vertex::ColorTupleSize, Vertex::stride());
-
-		m_boxObject.m_vao.release();
-		// Release (unbind) all
-		m_boxObject.m_vertexBuffer.release();
-		m_boxObject.m_elementBuffer.release();
 	} // end data init
 
+	m_boxObject.create(SHADER(0));
+	m_boxObject.m_vao.release();
+	// Release (unbind) all
+	m_boxObject.m_vertexBuffer.release();
+	m_boxObject.m_elementBuffer.release();
 	m_gridObject.create(SHADER(1));
 }
 

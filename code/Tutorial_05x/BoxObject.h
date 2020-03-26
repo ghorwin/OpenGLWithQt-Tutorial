@@ -19,8 +19,6 @@ public:
 
 	std::vector<RectMesh>		m_rectangles;
 
-	unsigned int				m_NVertexes;
-
 	std::vector<float>			m_vertexBufferData;
 	std::vector<GLuint>			m_elementBufferData;
 
