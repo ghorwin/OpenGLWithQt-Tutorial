@@ -41,58 +41,7 @@ OpenGLRenderWindow::OpenGLRenderWindow() :
 	m_inputHandler.addRecognizedKey(Qt::Key_Q);
 	m_inputHandler.addRecognizedKey(Qt::Key_E);
 
-	// Front Verticies
-	#define VERTEX_FTR QVector3D( 0.5f,  0.5f,  0.5f)
-	#define VERTEX_FTL QVector3D(-0.5f,  0.5f,  0.5f)
-	#define VERTEX_FBL QVector3D(-0.5f, -0.0f,  0.5f)
-	#define VERTEX_FBR QVector3D( 0.5f, -0.0f,  0.5f)
 
-	// Back Verticies
-	#define VERTEX_BTR QVector3D( 0.5f,  0.5f, -0.5f)
-	#define VERTEX_BTL QVector3D(-0.5f,  0.5f, -0.5f)
-	#define VERTEX_BBL QVector3D(-0.5f, -0.0f, -0.5f)
-	#define VERTEX_BBR QVector3D( 0.5f, -0.0f, -0.5f)
-
-	// front
-	m_rectangles.push_back( RectMesh(VERTEX_FBL, VERTEX_FBR, VERTEX_FTL, Qt::red ));
-	// right
-	m_rectangles.push_back( RectMesh(VERTEX_FBR, VERTEX_BBR, VERTEX_FTR, Qt::green ));
-	// back
-	m_rectangles.push_back( RectMesh(VERTEX_BBR, VERTEX_BBL, VERTEX_BTR, Qt::blue ));
-	// left
-	m_rectangles.push_back( RectMesh(VERTEX_BBL, VERTEX_FBL, VERTEX_BTL, Qt::yellow ));
-	// top
-	m_rectangles.push_back( RectMesh(VERTEX_FTL, VERTEX_FTR, VERTEX_BTL, Qt::cyan ));
-	// bottom
-	m_rectangles.push_back( RectMesh(VERTEX_BBL, VERTEX_BBR, VERTEX_FBL, Qt::magenta ));
-
-	// bottom 2
-//	m_rectangles.push_back( RectMesh(VERTEX_BBL, VERTEX_BBR, VERTEX_FBL, Qt::magenta ));
-//	m_rectangles.back().m_a.setZ(5);
-//	m_rectangles.back().m_b.setZ(5);
-//	m_rectangles.back().m_c.setZ(5);
-
-	#undef VERTEX_BBR
-	#undef VERTEX_BBL
-	#undef VERTEX_BTL
-	#undef VERTEX_BTR
-
-	#undef VERTEX_FBR
-	#undef VERTEX_FBL
-	#undef VERTEX_FTL
-	#undef VERTEX_FTR
-
-	// face count
-	unsigned int Nrects = m_rectangles.size();
-
-	// we have 6 sides of a cube, and each side needs 4 vertexes, and each vertex requires 2 vectors3d of float
-	unsigned int sizeOfVertex = 2*3; // number of floats
-	m_boxObject.m_vertexBufferData.resize(Nrects*4*sizeOfVertex);
-	std::fill(m_boxObject.m_vertexBufferData.begin(), m_boxObject.m_vertexBufferData.end(), 0);
-
-	// we have 6 sides of cube, and each side has two triangles, with 3 indexes each
-	m_boxObject.m_elementBufferData.resize(Nrects*2*3);
-	std::fill(m_boxObject.m_elementBufferData.begin(), m_boxObject.m_elementBufferData.end(), 0);
 	updateScene();
 }
 
@@ -394,8 +343,8 @@ void OpenGLRenderWindow::updateScene() {
 	unsigned int vertexCount = 0;
 	GLuint * elementBuffer = m_boxObject.m_elementBufferData.data();
 	unsigned int elementCount = 0;
-	for (unsigned int i=0; i<m_rectangles.size(); ++i) {
-		m_rectangles[i].copy2Buffer(vertexBuffer, vertexCount, elementBuffer, elementCount);
+	for (unsigned int i=0; i<m_boxObject.m_rectangles.size(); ++i) {
+		m_boxObject.m_rectangles[i].copy2Buffer(vertexBuffer, vertexCount, elementBuffer, elementCount);
 		vertexCount += 4;
 		elementCount += 2;
 	}

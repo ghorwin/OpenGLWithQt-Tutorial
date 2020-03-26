@@ -55,7 +55,7 @@ void Dialog::on_pushButton_clicked() {
 	QColorDialog dlg(this);
 	QColor c = dlg.getColor();
 	if (c.isValid()) {
-		openGLWindow->m_rectangles[0].m_color = QVector3D(c.redF(), c.greenF(), c.blueF());
+		openGLWindow->m_boxObject.m_rectangles[0].m_color = QVector3D(c.redF(), c.greenF(), c.blueF());
 		openGLWindow->m_sceneChanged = true;
 		openGLWindow->update();
 	}

@@ -37,11 +37,13 @@ public:
 
 	/*! If set to true, the cube is spinning, otherwise it will be static. */
 	bool m_animate;
-	std::vector<RectMesh>		m_rectangles;
 	bool						m_sceneChanged;
 
 	/*! All shader programs used in the scene. */
 	QList<ShaderProgram>	m_shaderPrograms;
+
+	BoxObject					m_boxObject;
+	GridObject					m_gridObject;
 
 private slots:
 	/*! Called when vsync has just happened and we *may* redraw the scene. */
@@ -61,9 +63,6 @@ protected:
 private:
 	void printVersionInformation();
 	void updateScene();
-
-	BoxObject					m_boxObject;
-	GridObject					m_gridObject;
 
 	QMatrix4x4					m_projection;	// updated in resizeGL() function
 	Transform3D					m_transform;	// world transformation matrix,
