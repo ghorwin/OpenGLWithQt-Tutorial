@@ -1,10 +1,9 @@
-#version 330 core
+#version 330
 
-// fragment shader
+in highp vec4 fragColor;
+out highp vec4 fColor;
 
-in vec4 fragColor;    // input: interpolated color as rgba-value
-out vec4 finalColor;  // output: final color value as rgba-value
-
-void main() {
-  finalColor = fragColor;
+void main()
+{
+   fColor = fragColor;
 }
