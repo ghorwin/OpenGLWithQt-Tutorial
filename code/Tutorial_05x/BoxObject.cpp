@@ -61,6 +61,18 @@ BoxObject::BoxObject() :
 	// we have 6 sides of cube, and each side has two triangles, with 3 indexes each
 	m_elementBufferData.resize(Nrects*2*3);
 	std::fill(m_elementBufferData.begin(), m_elementBufferData.end(), 0);
+
+	// update the buffers
+	float * vertexBuffer = m_vertexBufferData.data();
+	unsigned int vertexCount = 0;
+	GLuint * elementBuffer = m_elementBufferData.data();
+	unsigned int elementCount = 0;
+	for (unsigned int i=0; i<m_rectangles.size(); ++i) {
+		m_rectangles[i].copy2Buffer(vertexBuffer, vertexCount, elementBuffer, elementCount);
+		vertexCount += 4;
+		elementCount += 2;
+	}
+
 }
 
 

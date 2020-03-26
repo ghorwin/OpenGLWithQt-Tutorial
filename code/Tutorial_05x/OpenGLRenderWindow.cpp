@@ -280,7 +280,7 @@ void OpenGLRenderWindow::exposeEvent(QExposeEvent *ev) {
 
 
 void OpenGLRenderWindow::updateScene() {
-	// update the buffers
+#if 0	// update the buffers
 	float * vertexBuffer = m_boxObject.m_vertexBufferData.data();
 	unsigned int vertexCount = 0;
 	GLuint * elementBuffer = m_boxObject.m_elementBufferData.data();
@@ -294,6 +294,7 @@ void OpenGLRenderWindow::updateScene() {
 	m_boxObject.m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
 	int vertexMemSize = m_boxObject.m_vertexBufferData.size()*sizeof(float);
 	m_boxObject.m_vertexBuffer.allocate(m_boxObject.m_vertexBufferData.data(), vertexMemSize);
+#endif
 	m_sceneChanged = false;
 }
 
