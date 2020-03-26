@@ -2,6 +2,7 @@
 
 #include <QVector3D>
 #include <QOpenGLShaderProgram>
+#include <QOpenGLFunctions>
 
 BoxObject::BoxObject() :
 	m_vertexBuffer(QOpenGLBuffer::VertexBuffer), // actually the default, so default constructor would have been enough
@@ -105,3 +106,13 @@ void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
 }
 
 
+void BoxObject::render(QOpenGLFunctions * f) {
+	// set the geometry ("position" and "color" arrays)
+	m_vao.bind();
+
+	// now draw the cube by drawing individual triangles
+	// - GL_TRIANGLES - draw individual triangles via elements
+	f->glDrawElements(GL_TRIANGLES, m_elementBufferData.size(), GL_UNSIGNED_INT, nullptr);
+	// release vertices again
+	m_vao.release();
+}

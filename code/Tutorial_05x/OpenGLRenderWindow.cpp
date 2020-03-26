@@ -115,17 +115,7 @@ void OpenGLRenderWindow::paintGL() {
 	QMatrix4x4 worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();
 	// assign the projection matrix to the parameter identified by 'u_worldToView' in the shader code
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], worldToView);
-
-	{
-		// set the geometry ("position" and "color" arrays)
-		m_boxObject.m_vao.bind();
-
-		// now draw the cube by drawing individual triangles
-		// - GL_TRIANGLES - draw individual triangles via elements
-		glDrawElements(GL_TRIANGLES, m_boxObject.m_elementBufferData.size(), GL_UNSIGNED_INT, nullptr);
-		// release vertices again
-		m_boxObject.m_vao.release();
-	}
+	m_boxObject.render(this);
 	SHADER(0)->release();
 
 	// *** render grid afterwards ***
@@ -137,16 +127,7 @@ void OpenGLRenderWindow::paintGL() {
 	QVector3D color(0.3f, 0.3f, 0.6f);
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], color);
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[2], backColor);
-
-	{
-		// set the geometry ("position" and "color" arrays)
-		m_gridObject.m_vao.bind();
-
-		// now draw the grid lines
-		glDrawArrays(GL_LINES, 0, m_gridObject.m_NVertexes);
-		// release vertices again
-		m_gridObject.m_vao.release();
-	}
+	m_gridObject.render(this);
 	SHADER(1)->release();
 
 

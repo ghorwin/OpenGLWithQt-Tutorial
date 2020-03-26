@@ -6,6 +6,7 @@
 
 QT_BEGIN_NAMESPACE
 class QOpenGLShaderProgram;
+class QOpenGLFunctions;
 QT_END_NAMESPACE
 
 #include "RectMesh.h"
@@ -16,6 +17,8 @@ public:
 
 	/*! The function is called during OpenGL initialization, where the OpenGL context is current. */
 	void create(QOpenGLShaderProgram * shaderProgramm);
+
+	void render(QOpenGLFunctions * f);
 
 	std::vector<RectMesh>		m_rectangles;
 
