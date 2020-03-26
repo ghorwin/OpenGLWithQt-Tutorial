@@ -80,37 +80,7 @@ void OpenGLRenderWindow::initializeGL() {
 	glEnable(GL_DEPTH_TEST);  // Enables Depth Testing
 	glDepthFunc(GL_LESS);     // The Type Of Depth Test To Do
 
-
-	// Application-specific initialization
-	{
-		// Create Shader (Do not release until VAO is created)
-
-		// Create Vertex Array Object
-		m_boxObject.m_vao.create(); // create Vertex Array Object
-
-		m_boxObject.m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so we can write attributes to it
-
-		// Create Buffer (Do not release until VAO is created and released)
-		m_boxObject.m_vertexBuffer.create();
-		m_boxObject.m_vertexBuffer.bind();
-		m_boxObject.m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
-		int vertexMemSize = m_boxObject.m_vertexBufferData.size()*sizeof(float);
-		m_boxObject.m_vertexBuffer.allocate(m_boxObject.m_vertexBufferData.data(), vertexMemSize);
-
-		m_boxObject.m_elementBuffer.create();
-		m_boxObject.m_elementBuffer.bind();
-		m_boxObject.m_elementBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
-		int elementMemSize = m_boxObject.m_elementBufferData.size()*sizeof(GLuint);
-		m_boxObject.m_elementBuffer.allocate(m_boxObject.m_elementBufferData.data(), elementMemSize);
-
-
-	} // end data init
-
 	m_boxObject.create(SHADER(0));
-	m_boxObject.m_vao.release();
-	// Release (unbind) all
-	m_boxObject.m_vertexBuffer.release();
-	m_boxObject.m_elementBuffer.release();
 	m_gridObject.create(SHADER(1));
 }
 

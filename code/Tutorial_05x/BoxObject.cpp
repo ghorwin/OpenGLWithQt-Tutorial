@@ -66,6 +66,26 @@ BoxObject::BoxObject() :
 void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
 	// Create Shader (Do not release until VAO is created)
 
+	// Create Vertex Array Object
+	m_vao.create(); // create Vertex Array Object
+
+	m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so we can write attributes to it
+
+	// Create Buffer (Do not release until VAO is created and released)
+	m_vertexBuffer.create();
+	m_vertexBuffer.bind();
+	m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+	int vertexMemSize = m_vertexBufferData.size()*sizeof(float);
+	m_vertexBuffer.allocate(m_vertexBufferData.data(), vertexMemSize);
+
+	m_elementBuffer.create();
+	m_elementBuffer.bind();
+	m_elementBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+	int elementMemSize = m_elementBufferData.size()*sizeof(GLuint);
+	m_elementBuffer.allocate(m_elementBufferData.data(), elementMemSize);
+
+	// Create Shader (Do not release until VAO is created)
+
 	// tell shader program we have two data arrays to be used as input to the shaders
 	// the two calls to setAttributeBuffer() reference again the 'vertex' buffer whose allocate() function was called last,
 	// in this case m_vertexDataBuffer.
@@ -76,6 +96,11 @@ void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
 	// index 1 = color
 	shaderProgramm->enableAttributeArray(1); // array with index/id 1
 	shaderProgramm->setAttributeBuffer(1, GL_FLOAT, sizeof(QVector3D), 3, sizeof(float)*6);
+
+	m_vao.release();
+	// Release (unbind) all
+	m_vertexBuffer.release();
+	m_elementBuffer.release();
 
 }
 
