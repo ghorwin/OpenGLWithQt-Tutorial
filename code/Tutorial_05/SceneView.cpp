@@ -161,9 +161,9 @@ void SceneView::updateWorld2ViewMatrix() {
 	transform.translate(0.0f, 0.0f, -5.0f);
 
 	m_worldToView = m_projection * m_camera.toMatrix() * transform.toMatrix();
-	qDebug() << "m_projection = " << m_projection;
-	qDebug() << "m_camera = " << m_camera.toMatrix();
-	qDebug() << "m_transform = " << transform.toMatrix();
-	qDebug() << "world2View = " << m_worldToView;
+//	qDebug() << "m_projection = " << m_projection;
+//	qDebug() << "m_camera = " << m_camera.toMatrix();
+//	qDebug() << "m_transform = " << transform.toMatrix();
+//	qDebug() << "world2View = " << m_worldToView;
 	m_needRepaint = true;
 }
