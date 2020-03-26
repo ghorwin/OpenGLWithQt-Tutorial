@@ -28,6 +28,10 @@ void ShaderProgram::create() {
 
 	if (!m_program->link())
 		qDebug() << "Shader linker errors:\n" << m_program->log();
+
+	m_uniformIDs.clear();
+	for (const QString & uniformName : m_uniformNames)
+		m_uniformIDs.append( m_program->uniformLocation(uniformName));
 }
 
 

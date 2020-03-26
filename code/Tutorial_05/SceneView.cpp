@@ -5,6 +5,18 @@
 SceneView::SceneView() :
 	m_needRepaint(false)
 {
+	// *** create scene (no OpenGL calls are being issued below, just the data structures are created.
+
+	// Shaderprogram #0 : regular geometry (painting triangles via element index)
+	ShaderProgram blocks(":/shaders/world2view.vert",":/shaders/simple.frag");
+	blocks.m_uniformNames.append("worldToView");
+	m_shaderPrograms.append( blocks );
+
+	// Shaderprogram #1 : grid (painting grid lines)
+	ShaderProgram grid(":/shaders/grid.vert",":/shaders/simple.frag");
+	grid.m_uniformNames.append("worldToView");
+	grid.m_uniformNames.append("backgroundColor");
+	m_shaderPrograms.append( grid );
 }
 
 

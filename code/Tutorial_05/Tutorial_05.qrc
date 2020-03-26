@@ -1,6 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>shaders/grid.frag</file>
         <file>shaders/grid.vert</file>
         <file>shaders/simple.frag</file>
         <file>shaders/world2view.vert</file>

@@ -2,6 +2,7 @@
 #define SHADERPROGRAM_H
 
 #include <QString>
+#include <QStringList>
 
 QT_BEGIN_NAMESPACE
 class QOpenGLShaderProgram;
@@ -30,6 +31,15 @@ public:
 	QString		m_vertexShaderFilePath;
 	/*! Path to fragment shader program, used in create(). */
 	QString		m_fragmentShaderFilePath;
+
+
+	// Note: Uniform-Handling is pretty simple, probably better to wrap that somehow.
+
+	/*! List of uniform values to be resolved. Values is used in create(). */
+	QStringList	m_uniformNames;
+
+	/*! Holds uniform Ids to be used in conjunction with setUniformValue(). */
+	QList<int>	m_uniformIDs;
 
 private:
 	/*! The wrapped native QOpenGLShaderProgram. */

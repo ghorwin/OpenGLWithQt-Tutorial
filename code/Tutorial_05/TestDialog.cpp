@@ -24,14 +24,6 @@ TestDialog::TestDialog() :
 	m_sceneView = new SceneView;
 	m_sceneView->setFormat(format);
 
-
-	// *** create scene
-
-	// Shaderprogram #0 : regular geometry (painting triangles via element index)
-	m_sceneView->m_shaderPrograms.append( ShaderProgram(":/shaders/world2view.vert",":/shaders/simple.frag") );
-	// Shaderprogram #1 : grid (painting grid lines)
-	m_sceneView->m_shaderPrograms.append( ShaderProgram(":/shaders/grid.vert",":/shaders/grid.frag") );
-
 	// *** create window container widget
 
 	QWidget *container = QWidget::createWindowContainer(m_sceneView);
