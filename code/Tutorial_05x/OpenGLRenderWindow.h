@@ -71,15 +71,11 @@ private:
 
 	/*! Holds the compiled shader programs. */
 	QOpenGLShaderProgram		*m_program;
-	int							u_modelToWorld;		// cache for variable index of parameter 'modelToWorld' declared in vertex shader
-	int							u_worldToCamera;	// cache for variable index of parameter 'worldToCamera' declared in vertex shader
-	int							u_cameraToView;		// cache for variable index of parameter 'cameraToView' declared in vertex shader
+	int							u_worldToView;	// cache for variable index of parameter 'worldToCamera' declared in vertex shader
 
 	/*! Holds the compiled shader program for grid lines. */
 	QOpenGLShaderProgram		*m_gridProgram;
-	int							u_gridModelToWorld;		// cache for variable index of parameter 'modelToWorld' declared in vertex shader
-	int							u_gridWorldToCamera;	// cache for variable index of parameter 'worldToCamera' declared in vertex shader
-	int							u_gridCameraToView;		// cache for variable index of parameter 'cameraToView' declared in vertex shader
+	int							u_gridWorldToView;	// cache for variable index of parameter 'worldToCamera' declared in vertex shader
 	int							u_gridColor;			// cache for variable index of parameter 'gridColor' declared in vertex shader
 
 

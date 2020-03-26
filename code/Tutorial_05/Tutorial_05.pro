@@ -32,6 +32,7 @@ SOURCES += \
 		KeyboardMouseHandler.cpp \
 		OpenGLGridObject.cpp \
 		OpenGLWindow.cpp \
+		RectMesh.cpp \
 		SceneView.cpp \
 		ShaderProgram.cpp \
 		TestDialog.cpp \
@@ -44,6 +45,7 @@ HEADERS += \
 	KeyboardMouseHandler.h \
 	OpenGLGridObject.h \
 	OpenGLWindow.h \
+	RectMesh.h \
 	SceneView.h \
 	ShaderProgram.h \
 	TestDialog.h \

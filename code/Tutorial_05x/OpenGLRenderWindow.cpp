@@ -162,9 +162,7 @@ void OpenGLRenderWindow::initializeGL() {
 		m_program->bind();
 
 		// Cache Uniform Locations
-		u_modelToWorld = m_program->uniformLocation("modelToWorld");
-		u_worldToCamera = m_program->uniformLocation("worldToCamera");
-		u_cameraToView = m_program->uniformLocation("cameraToView");
+		u_worldToView = m_program->uniformLocation("worldToView");
 
 		// Create Vertex Array Object
 		m_vao.create(); // create Vertex Array Object
@@ -213,9 +211,7 @@ void OpenGLRenderWindow::initializeGL() {
 		qDebug() << "Errors?" << glGetError() << m_gridProgram->log();
 
 		// Cache Uniform Locations
-		u_gridModelToWorld = m_gridProgram->uniformLocation("modelToWorld");
-		u_gridWorldToCamera = m_gridProgram->uniformLocation("worldToCamera");
-		u_gridCameraToView = m_gridProgram->uniformLocation("cameraToView");
+		u_gridWorldToView = m_gridProgram->uniformLocation("worldToView");
 		u_gridColor = m_gridProgram->uniformLocation("gridColor");
 
 		// Create Vertex Array Object
@@ -265,16 +261,14 @@ void OpenGLRenderWindow::paintGL() {
 
 	// render using our shader
 	m_program->bind();
+
+	QMatrix4x4 worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();
 	// assign the projection matrix to the parameter identified by 'u_worldToView' in the shader code
-	m_program->setUniformValue(u_worldToCamera, m_camera.toMatrix());
-	m_program->setUniformValue(u_cameraToView, m_projection);
+	m_program->setUniformValue(u_worldToView, worldToView);
 
 	{
 		// set the geometry ("position" and "color" arrays)
 		m_vao.bind();
-
-		// set the transformation matrix to
-		m_program->setUniformValue(u_modelToWorld, m_transform.toMatrix());
 
 		// now draw the cube by drawing individual triangles
 		// - GL_TRIANGLES - draw individual triangles via elements
@@ -289,17 +283,13 @@ void OpenGLRenderWindow::paintGL() {
 	// render using our shader
 	m_gridProgram->bind();
 	// assign the projection matrix to the parameter identified by 'u_worldToView' in the shader code
-	m_gridProgram->setUniformValue(u_gridWorldToCamera, m_camera.toMatrix());
-	m_gridProgram->setUniformValue(u_gridCameraToView, m_projection);
+	m_gridProgram->setUniformValue(u_gridWorldToView, worldToView);
 	QVector3D color(0.3f, 0.6f, 0.3f);
 	m_gridProgram->setUniformValue(u_gridColor, color);
 
 	{
 		// set the geometry ("position" and "color" arrays)
 		m_gridVao.bind();
-
-		// set the transformation matrix to
-		m_gridProgram->setUniformValue(u_gridModelToWorld, m_transform.toMatrix());
 
 		// now draw the grid lines
 		glDrawArrays(GL_LINES, 0, m_gridVertexBufferData.size());

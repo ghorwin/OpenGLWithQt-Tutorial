@@ -9,6 +9,7 @@
 #include "OpenGLGridObject.h"
 #include "Camera.h"
 #include "BoxObject.h"
+#include "RectMesh.h"
 
 /*! The class SceneView extends the primitive OpenGLWindow
 	by adding keyboard/mouse event handling, and rendering of different
@@ -48,6 +49,7 @@ private:
 		not waste resources.
 	*/
 	bool m_needRepaint;
+	std::vector<RectMesh>		m_rectangles;
 
 	// Shader Information
 	int							u_worldToView;  // cache for variable index of parameter 'u_worldToCamera' declared in vertex shader
@@ -66,8 +68,38 @@ private:
 
 	// stuff to draw
 
-	BoxObject					m_boxObject;
-	OpenGLGridObject			m_gridObject;
+	std::vector<float>			m_vertexBufferData;
+	std::vector<GLuint>			m_elementBufferData;
+
+	/*! Wraps an OpenGL VertexArrayObject, that references the vertex coordinates and color buffers. */
+	QOpenGLVertexArrayObject	m_vao;
+	/*! Holds position and colors in a single buffer. */
+	QOpenGLBuffer				m_vertexBuffer;
+	/*! Holds elements. */
+	QOpenGLBuffer				m_elementBuffer;
+
+	/*! Holds position of grid lines. */
+	QOpenGLBuffer				m_gridVertexBuffer;
+	std::vector<float>			m_gridVertexBufferData;
+
+	/*! Holds the compiled shader programs. */
+	QOpenGLShaderProgram		*m_program;
+
+	/*! Holds the compiled shader program for grid lines. */
+	QOpenGLShaderProgram		*m_gridProgram;
+	int							u_gridWorldToView;	// cache for variable index of parameter 'worldToCamera' declared in vertex shader
+	int							u_gridColor;			// cache for variable index of parameter 'gridColor' declared in vertex shader
+
+
+	/*! Wraps an OpenGL VertexArrayObject, that references the vertex coordinates and color buffers. */
+	QOpenGLVertexArrayObject	m_gridVao;
+
+
+
+
+
+//	BoxObject					m_boxObject;
+//	OpenGLGridObject			m_gridObject;
 };
 
 #endif // SCENEVIEW_H

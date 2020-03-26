@@ -67,16 +67,16 @@ BoxObject::BoxObject()
 void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
 	m_NVertexes = sizeof(sg_vertexes)/sizeof(sg_vertexes[0]);
 
+	// Create Vertex Array Object
+	m_vao.create(); // create underlying OpenGL object
+	m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so we can write attributes to it
+
 	// Create Buffer (Do not release until VAO is created)
 	m_vertexDataBuffer.create();
 	m_vertexDataBuffer.bind();
 	m_vertexDataBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
 	int vertexArrayMemSize = sizeof(sg_vertexes);
 	m_vertexDataBuffer.allocate(sg_vertexes, vertexArrayMemSize);
-
-	// Create Vertex Array Object
-	m_vao.create(); // create underlying OpenGL object
-	m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so we can write attributes to it
 
 	// tell shader program we have two data arrays to be used as input to the shaders
 	// the two calls to setAttributeBuffer() reference again the buffer whose allocate() function was called last,
