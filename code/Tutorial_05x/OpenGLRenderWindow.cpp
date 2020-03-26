@@ -138,9 +138,6 @@ void OpenGLRenderWindow::initializeGL() {
 	{
 		// Create Shader (Do not release until VAO is created)
 
-		// Cache Uniform Locations
-		u_worldToView = SHADER(0)->uniformLocation("worldToView");
-
 		// Create Vertex Array Object
 		m_vao.create(); // create Vertex Array Object
 
@@ -209,7 +206,7 @@ void OpenGLRenderWindow::paintGL() {
 
 	QMatrix4x4 worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();
 	// assign the projection matrix to the parameter identified by 'u_worldToView' in the shader code
-	SHADER(0)->setUniformValue(u_worldToView, worldToView);
+	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], worldToView);
 
 	{
 		// set the geometry ("position" and "color" arrays)

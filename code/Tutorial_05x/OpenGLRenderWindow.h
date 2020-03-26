@@ -74,9 +74,6 @@ private:
 
 	GridObject					m_gridObject;
 
-	/*! Holds the compiled shader programs. */
-	int							u_worldToView;	// cache for variable index of parameter 'worldToCamera' declared in vertex shader
-
 	QMatrix4x4					m_projection;	// updated in resizeGL() function
 	Transform3D					m_transform;	// world transformation matrix,
 	Camera						m_camera;		// Camera position, orientation and lens data

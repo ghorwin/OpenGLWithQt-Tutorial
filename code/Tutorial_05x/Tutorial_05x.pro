@@ -25,6 +25,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11
 
 SOURCES += \
+	BoxObject.cpp \
 	Camera.cpp \
 	GridObject.cpp \
 	KeyboardMouseHandler.cpp \
@@ -36,6 +37,7 @@ SOURCES += \
 	Dialog.cpp
 
 HEADERS += \
+	BoxObject.h \
 	Camera.h \
 	Dialog.h \
 	GridObject.h \
