@@ -207,7 +207,7 @@ void OpenGLRenderWindow::initializeGL() {
 		// This is the same stuff as in Var_01, but shortened a bit
 		m_gridProgram = new QOpenGLShaderProgram();
 		m_gridProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/grid.vert");
-		m_gridProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/grid.frag");
+		m_gridProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/simple.frag");
 		m_gridProgram->link();
 		m_gridProgram->bind();
 		qDebug() << "Errors?" << glGetError() << m_gridProgram->log();
