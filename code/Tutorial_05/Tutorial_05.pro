@@ -29,19 +29,23 @@ win32 {
 SOURCES += \
 		Camera.cpp \
 		KeyboardMouseHandler.cpp \
+		OpenGLGridObject.cpp \
 		OpenGLWindow.cpp \
 		SceneView.cpp \
 		ShaderProgram.cpp \
 		TestDialog.cpp \
+		Transform3D.cpp \
 		main.cpp
 
 HEADERS += \
 	Camera.h \
 	KeyboardMouseHandler.h \
+	OpenGLGridObject.h \
 	OpenGLWindow.h \
 	SceneView.h \
 	ShaderProgram.h \
-	TestDialog.h
+	TestDialog.h \
+	Transform3D.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

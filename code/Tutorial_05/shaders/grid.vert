@@ -18,5 +18,6 @@ void main() {
   gl_Position = worldToView * vec4(position.x, 0.0, position.y, 1.0);
   fragDepth = min(1, gl_Position.z / FARPLANE); // do not divide by w
   // mix color between grid color and background color, depending on normalized depth
-  fragColor = vec4( mix(gridColor, backgroundColor, fragDepth), 1.0);
+  //fragColor = vec4( mix(gridColor, backgroundColor, fragDepth), 1.0);
+  fragColor = vec4(gridColor, 1.0);
 }

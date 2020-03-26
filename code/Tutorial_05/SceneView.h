@@ -6,6 +6,8 @@
 #include "OpenGLWindow.h"
 #include "ShaderProgram.h"
 #include "KeyboardMouseHandler.h"
+#include "OpenGLGridObject.h"
+#include "Camera.h"
 
 /*! The class SceneView extends the primitive OpenGLWindow
 	by adding keyboard/mouse event handling, and rendering of different
@@ -46,6 +48,16 @@ private:
 	*/
 	bool m_needRepaint;
 
+	/*! Wraps an OpenGL VertexArrayObject, that references the vertex coordinates and color buffers. */
+	QOpenGLVertexArrayObject	m_vao;
+	/*! Holds position and colors in a single buffer. */
+	QOpenGLBuffer				m_vertexDataBuffer;
+
+	/*! Holds the compiled shader programs. */
+	QOpenGLShaderProgram		*m_program;
+	// Shader Information
+	int							u_worldToView;  // cache for variable index of parameter 'u_worldToCamera' declared in vertex shader
+
 	// Fix for Windows OS, to avoid "2 vsync delay" lag
 	QRegion						m_cachedRegion;
 
@@ -54,6 +66,13 @@ private:
 
 	/*! The projection matrix, updated whenever the viewport geometry changes (in resizeGL() ). */
 	QMatrix4x4					m_projection;
+
+	Camera						m_camera;
+	QMatrix4x4					m_worldToView;
+
+	// stuff to draw
+
+	OpenGLGridObject			m_gridObject;
 };
 
 #endif // SCENEVIEW_H

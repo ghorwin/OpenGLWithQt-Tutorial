@@ -27,6 +27,9 @@ public:
 	/*! Destroys OpenGL resources, OpenGL context must be made current before this function is callded! */
 	void destroy();
 
+	/*! Access to the native shader program. */
+	QOpenGLShaderProgram * shaderProgram() { return m_program; }
+
 	/*! Path to vertex shader program, used in create(). */
 	QString		m_vertexShaderFilePath;
 	/*! Path to fragment shader program, used in create(). */
