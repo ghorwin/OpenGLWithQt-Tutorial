@@ -15,14 +15,12 @@ OpenGLRenderWindow::OpenGLRenderWindow() :
 	m_sceneChanged(false),
 	m_vertexBuffer(QOpenGLBuffer::VertexBuffer), // actually the default, so default constructor would have been enough
 	m_elementBuffer(QOpenGLBuffer::IndexBuffer),
-	m_gridVertexBuffer(QOpenGLBuffer::VertexBuffer),
-	m_program(nullptr),
-	m_gridProgram(nullptr)
+	m_gridVertexBuffer(QOpenGLBuffer::VertexBuffer)
 {
 	// *** create scene (no OpenGL calls are being issued below, just the data structures are created.
 
 	// Shaderprogram #0 : regular geometry (painting triangles via element index)
-	ShaderProgram blocks(":/shaders/world2view.vert",":/shaders/simple.frag");
+	ShaderProgram blocks(":/shaders/withWorldAndCamera.vert",":/shaders/simple.frag");
 	blocks.m_uniformNames.append("worldToView");
 	m_shaderPrograms.append( blocks );
 
@@ -137,8 +135,8 @@ OpenGLRenderWindow::~OpenGLRenderWindow() {
 	// resource cleanup
 	m_vao.destroy();
 	m_vertexBuffer.destroy();
-	delete m_program;
-	delete m_gridProgram;
+	for (ShaderProgram & p : m_shaderPrograms)
+		p.destroy();
 }
 
 
@@ -174,15 +172,8 @@ void OpenGLRenderWindow::initializeGL() {
 	{
 		// Create Shader (Do not release until VAO is created)
 
-		// This is the same stuff as in Var_01, but shortened a bit
-		m_program = new QOpenGLShaderProgram();
-		m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/withWorldAndCamera.vert");
-		m_program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/simple.frag");
-		m_program->link();
-		m_program->bind();
-
 		// Cache Uniform Locations
-		u_worldToView = m_program->uniformLocation("worldToView");
+		u_worldToView = SHADER(0)->uniformLocation("worldToView");
 
 		// Create Vertex Array Object
 		m_vao.create(); // create Vertex Array Object
@@ -207,32 +198,27 @@ void OpenGLRenderWindow::initializeGL() {
 		// in this case m_vertexDataBuffer.
 
 		// index 0 = position
-		m_program->enableAttributeArray(0); // array with index/id 0
-		m_program->setAttributeBuffer(0, GL_FLOAT, Vertex::positionOffset(), Vertex::PositionTupleSize, Vertex::stride());
+		SHADER(0)->enableAttributeArray(0); // array with index/id 0
+		SHADER(0)->setAttributeBuffer(0, GL_FLOAT, Vertex::positionOffset(), Vertex::PositionTupleSize, Vertex::stride());
 		// index 1 = color
-		m_program->enableAttributeArray(1); // array with index/id 1
-		m_program->setAttributeBuffer(1, GL_FLOAT, Vertex::colorOffset(), Vertex::ColorTupleSize, Vertex::stride());
+		SHADER(0)->enableAttributeArray(1); // array with index/id 1
+		SHADER(0)->setAttributeBuffer(1, GL_FLOAT, Vertex::colorOffset(), Vertex::ColorTupleSize, Vertex::stride());
 
 		m_vao.release();
 		// Release (unbind) all
 		m_vertexBuffer.release();
 		m_elementBuffer.release();
-		m_program->release();
 	} // end data init
 
 	// init grid shader program
 	{
 		// This is the same stuff as in Var_01, but shortened a bit
-		m_gridProgram = new QOpenGLShaderProgram();
-		m_gridProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/grid.vert");
-		m_gridProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/simple.frag");
-		m_gridProgram->link();
-		m_gridProgram->bind();
-		qDebug() << "Errors?" << glGetError() << m_gridProgram->log();
+		SHADER(1)->bind();
+		qDebug() << "Errors?" << glGetError() << SHADER(1)->log();
 
 		// Cache Uniform Locations
-		u_gridWorldToView = m_gridProgram->uniformLocation("worldToView");
-		u_gridColor = m_gridProgram->uniformLocation("gridColor");
+		u_gridWorldToView = SHADER(1)->uniformLocation("worldToView");
+		u_gridColor = SHADER(1)->uniformLocation("gridColor");
 
 		// Create Vertex Array Object
 		m_gridVao.create();		// create Vertex Array Object
@@ -246,15 +232,14 @@ void OpenGLRenderWindow::initializeGL() {
 		m_gridVertexBuffer.allocate(m_gridVertexBufferData.data(), vertexMemSize);
 
 		// index 0 = position
-		m_gridProgram->enableAttributeArray(0); // array with index/id 0
-		m_gridProgram->setAttributeBuffer(0, GL_FLOAT,
+		SHADER(1)->enableAttributeArray(0); // array with index/id 0
+		SHADER(1)->setAttributeBuffer(0, GL_FLOAT,
 									  0 /* position/vertex offset */,
 									  2 /* two floats per position = vec2 */,
 									  0 /* vertex after vertex, no interleaving */);
 
 		m_gridVao.release();
 		m_gridVertexBuffer.release();
-		m_gridProgram->release();
 	}
 }
 
@@ -280,11 +265,11 @@ void OpenGLRenderWindow::paintGL() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// render using our shader
-	m_program->bind();
+	SHADER(0)->bind();
 
 	QMatrix4x4 worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();
 	// assign the projection matrix to the parameter identified by 'u_worldToView' in the shader code
-	m_program->setUniformValue(u_worldToView, worldToView);
+	SHADER(0)->setUniformValue(u_worldToView, worldToView);
 
 	{
 		// set the geometry ("position" and "color" arrays)
@@ -296,16 +281,16 @@ void OpenGLRenderWindow::paintGL() {
 		// release vertices again
 		m_vao.release();
 	}
-	m_program->release();
+	SHADER(0)->release();
 
 	// *** render grid afterwards ***
 
 	// render using our shader
-	m_gridProgram->bind();
+	SHADER(1)->bind();
 	// assign the projection matrix to the parameter identified by 'u_worldToView' in the shader code
-	m_gridProgram->setUniformValue(u_gridWorldToView, worldToView);
+	SHADER(1)->setUniformValue(u_gridWorldToView, worldToView);
 	QVector3D color(0.3f, 0.6f, 0.3f);
-	m_gridProgram->setUniformValue(u_gridColor, color);
+	SHADER(1)->setUniformValue(u_gridColor, color);
 
 	{
 		// set the geometry ("position" and "color" arrays)
@@ -316,7 +301,7 @@ void OpenGLRenderWindow::paintGL() {
 		// release vertices again
 		m_gridVao.release();
 	}
-	m_gridProgram->release();
+	SHADER(1)->release();
 
 
 }

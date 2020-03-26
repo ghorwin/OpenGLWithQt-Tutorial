@@ -74,11 +74,9 @@ private:
 	std::vector<float>			m_gridVertexBufferData;
 
 	/*! Holds the compiled shader programs. */
-	QOpenGLShaderProgram		*m_program;
 	int							u_worldToView;	// cache for variable index of parameter 'worldToCamera' declared in vertex shader
 
 	/*! Holds the compiled shader program for grid lines. */
-	QOpenGLShaderProgram		*m_gridProgram;
 	int							u_gridWorldToView;	// cache for variable index of parameter 'worldToCamera' declared in vertex shader
 	int							u_gridColor;			// cache for variable index of parameter 'gridColor' declared in vertex shader
 
