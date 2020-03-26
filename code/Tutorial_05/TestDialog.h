@@ -3,7 +3,7 @@
 
 #include <QDialog>
 
-class RectangleWindow;
+class SceneView;
 
 /*! A simple test dialog for an embedded OpenGL window. */
 class TestDialog : public QDialog {
@@ -11,12 +11,9 @@ class TestDialog : public QDialog {
 public:
 	TestDialog();
 
-private slots:
-	void onChangeColors();
-	void onAnimateColors();
-
 private:
-	RectangleWindow * m_rectangleWindow;
+	// The scene view, that shows our world and allows navigation
+	SceneView * m_sceneView;
 };
 
 #endif // TESTDIALOG_H

@@ -20,3 +20,19 @@ In diesem Tutorial werden viele Dinge verwendet:
 Als Grundlage für die Implementierung wird die Klasse `QOpenGLWindow` aus _Tutorial 02_ verwendet.
 
 
+
+
+== Antialiasing
+
+Es gibt hier verschiedene Möglichkeiten, die wohl einfachste aus Sicht der Programmierung ist das Einschalten von Multisampling (MSAA) (siehe Erläuterung auf https://www.khronos.org/opengl/wiki/Multisampling).
+
+Dazu muss man beim Konfigurieren des `QSurfaceFormat`-Objekts nur folgende Zeile hinzufügen:
+
+[source,c++]
+----
+format.setSamples(4);	// enable multisampling (antialiasing)
+----
+
+Multisampling braucht mehr Grafikkartenspeicher und ist durch das mehrfache Samplen von Pixeln/Fragmenten natürlich langsamer. Daher gibt es auch die Möglichkeit, Antialiasing in das Shaderprogramm einzubauen.
+
+TODO : Antialiased-Shader

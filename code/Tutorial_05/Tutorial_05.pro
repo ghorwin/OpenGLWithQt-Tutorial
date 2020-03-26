@@ -27,12 +27,16 @@ win32 {
 }
 
 SOURCES += \
-		RectangleWindow.cpp \
+		OpenGLWindow.cpp \
+		SceneView.cpp \
+		ShaderProgram.cpp \
 		TestDialog.cpp \
 		main.cpp
 
 HEADERS += \
-	RectangleWindow.h \
+	OpenGLWindow.h \
+	SceneView.h \
+	ShaderProgram.h \
 	TestDialog.h
 
 # Default rules for deployment.

@@ -27,10 +27,47 @@ OpenGLWindow::OpenGLWindow(QWindow *parent) :
 }
 
 
+void OpenGLWindow::initOpenGL() {
+	bool needsInitialize = false;
+
+	// protect against calling this function twice (accidentally)
+	if (m_context == nullptr) {
+		m_context = new QOpenGLContext(this);
+		m_context->setFormat(requestedFormat());
+		m_context->create();
+
+		needsInitialize = true;
+	}
+
+	m_context->makeCurrent(this);
+
+	if (needsInitialize) {
+		initializeOpenGLFunctions();
+		initializeGL(); // call user code
+	}
+}
+
+
 void OpenGLWindow::renderLater() {
 	// Schedule an UpdateRequest event in the event loop
 	// that will be send with the next VSync.
 	requestUpdate(); // call public slot requestUpdate()
+}
+
+
+void OpenGLWindow::renderNow() {
+	if (!isExposed())
+		return;
+
+	// initialize on first call
+	if (m_context == nullptr)
+		initOpenGL();
+
+	m_context->makeCurrent(this);
+
+	paintGL(); // call user code
+
+	m_context->swapBuffers(this);
 }
 
 
@@ -46,34 +83,18 @@ bool OpenGLWindow::event(QEvent *event) {
 
 
 void OpenGLWindow::exposeEvent(QExposeEvent * /*event*/) {
-	renderNow(); // simply redirect call to renderNow()
+	renderNow(); // simply redirect call to renderNow(), isExposed() is checked there
 }
 
 
-void OpenGLWindow::renderNow() {
-	if (!isExposed())
-		return;
-
-	bool needsInitialize = false;
+void OpenGLWindow::resizeEvent(QResizeEvent * event) {
+	QWindow::resizeEvent(event);
 
 	// initialize on first call
-	if (m_context == nullptr) {
-		m_context = new QOpenGLContext(this);
-		m_context->setFormat(requestedFormat());
-		m_context->create();
+	if (m_context == nullptr)
+		initOpenGL();
 
-		needsInitialize = true;
-	}
-
-	m_context->makeCurrent(this);
-
-	if (needsInitialize) {
-		initializeOpenGLFunctions();
-		initialize(); // user code
-	}
-
-	render(); // user code
-
-	m_context->swapBuffers(this);
+	resizeGL(width(), height());
 }
+
 
