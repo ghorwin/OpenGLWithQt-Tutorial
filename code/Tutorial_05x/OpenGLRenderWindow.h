@@ -62,11 +62,6 @@ private:
 	void printVersionInformation();
 	void updateScene();
 
-	/*! Wraps an OpenGL VertexArrayObject, that references the vertex coordinates and color buffers. */
-	QOpenGLVertexArrayObject	m_vao;
-	/*! Holds elements. */
-	QOpenGLBuffer				m_elementBuffer;
-
 	BoxObject					m_boxObject;
 	GridObject					m_gridObject;
 

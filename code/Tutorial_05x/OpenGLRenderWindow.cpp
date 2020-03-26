@@ -12,8 +12,7 @@
 
 OpenGLRenderWindow::OpenGLRenderWindow() :
 	m_animate(true),
-	m_sceneChanged(false),
-	m_elementBuffer(QOpenGLBuffer::IndexBuffer)
+	m_sceneChanged(false)
 {
 	// *** create scene (no OpenGL calls are being issued below, just the data structures are created.
 
@@ -101,7 +100,7 @@ OpenGLRenderWindow::OpenGLRenderWindow() :
 
 OpenGLRenderWindow::~OpenGLRenderWindow() {
 	// resource cleanup
-	m_vao.destroy();
+	m_boxObject.m_vao.destroy();
 	m_boxObject.m_vertexBuffer.destroy();
 	for (ShaderProgram & p : m_shaderPrograms)
 		p.destroy();
@@ -138,9 +137,9 @@ void OpenGLRenderWindow::initializeGL() {
 		// Create Shader (Do not release until VAO is created)
 
 		// Create Vertex Array Object
-		m_vao.create(); // create Vertex Array Object
+		m_boxObject.m_vao.create(); // create Vertex Array Object
 
-		m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so we can write attributes to it
+		m_boxObject.m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so we can write attributes to it
 
 		// Create Buffer (Do not release until VAO is created and released)
 		m_boxObject.m_vertexBuffer.create();
@@ -149,11 +148,11 @@ void OpenGLRenderWindow::initializeGL() {
 		int vertexMemSize = m_boxObject.m_vertexBufferData.size()*sizeof(float);
 		m_boxObject.m_vertexBuffer.allocate(m_boxObject.m_vertexBufferData.data(), vertexMemSize);
 
-		m_elementBuffer.create();
-		m_elementBuffer.bind();
-		m_elementBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+		m_boxObject.m_elementBuffer.create();
+		m_boxObject.m_elementBuffer.bind();
+		m_boxObject.m_elementBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
 		int elementMemSize = m_boxObject.m_elementBufferData.size()*sizeof(GLuint);
-		m_elementBuffer.allocate(m_boxObject.m_elementBufferData.data(), elementMemSize);
+		m_boxObject.m_elementBuffer.allocate(m_boxObject.m_elementBufferData.data(), elementMemSize);
 
 		// tell shader program we have two data arrays to be used as input to the shaders
 		// the two calls to setAttributeBuffer() reference again the 'vertex' buffer whose allocate() function was called last,
@@ -166,10 +165,10 @@ void OpenGLRenderWindow::initializeGL() {
 		SHADER(0)->enableAttributeArray(1); // array with index/id 1
 		SHADER(0)->setAttributeBuffer(1, GL_FLOAT, Vertex::colorOffset(), Vertex::ColorTupleSize, Vertex::stride());
 
-		m_vao.release();
+		m_boxObject.m_vao.release();
 		// Release (unbind) all
 		m_boxObject.m_vertexBuffer.release();
-		m_elementBuffer.release();
+		m_boxObject.m_elementBuffer.release();
 	} // end data init
 
 	m_gridObject.create(SHADER(1));
@@ -209,13 +208,13 @@ void OpenGLRenderWindow::paintGL() {
 
 	{
 		// set the geometry ("position" and "color" arrays)
-		m_vao.bind();
+		m_boxObject.m_vao.bind();
 
 		// now draw the cube by drawing individual triangles
 		// - GL_TRIANGLES - draw individual triangles via elements
 		glDrawElements(GL_TRIANGLES, m_boxObject.m_elementBufferData.size(), GL_UNSIGNED_INT, nullptr);
 		// release vertices again
-		m_vao.release();
+		m_boxObject.m_vao.release();
 	}
 	SHADER(0)->release();
 
