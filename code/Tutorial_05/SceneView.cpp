@@ -91,8 +91,8 @@ SceneView::~SceneView() {
 void SceneView::initializeGL() {
 
 	// we process all individual shader programs first
-//	for (ShaderProgram & p : m_shaderPrograms)
-//		p.create();
+	for (ShaderProgram & p : m_shaderPrograms)
+		p.create();
 
 	// initialize drawable objects
 //	m_gridObject.create(m_shaderPrograms[1].shaderProgram());
@@ -105,21 +105,7 @@ void SceneView::initializeGL() {
 
 	// Application-specific initialization
 	{
-		// Create Shader (Do not release until VAO is created)
-
-		// This is the same stuff as in Var_01, but shortened a bit
-		m_program = new QOpenGLShaderProgram();
-		if (!m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/withWorldAndCamera.vert"))
-			qDebug() << m_program->log();
-		if (!m_program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/simple.frag"))
-			qDebug() << m_program->log();
-		if (!m_program->link())
-			qDebug() << m_program->log();
-		if (!m_program->bind())
-			qDebug() << m_program->log();
-
-		// Cache Uniform Locations
-		u_worldToView = m_program->uniformLocation("worldToView");
+		QOpenGLShaderProgram		*program = m_shaderPrograms[0].shaderProgram();
 
 		// Create Buffer (Do not release until VAO is created)
 		m_vertexDataBuffer.create();
@@ -135,17 +121,17 @@ void SceneView::initializeGL() {
 		// tell shader program we have two data arrays to be used as input to the shaders
 		// the two calls to setAttributeBuffer() reference again the buffer whose allocate() function was called last,
 		// in this case m_vertexDataBuffer.
-		m_program->enableAttributeArray(0); // array with index/id 0
-		m_program->enableAttributeArray(1); // array with index/id 1
+		program->enableAttributeArray(0); // array with index/id 0
+		program->enableAttributeArray(1); // array with index/id 1
 		// index 0 = position
-		m_program->setAttributeBuffer(0, GL_FLOAT, Vertex::positionOffset(), Vertex::PositionTupleSize, Vertex::stride());
+		program->setAttributeBuffer(0, GL_FLOAT, Vertex::positionOffset(), Vertex::PositionTupleSize, Vertex::stride());
 		// index 0 = color
-		m_program->setAttributeBuffer(1, GL_FLOAT, Vertex::colorOffset(), Vertex::ColorTupleSize, Vertex::stride());
+		program->setAttributeBuffer(1, GL_FLOAT, Vertex::colorOffset(), Vertex::ColorTupleSize, Vertex::stride());
 
 		// Release (unbind) all
 		m_vertexDataBuffer.release();
 		m_vao.release();
-		m_program->release();
+//		m_program->release();
 	} // end data init
 }
 
@@ -173,7 +159,6 @@ void SceneView::paintGL() {
 
 	qDebug() << "[SceneView::paintGL]";
 
-	// this function is called for every frame to be rendered on screen
 	const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
 	glViewport(0, 0, width() * retinaScale, height() * retinaScale);
 
@@ -184,10 +169,10 @@ void SceneView::paintGL() {
 
 	// clear the background color
 	// render using our shader
-	m_program->bind();
+	m_shaderPrograms[0].shaderProgram()->bind();
 	// assign the projection matrix to the parameter identified by 'u_worldToView' in the shader code
 	qDebug() << m_worldToView;
-	m_program->setUniformValue(u_worldToView, m_worldToView);
+	m_shaderPrograms[0].shaderProgram()->setUniformValue(u_worldToView, m_worldToView);
 
 	{
 		// set the geometry ("position" and "color" arrays)
@@ -200,7 +185,7 @@ void SceneView::paintGL() {
 		// release vertices again
 		m_vao.release();
 	}
-	m_program->release();
+	m_shaderPrograms[0].shaderProgram()->release();
 
 #ifdef DRAW_GRID
 	QOpenGLShaderProgram * gridProgram = m_shaderPrograms[1].shaderProgram();

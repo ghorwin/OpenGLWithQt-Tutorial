@@ -53,8 +53,6 @@ private:
 	/*! Holds position and colors in a single buffer. */
 	QOpenGLBuffer				m_vertexDataBuffer;
 
-	/*! Holds the compiled shader programs. */
-	QOpenGLShaderProgram		*m_program;
 	// Shader Information
 	int							u_worldToView;  // cache for variable index of parameter 'u_worldToCamera' declared in vertex shader
 
