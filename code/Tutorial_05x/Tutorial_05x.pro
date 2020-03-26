@@ -26,6 +26,7 @@ CONFIG += c++11
 
 SOURCES += \
 	Camera.cpp \
+	GridObject.cpp \
 	KeyboardMouseHandler.cpp \
 	RectMesh.cpp \
 	ShaderProgram.cpp \
@@ -37,6 +38,7 @@ SOURCES += \
 HEADERS += \
 	Camera.h \
 	Dialog.h \
+	GridObject.h \
 	KeyboardMouseHandler.h \
 	RectMesh.h \
 	ShaderProgram.h \

@@ -12,6 +12,8 @@
 #include "RectMesh.h"
 #include "ShaderProgram.h"
 
+#include "GridObject.h"
+
 class QExposeEvent;
 
 class QOpenGLShaderProgram;
@@ -69,20 +71,11 @@ private:
 	/*! Holds elements. */
 	QOpenGLBuffer				m_elementBuffer;
 
-	/*! Holds position of grid lines. */
-	QOpenGLBuffer				m_gridVertexBuffer;
-	std::vector<float>			m_gridVertexBufferData;
+
+	GridObject					m_gridObject;
 
 	/*! Holds the compiled shader programs. */
 	int							u_worldToView;	// cache for variable index of parameter 'worldToCamera' declared in vertex shader
-
-	/*! Holds the compiled shader program for grid lines. */
-	int							u_gridWorldToView;	// cache for variable index of parameter 'worldToCamera' declared in vertex shader
-	int							u_gridColor;			// cache for variable index of parameter 'gridColor' declared in vertex shader
-
-
-	/*! Wraps an OpenGL VertexArrayObject, that references the vertex coordinates and color buffers. */
-	QOpenGLVertexArrayObject	m_gridVao;
 
 	QMatrix4x4					m_projection;	// updated in resizeGL() function
 	Transform3D					m_transform;	// world transformation matrix,

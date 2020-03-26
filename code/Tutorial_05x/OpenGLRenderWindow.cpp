@@ -14,8 +14,7 @@ OpenGLRenderWindow::OpenGLRenderWindow() :
 	m_animate(true),
 	m_sceneChanged(false),
 	m_vertexBuffer(QOpenGLBuffer::VertexBuffer), // actually the default, so default constructor would have been enough
-	m_elementBuffer(QOpenGLBuffer::IndexBuffer),
-	m_gridVertexBuffer(QOpenGLBuffer::VertexBuffer)
+	m_elementBuffer(QOpenGLBuffer::IndexBuffer)
 {
 	// *** create scene (no OpenGL calls are being issued below, just the data structures are created.
 
@@ -26,9 +25,9 @@ OpenGLRenderWindow::OpenGLRenderWindow() :
 
 	// Shaderprogram #1 : grid (painting grid lines)
 	ShaderProgram grid(":/shaders/grid.vert",":/shaders/simple.frag");
-	grid.m_uniformNames.append("worldToView");
-	grid.m_uniformNames.append("gridColor");
-	grid.m_uniformNames.append("backgroundColor");
+	grid.m_uniformNames.append("worldToView"); // mat4
+	grid.m_uniformNames.append("gridColor"); // vec3
+	grid.m_uniformNames.append("backColor"); // vec3
 	m_shaderPrograms.append( grid );
 
 	// move object a little bit to the back of the scene (negative z coordinates = further back)
@@ -96,36 +95,6 @@ OpenGLRenderWindow::OpenGLRenderWindow() :
 	// we have 6 sides of cube, and each side has two triangles, with 3 indexes each
 	m_elementBufferData.resize(Nrects*2*3);
 	std::fill(m_elementBufferData.begin(), m_elementBufferData.end(), 0);
-
-	// create the grid lines
-
-	const unsigned int N = 100; // number of lines to draw in x and z direction
-	float width = 500;
-
-	// we have 2*N lines, each line requires two vertexes, with two floats (x and z coordinates) each.
-	m_gridVertexBufferData.resize(2*N*2*2);
-	float * gridVertexBufferPtr = m_gridVertexBufferData.data();
-	// compute grid lines with z = const
-	float x1 = -width*0.5;
-	float x2 = width*0.5;
-	for (unsigned int i=0; i<N; ++i, ++gridVertexBufferPtr) {
-		float z = width/(N-1)*i-width*0.5;
-		*gridVertexBufferPtr = x1;
-		*(++gridVertexBufferPtr) = z;
-		*(++gridVertexBufferPtr) = x2;
-		*(++gridVertexBufferPtr) = z;
-	}
-	// compute grid lines with x = const
-	float z1 = -width*0.5;
-	float z2 = width*0.5;
-	for (unsigned int i=0; i<N; ++i, ++gridVertexBufferPtr) {
-		float x = width/(N-1)*i-width*0.5;
-		*gridVertexBufferPtr = x;
-		*(++gridVertexBufferPtr) = z1;
-		*(++gridVertexBufferPtr) = x;
-		*(++gridVertexBufferPtr) = z2;
-	}
-
 	updateScene();
 }
 
@@ -156,9 +125,6 @@ void OpenGLRenderWindow::initializeGL() {
 	connect(this, SIGNAL(frameSwapped()), this, SLOT(onFrameSwapped()));
 
 	printVersionInformation();
-
-	// set the background color = clear color
-	glClearColor(0.1f, 0.1f, 0.2f, 1.0f);
 
 	// tell OpenGL to show only faces whose normal vector points towards us
 	glEnable(GL_CULL_FACE);
@@ -210,37 +176,7 @@ void OpenGLRenderWindow::initializeGL() {
 		m_elementBuffer.release();
 	} // end data init
 
-	// init grid shader program
-	{
-		// This is the same stuff as in Var_01, but shortened a bit
-		SHADER(1)->bind();
-		qDebug() << "Errors?" << glGetError() << SHADER(1)->log();
-
-		// Cache Uniform Locations
-		u_gridWorldToView = SHADER(1)->uniformLocation("worldToView");
-		u_gridColor = SHADER(1)->uniformLocation("gridColor");
-
-		// Create Vertex Array Object
-		m_gridVao.create();		// create Vertex Array Object
-		m_gridVao.bind();		// sets the Vertex Array Object current to the OpenGL context so we can write attributes to it
-
-		// Create Buffer (Do not release until VAO is created and released)
-		m_gridVertexBuffer.create();
-		m_gridVertexBuffer.bind();
-		m_gridVertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
-		int vertexMemSize = m_gridVertexBufferData.size()*sizeof(float);
-		m_gridVertexBuffer.allocate(m_gridVertexBufferData.data(), vertexMemSize);
-
-		// index 0 = position
-		SHADER(1)->enableAttributeArray(0); // array with index/id 0
-		SHADER(1)->setAttributeBuffer(0, GL_FLOAT,
-									  0 /* position/vertex offset */,
-									  2 /* two floats per position = vec2 */,
-									  0 /* vertex after vertex, no interleaving */);
-
-		m_gridVao.release();
-		m_gridVertexBuffer.release();
-	}
+	m_gridObject.create(SHADER(1));
 }
 
 
@@ -263,6 +199,10 @@ void OpenGLRenderWindow::paintGL() {
 
 	// clear the background color
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// set the background color = clear color
+	QVector3D backColor(0.1f, 0.15f, 0.3f);
+	glClearColor(0.1f, 0.15f, 0.3f, 1.0f);
 
 	// render using our shader
 	SHADER(0)->bind();
@@ -288,18 +228,19 @@ void OpenGLRenderWindow::paintGL() {
 	// render using our shader
 	SHADER(1)->bind();
 	// assign the projection matrix to the parameter identified by 'u_worldToView' in the shader code
-	SHADER(1)->setUniformValue(u_gridWorldToView, worldToView);
-	QVector3D color(0.3f, 0.6f, 0.3f);
-	SHADER(1)->setUniformValue(u_gridColor, color);
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[0], worldToView);
+	QVector3D color(0.3f, 0.3f, 0.6f);
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], color);
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[2], backColor);
 
 	{
 		// set the geometry ("position" and "color" arrays)
-		m_gridVao.bind();
+		m_gridObject.m_vao.bind();
 
 		// now draw the grid lines
-		glDrawArrays(GL_LINES, 0, m_gridVertexBufferData.size());
+		glDrawArrays(GL_LINES, 0, m_gridObject.m_NVertexes);
 		// release vertices again
-		m_gridVao.release();
+		m_gridObject.m_vao.release();
 	}
 	SHADER(1)->release();
 

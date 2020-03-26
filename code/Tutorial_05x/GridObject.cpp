@@ -1,4 +1,4 @@
-#include "OpenGLGridObject.h"
+#include "GridObject.h"
 
 #include <QOpenGLShaderProgram>
 #include <vector>
