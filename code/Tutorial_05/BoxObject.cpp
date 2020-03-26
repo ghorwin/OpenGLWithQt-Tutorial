@@ -89,8 +89,8 @@ void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
 	shaderProgramm->setAttributeBuffer(1, GL_FLOAT, sizeof(QVector3D), 3, sizeof(Vertex));
 
 	// Release (unbind) all
-	m_vertexDataBuffer.release();
 	m_vao.release();
+	m_vertexDataBuffer.release();
 }
 
 

@@ -100,6 +100,7 @@ void SceneView::paintGL() {
 	SHADER(0)->setUniformValue(u_worldToView, m_worldToView);
 	{
 		// set the geometry ("position" and "color" arrays)
+		m_boxObject.m_vertexDataBuffer.bind();
 		m_boxObject.m_vao.bind();
 
 		// now draw the cube by drawing individual triangles
