@@ -13,6 +13,7 @@
 #include "ShaderProgram.h"
 
 #include "GridObject.h"
+#include "BoxObject.h"
 
 class QExposeEvent;
 
@@ -61,17 +62,12 @@ private:
 	void printVersionInformation();
 	void updateScene();
 
-	std::vector<float>			m_vertexBufferData;
-	std::vector<GLuint>			m_elementBufferData;
-
 	/*! Wraps an OpenGL VertexArrayObject, that references the vertex coordinates and color buffers. */
 	QOpenGLVertexArrayObject	m_vao;
-	/*! Holds position and colors in a single buffer. */
-	QOpenGLBuffer				m_vertexBuffer;
 	/*! Holds elements. */
 	QOpenGLBuffer				m_elementBuffer;
 
-
+	BoxObject					m_boxObject;
 	GridObject					m_gridObject;
 
 	QMatrix4x4					m_projection;	// updated in resizeGL() function

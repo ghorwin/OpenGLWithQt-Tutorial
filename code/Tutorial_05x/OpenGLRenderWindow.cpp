@@ -13,7 +13,6 @@
 OpenGLRenderWindow::OpenGLRenderWindow() :
 	m_animate(true),
 	m_sceneChanged(false),
-	m_vertexBuffer(QOpenGLBuffer::VertexBuffer), // actually the default, so default constructor would have been enough
 	m_elementBuffer(QOpenGLBuffer::IndexBuffer)
 {
 	// *** create scene (no OpenGL calls are being issued below, just the data structures are created.
@@ -89,12 +88,12 @@ OpenGLRenderWindow::OpenGLRenderWindow() :
 
 	// we have 6 sides of a cube, and each side needs 4 vertexes, and each vertex requires 2 vectors3d of float
 	unsigned int sizeOfVertex = 2*3; // number of floats
-	m_vertexBufferData.resize(Nrects*4*sizeOfVertex);
-	std::fill(m_vertexBufferData.begin(), m_vertexBufferData.end(), 0);
+	m_boxObject.m_vertexBufferData.resize(Nrects*4*sizeOfVertex);
+	std::fill(m_boxObject.m_vertexBufferData.begin(), m_boxObject.m_vertexBufferData.end(), 0);
 
 	// we have 6 sides of cube, and each side has two triangles, with 3 indexes each
-	m_elementBufferData.resize(Nrects*2*3);
-	std::fill(m_elementBufferData.begin(), m_elementBufferData.end(), 0);
+	m_boxObject.m_elementBufferData.resize(Nrects*2*3);
+	std::fill(m_boxObject.m_elementBufferData.begin(), m_boxObject.m_elementBufferData.end(), 0);
 	updateScene();
 }
 
@@ -103,7 +102,7 @@ OpenGLRenderWindow::OpenGLRenderWindow() :
 OpenGLRenderWindow::~OpenGLRenderWindow() {
 	// resource cleanup
 	m_vao.destroy();
-	m_vertexBuffer.destroy();
+	m_boxObject.m_vertexBuffer.destroy();
 	for (ShaderProgram & p : m_shaderPrograms)
 		p.destroy();
 }
@@ -144,17 +143,17 @@ void OpenGLRenderWindow::initializeGL() {
 		m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so we can write attributes to it
 
 		// Create Buffer (Do not release until VAO is created and released)
-		m_vertexBuffer.create();
-		m_vertexBuffer.bind();
-		m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
-		int vertexMemSize = m_vertexBufferData.size()*sizeof(float);
-		m_vertexBuffer.allocate(m_vertexBufferData.data(), vertexMemSize);
+		m_boxObject.m_vertexBuffer.create();
+		m_boxObject.m_vertexBuffer.bind();
+		m_boxObject.m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+		int vertexMemSize = m_boxObject.m_vertexBufferData.size()*sizeof(float);
+		m_boxObject.m_vertexBuffer.allocate(m_boxObject.m_vertexBufferData.data(), vertexMemSize);
 
 		m_elementBuffer.create();
 		m_elementBuffer.bind();
 		m_elementBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
-		int elementMemSize = m_elementBufferData.size()*sizeof(GLuint);
-		m_elementBuffer.allocate(m_elementBufferData.data(), elementMemSize);
+		int elementMemSize = m_boxObject.m_elementBufferData.size()*sizeof(GLuint);
+		m_elementBuffer.allocate(m_boxObject.m_elementBufferData.data(), elementMemSize);
 
 		// tell shader program we have two data arrays to be used as input to the shaders
 		// the two calls to setAttributeBuffer() reference again the 'vertex' buffer whose allocate() function was called last,
@@ -169,7 +168,7 @@ void OpenGLRenderWindow::initializeGL() {
 
 		m_vao.release();
 		// Release (unbind) all
-		m_vertexBuffer.release();
+		m_boxObject.m_vertexBuffer.release();
 		m_elementBuffer.release();
 	} // end data init
 
@@ -192,7 +191,7 @@ void OpenGLRenderWindow::paintGL() {
 
 	// monitor rendering - prints out a string whenever the rendering takes place - only for resizing or when
 	// focussing in/out of the window
-	qDebug() << QDateTime::currentDateTime().toString();
+//	qDebug() << QDateTime::currentDateTime().toString();
 
 	// clear the background color
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -214,7 +213,7 @@ void OpenGLRenderWindow::paintGL() {
 
 		// now draw the cube by drawing individual triangles
 		// - GL_TRIANGLES - draw individual triangles via elements
-		glDrawElements(GL_TRIANGLES, m_elementBufferData.size(), GL_UNSIGNED_INT, nullptr);
+		glDrawElements(GL_TRIANGLES, m_boxObject.m_elementBufferData.size(), GL_UNSIGNED_INT, nullptr);
 		// release vertices again
 		m_vao.release();
 	}
@@ -392,19 +391,19 @@ void OpenGLRenderWindow::exposeEvent(QExposeEvent *ev) {
 
 void OpenGLRenderWindow::updateScene() {
 	// update the buffers
-	float * vertexBuffer = m_vertexBufferData.data();
+	float * vertexBuffer = m_boxObject.m_vertexBufferData.data();
 	unsigned int vertexCount = 0;
-	GLuint * elementBuffer = m_elementBufferData.data();
+	GLuint * elementBuffer = m_boxObject.m_elementBufferData.data();
 	unsigned int elementCount = 0;
 	for (unsigned int i=0; i<m_rectangles.size(); ++i) {
 		m_rectangles[i].copy2Buffer(vertexBuffer, vertexCount, elementBuffer, elementCount);
 		vertexCount += 4;
 		elementCount += 2;
 	}
-	m_vertexBuffer.bind();
-	m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
-	int vertexMemSize = m_vertexBufferData.size()*sizeof(float);
-	m_vertexBuffer.allocate(m_vertexBufferData.data(), vertexMemSize);
+	m_boxObject.m_vertexBuffer.bind();
+	m_boxObject.m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+	int vertexMemSize = m_boxObject.m_vertexBufferData.size()*sizeof(float);
+	m_boxObject.m_vertexBuffer.allocate(m_boxObject.m_vertexBufferData.data(), vertexMemSize);
 	m_sceneChanged = false;
 }
 
