@@ -10,6 +10,7 @@
 #include "Camera.h"
 #include "KeyboardMouseHandler.h"
 #include "RectMesh.h"
+#include "ShaderProgram.h"
 
 class QExposeEvent;
 
@@ -35,6 +36,9 @@ public:
 	bool m_animate;
 	std::vector<RectMesh>		m_rectangles;
 	bool						m_sceneChanged;
+
+	/*! All shader programs used in the scene. */
+	QList<ShaderProgram>	m_shaderPrograms;
 
 private slots:
 	/*! Called when vsync has just happened and we *may* redraw the scene. */

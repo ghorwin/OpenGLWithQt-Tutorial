@@ -8,6 +8,8 @@
 
 #include "Vertex.h"
 
+#define SHADER(x) m_shaderPrograms[x].shaderProgram()
+
 OpenGLRenderWindow::OpenGLRenderWindow() :
 	m_animate(true),
 	m_sceneChanged(false),
@@ -17,6 +19,20 @@ OpenGLRenderWindow::OpenGLRenderWindow() :
 	m_program(nullptr),
 	m_gridProgram(nullptr)
 {
+	// *** create scene (no OpenGL calls are being issued below, just the data structures are created.
+
+	// Shaderprogram #0 : regular geometry (painting triangles via element index)
+	ShaderProgram blocks(":/shaders/world2view.vert",":/shaders/simple.frag");
+	blocks.m_uniformNames.append("worldToView");
+	m_shaderPrograms.append( blocks );
+
+	// Shaderprogram #1 : grid (painting grid lines)
+	ShaderProgram grid(":/shaders/grid.vert",":/shaders/simple.frag");
+	grid.m_uniformNames.append("worldToView");
+	grid.m_uniformNames.append("gridColor");
+	grid.m_uniformNames.append("backgroundColor");
+	m_shaderPrograms.append( grid );
+
 	// move object a little bit to the back of the scene (negative z coordinates = further back)
 	m_transform.translate(0.0f, 0.0f, -5.0f);
 	m_camera.translate(0,5,0);
@@ -131,6 +147,10 @@ void OpenGLRenderWindow::initializeGL() {
 
 	// Initialize OpenGL Backend
 	initializeOpenGLFunctions(); // QOpenGLFunctions::initializeOpenGLFunctions()
+
+	// we process all individual shader programs first
+	for (ShaderProgram & p : m_shaderPrograms)
+		p.create();
 
 	// The 'frameSwapped' signal is emitted after the widget's top-level window has finished
 	// composition and returned from its potentially blocking QOpenGLContext::swapBuffers() call.

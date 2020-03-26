@@ -28,6 +28,7 @@ SOURCES += \
 	Camera.cpp \
 	KeyboardMouseHandler.cpp \
 	RectMesh.cpp \
+	ShaderProgram.cpp \
 	Transform3d.cpp \
 	OpenGLRenderWindow.cpp \
 	main.cpp \
@@ -38,6 +39,7 @@ HEADERS += \
 	Dialog.h \
 	KeyboardMouseHandler.h \
 	RectMesh.h \
+	ShaderProgram.h \
 	Transform3d.h \
 	OpenGLRenderWindow.h \
 	Vertex.h
