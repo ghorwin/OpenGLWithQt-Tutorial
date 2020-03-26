@@ -10,6 +10,10 @@ Die Quelltexte (und Inhalte dieses Tutorials) liegen auf github:
 
 https://github.com/ghorwin/OpenGLWithQt-Tutorial
 
+Fragen und Anregungen kann man in der Issues-Seite auf Githab eintragen, die kann man ja wie ein Diskussionsforum verwenden, nur dass die nie geschlossen werden :-)
+
+https://github.com/ghorwin/OpenGLWithQt-Tutorial/issues
+
 == Kernthemen
 In diesem Tutorial geht es primär um folgende Themen:
 

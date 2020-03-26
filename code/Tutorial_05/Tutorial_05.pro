@@ -27,6 +27,8 @@ win32 {
 }
 
 SOURCES += \
+		Camera.cpp \
+		KeyboardMouseHandler.cpp \
 		OpenGLWindow.cpp \
 		SceneView.cpp \
 		ShaderProgram.cpp \
@@ -34,6 +36,8 @@ SOURCES += \
 		main.cpp
 
 HEADERS += \
+	Camera.h \
+	KeyboardMouseHandler.h \
 	OpenGLWindow.h \
 	SceneView.h \
 	ShaderProgram.h \

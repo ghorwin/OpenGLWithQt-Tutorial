@@ -62,7 +62,7 @@ protected:
 		\param width Width of window in pixels as returned from width()
 		\param height Height of window in pixels as returned from height()
 	*/
-	virtual void resizeGL(int width, int height) {}
+	virtual void resizeGL(int width, int height) { Q_UNUSED(width) Q_UNUSED(height) }
 
 	/*! Called just after the OpenGL context was made current. Re-implement in
 		derived classes to do the actual painting.

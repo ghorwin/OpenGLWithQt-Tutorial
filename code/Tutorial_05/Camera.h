@@ -1,7 +1,7 @@
 #ifndef QCAMERA_H
 #define QCAMERA_H
 
-#include "Transform3d.h"
+#include "Transform3D.h"
 
 class Camera {
 public:

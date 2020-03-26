@@ -1,11 +1,14 @@
 #include "KeyboardMouseHandler.h"
 
+#include <QKeyEvent>
+#include <QMouseEvent>
+#include <QWheelEvent>
+
 
 KeyboardMouseHandler::KeyboardMouseHandler() :
-	m_leftButtonDown(false),
-	m_middleButtonDown(false),
-	m_rightButtonDown(false),
-	m_stateHasChanged(false)
+	m_leftButtonDown(StateNotPressed),
+	m_middleButtonDown(StateNotPressed),
+	m_rightButtonDown(StateNotPressed)
 {
 }
 
@@ -14,25 +17,41 @@ KeyboardMouseHandler::~KeyboardMouseHandler() {
 }
 
 
-void KeyboardMouseHandler::keyPressEvent(QKeyEvent *event) {
 
+void KeyboardMouseHandler::keyPressEvent(QKeyEvent *event) {
+	if (event->isAutoRepeat()) {
+		event->ignore();
+	}
+	else {
+		keyPressed(static_cast<Qt::Key>((event->key())));
+	}
 }
+
 
 void KeyboardMouseHandler::keyReleaseEvent(QKeyEvent *event) {
-
+	if (event->isAutoRepeat())	{
+		event->ignore();
+	}
+	else {
+		keyReleased(static_cast<Qt::Key>((event->key())));
+	}
 }
+
 
 void KeyboardMouseHandler::mousePressEvent(QMouseEvent *event) {
-
+	buttonPressed(static_cast<Qt::MouseButton>(event->button()), event->pos());
 }
+
 
 void KeyboardMouseHandler::mouseReleaseEvent(QMouseEvent *event) {
-
+	buttonReleased(static_cast<Qt::MouseButton>(event->button()));
 }
 
-void KeyboardMouseHandler::mouseMoveEvent(QMouseEvent *event) {
 
+void KeyboardMouseHandler::mouseMoveEvent(QMouseEvent *) {
+	// if needed, implement some logic here
 }
+
 
 void KeyboardMouseHandler::wheelEvent(QWheelEvent *event) {
 
@@ -44,7 +63,7 @@ void KeyboardMouseHandler::addRecognizedKey(Qt::Key k) {
 		return; // already known
 	// remember key to be known and expected
 	m_keys.push_back(k);
-	m_keyStates.push_back(0);
+	m_keyStates.push_back(StateNotPressed);
 }
 
 
@@ -54,10 +73,21 @@ void KeyboardMouseHandler::clearRecognizedKeys() {
 }
 
 
+void KeyboardMouseHandler::clearWasPressedKeyStates() {
+	m_leftButtonDown = (m_leftButtonDown == StateWasPressed) ? StateNotPressed  : m_leftButtonDown;
+	m_middleButtonDown = (m_middleButtonDown == StateWasPressed) ? StateNotPressed  : m_middleButtonDown;
+	m_rightButtonDown = (m_rightButtonDown == StateWasPressed) ? StateNotPressed  : m_rightButtonDown;
+
+	for (unsigned int i=0; i<m_keyStates.size(); ++i)
+		m_keyStates[i] = static_cast<KeyStates>(m_keyStates[i] & 1); // toggle "WasPressed" bit -> NotPressed
+}
+
+
+
 bool KeyboardMouseHandler::keyPressed(Qt::Key k) {
 	for (unsigned int i=0; i<m_keys.size(); ++i) {
 		if (m_keys[i] == k) {
-			m_keyStates[i] = 1;
+			m_keyStates[i] = StateHeld;
 			return true;
 		}
 	}
@@ -68,7 +98,7 @@ bool KeyboardMouseHandler::keyPressed(Qt::Key k) {
 bool KeyboardMouseHandler::keyReleased(Qt::Key k) {
 	for (unsigned int i=0; i<m_keys.size(); ++i) {
 		if (m_keys[i] == k) {
-			m_keyStates[i] = 0;
+			m_keyStates[i] = StateWasPressed;
 			return true;
 		}
 	}
@@ -78,9 +108,9 @@ bool KeyboardMouseHandler::keyReleased(Qt::Key k) {
 
 bool KeyboardMouseHandler::buttonPressed(Qt::MouseButton btn, QPoint currentPos) {
 	switch (btn) {
-		case Qt::LeftButton		: m_leftButtonDown = true; break;
-		case Qt::MiddleButton	: m_middleButtonDown = true; break;
-		case Qt::RightButton	: m_rightButtonDown = true; break;
+		case Qt::LeftButton		: m_leftButtonDown = StateHeld; break;
+		case Qt::MiddleButton	: m_middleButtonDown = StateHeld; break;
+		case Qt::RightButton	: m_rightButtonDown = StateHeld; break;
 		default: return false;
 	}
 	m_mouseDownPos = currentPos;
@@ -90,9 +120,9 @@ bool KeyboardMouseHandler::buttonPressed(Qt::MouseButton btn, QPoint currentPos)
 
 bool KeyboardMouseHandler::buttonReleased(Qt::MouseButton btn) {
 	switch (btn) {
-		case Qt::LeftButton		: m_leftButtonDown = false; break;
-		case Qt::MiddleButton	: m_middleButtonDown = false; break;
-		case Qt::RightButton	: m_rightButtonDown = false; break;
+		case Qt::LeftButton		: m_leftButtonDown = StateWasPressed; break;
+		case Qt::MiddleButton	: m_middleButtonDown = StateWasPressed; break;
+		case Qt::RightButton	: m_rightButtonDown = StateWasPressed; break;
 		default: return false;
 	}
 	return true;

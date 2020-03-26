@@ -8,25 +8,55 @@ class QKeyEvent;
 class QMouseEvent;
 class QWheelEvent;
 
-/*! Base class for windows that manage and maintaine key pressed/release states.
+/*! An example keyboard/mouse handler implementation.
 	When a keyboard key has been pressed, the corresponding's key state is updated, same
-	when it is release.
+	when it is release (in this case the state will be "was pressed" until cleared). This
+	"was pressed" state is needed in those cases, where a delay of state requesting on the
+	client side causes a keyPress and keyRelease Sequence to happen before the states
+	where checked.
 
 	In addition, when a mouse button is pressed, the corresponding position is stored, so
 	that a mouse move delta kann be determined.
 
+	The handler monitors only keys that it was told to monitor. Mouse buttons are all monitored.
+	Modification keys are used just as any other key.
+
 	State management:
-	- the state of the handler changes discretely between "frames", that is during updateState() calls.
-	- The difference between two states can be used to identify which buttens have been just pressed
-	  (before release, now pressed), held (before and now pressed), not pressed (before and now released)
-	  and the mouse delta (i.e. movement between position when mouse button was pressed and current mouse position).
+	- the states of pressed keys are remembered in state WasPressed until clearWasPressedKeyStates() is called
+	- the mouse position is updated in mouseDelta(), which requires the new mouse cursor position to update
+	  the mouse position for the next call cycle
 
-	State change:
-	- when any of the key methods is clicked,
+	The time elapsed since last call is retrieved with timeDelta(), which also resets the time again.
 
+	\code
+	// usage pattern
 
-	The computation of the mouse delta needs to be synchronized with view/camera updates.
-	When the delta is computed between
+	// ... some change of state is registered during the event loop
+
+	// evaluate input handler state
+
+	// process all keys and check if they are either held or where pressed
+
+	if (m_inputHandler.keyDown(Qt::Key_W)) {
+		...
+	}
+
+	// get and reset mouse delta (pass current mouse cursor position)
+	QPoint mouseDelta = m_inputHandler.mouseDelta(QCursor::pos());
+
+	// get and reset time delta
+	double timeSinceLastCheck = m_inputHandler.timeDelta(); // in ms
+
+	// compute mouse speed
+	static const float rotatationSpeed   = 0.001f; // in space units/ms
+
+	float yRot = rotationSpeed * timeSinceLastCheck * mouseDelta.y();
+
+	...
+
+	// finally, reset "WasPressed" key states
+	m_inputHandler.clearWasPressedKeyStates();
+	\endcode
 */
 class KeyboardMouseHandler {
 public:
@@ -41,12 +71,19 @@ public:
 	void mouseMoveEvent(QMouseEvent *event);
 	void wheelEvent(QWheelEvent *event);
 
-
+	enum KeyStates {
+		StateNotPressed,
+		StateHeld,
+		StateWasPressed
+	};
 
 	/*! Call this function for each key we are listening to. */
 	void addRecognizedKey(Qt::Key k);
 	/*! Clears list of recognized keys. */
 	void clearRecognizedKeys();
+
+	/*! This resets all key states currently marked as "WasPressed". */
+	void clearWasPressedKeyStates();
 
 	/*! Called when a key was pressed. */
 	bool keyPressed(Qt::Key k);
@@ -60,7 +97,7 @@ public:
 	/*! Returns the position that was recorded, when a mouse button was pressed. */
 	QPoint mouseDownPos() const { return m_mouseDownPos; }
 
-	/*! Returns the difference between last and current mouse position and updates
+	/*! Returns the difference between last and current mouse position and *updates*
 		last mouse position to currentPos.
 		The retrieved point (x and y distances) should be used to modify state based transformations.
 	*/
@@ -71,22 +108,15 @@ public:
 	/*! Returns, whether the mouse button is pressed. */
 	bool buttonDown(Qt::MouseButton btn) const;
 
-	/*! Call this function with the current cursor position as argument, and
-		the function will return true, if the state has changed since it was last stored.
-	*/
-	bool stateHasChanged() const { return m_stateHasChanged; }
-
 private:
 	std::vector<Qt::Key>	m_keys;
-	std::vector<int>		m_keyStates;
+	std::vector<KeyStates>	m_keyStates;
 
-	bool					m_leftButtonDown;
-	bool					m_middleButtonDown;
-	bool					m_rightButtonDown;
+	KeyStates				m_leftButtonDown;
+	KeyStates				m_middleButtonDown;
+	KeyStates				m_rightButtonDown;
 
 	QPoint					m_mouseDownPos;
-
-	bool					m_stateHasChanged;
 };
 
 #endif // KeyboardMouseHandlerH

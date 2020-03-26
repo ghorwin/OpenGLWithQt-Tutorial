@@ -1,6 +1,8 @@
 #ifndef SCENEVIEW_H
 #define SCENEVIEW_H
 
+#include <QMatrix4x4>
+
 #include "OpenGLWindow.h"
 #include "ShaderProgram.h"
 #include "KeyboardMouseHandler.h"
@@ -33,6 +35,10 @@ protected:
 	void exposeEvent(QExposeEvent *event) override;
 
 private:
+	/*! Compines camera matrix and project matrix to form the world2view matrix and also
+		marks the scene as dirty (needs repaint).
+	*/
+	void updateWorld2ViewMatrix();
 
 	/*! This flag marks the scene/camera/project matrix as invalid and will cause a render update
 		in next call to paintGL(). If this flag is false, paintGL() does nothing and thus also does
@@ -40,8 +46,14 @@ private:
 	*/
 	bool m_needRepaint;
 
+	// Fix for Windows OS, to avoid "2 vsync delay" lag
+	QRegion						m_cachedRegion;
+
 	/*! The input handler, that encapsulates the event handling code. */
 	KeyboardMouseHandler		m_keyboardMouseHandler;
+
+	/*! The projection matrix, updated whenever the viewport geometry changes (in resizeGL() ). */
+	QMatrix4x4					m_projection;
 };
 
 #endif // SCENEVIEW_H

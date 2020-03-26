@@ -71,6 +71,8 @@ void OpenGLWindow::renderNow() {
 }
 
 
+// *** protected functions ***
+
 bool OpenGLWindow::event(QEvent *event) {
 	switch (event->type()) {
 	case QEvent::UpdateRequest:
