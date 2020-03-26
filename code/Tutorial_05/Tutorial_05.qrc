@@ -3,6 +3,5 @@
         <file>shaders/grid.vert</file>
         <file>shaders/simple.frag</file>
         <file>shaders/world2view.vert</file>
-        <file>shaders/withWorldAndCamera.vert</file>
     </qresource>
 </RCC>

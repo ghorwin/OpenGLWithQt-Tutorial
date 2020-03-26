@@ -27,6 +27,7 @@ win32 {
 }
 
 SOURCES += \
+		BoxObject.cpp \
 		Camera.cpp \
 		KeyboardMouseHandler.cpp \
 		OpenGLGridObject.cpp \
@@ -38,6 +39,7 @@ SOURCES += \
 		main.cpp
 
 HEADERS += \
+	BoxObject.h \
 	Camera.h \
 	KeyboardMouseHandler.h \
 	OpenGLGridObject.h \
