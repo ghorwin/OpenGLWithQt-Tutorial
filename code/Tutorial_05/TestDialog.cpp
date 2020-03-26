@@ -19,7 +19,7 @@ TestDialog::TestDialog() :
 	format.setRenderableType(QSurfaceFormat::OpenGL);
 	format.setProfile(QSurfaceFormat::CoreProfile);
 	format.setVersion(3,3);
-//	format.setSamples(4);	// enable multisampling (antialiasing)
+	format.setSamples(4);	// enable multisampling (antialiasing)
 
 	m_sceneView = new SceneView;
 	m_sceneView->setFormat(format);

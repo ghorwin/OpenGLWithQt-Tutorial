@@ -58,16 +58,19 @@ void SceneView::initializeGL() {
 	for (ShaderProgram & p : m_shaderPrograms)
 		p.create();
 
-	// initialize drawable objects
-	m_boxObject.create(SHADER(0));
-	m_gridObject.create(SHADER(1));
-
 	// tell OpenGL to show only faces whose normal vector points towards us
 	glEnable(GL_CULL_FACE);
+
+	// Enable depth testing, important for the grid and for the drawing order of several objects
+	glEnable(GL_DEPTH_TEST);  // Enables Depth Testing
+	glDepthFunc(GL_LESS);     // The Type Of Depth Test To Do
 
 	// set the background color = clear color
 	glClearColor(0.1f, 0.1f, 0.3f, 1.0f);
 
+	// initialize drawable objects
+	m_boxObject.create(SHADER(0));
+	m_gridObject.create(SHADER(1));
 }
 
 
@@ -98,16 +101,6 @@ void SceneView::paintGL() {
 	// set the background color = clear color
 	QVector3D backgroundColor(0.1f, 0.1f, 0.3f);
 	glClearColor(backgroundColor.x(), backgroundColor.y(), backgroundColor.z(), 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	// monitor rendering - prints out a string whenever the rendering takes place - only for resizing or when
-	// focussing in/out of the window
-	qDebug() << QDateTime::currentDateTime().toString();
-
-	// clear the background color
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	// clear the background color
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// set the background color = clear color
@@ -162,11 +155,8 @@ void SceneView::exposeEvent(QExposeEvent *event) {
 
 void SceneView::updateWorld2ViewMatrix() {
 	qDebug() << "SceneView::updateWorld2ViewMatrix";
-	// projectedPoint = camera2project * world2camera
-	Transform3D transform;
-	transform.translate(0.0f, 0.0f, -5.0f);
 
-	m_worldToView = m_projection * m_camera.toMatrix() * transform.toMatrix();
+	m_worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();
 //	qDebug() << "m_projection = " << m_projection;
 //	qDebug() << "m_camera = " << m_camera.toMatrix();
 //	qDebug() << "m_transform = " << transform.toMatrix();
