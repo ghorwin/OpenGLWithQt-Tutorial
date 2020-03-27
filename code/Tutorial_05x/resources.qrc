@@ -1,7 +1,0 @@
-<RCC>
-    <qresource prefix="/">
-        <file>shaders/simple.frag</file>
-        <file>shaders/withWorldAndCamera.vert</file>
-        <file>shaders/grid.vert</file>
-    </qresource>
-</RCC>
