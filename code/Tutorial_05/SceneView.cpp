@@ -102,7 +102,7 @@ void SceneView::resizeGL(int width, int height) {
 
 
 void SceneView::paintGL() {
-	qDebug() << "SceneView::paintGL()";
+//	qDebug() << "SceneView::paintGL()";
 	// process input, i.e. check if any keys have been pressed
 	if (m_inputEventReceived)
 		processInput(); // this sets the m_needRepaint flag if user has pressed some keys
@@ -111,7 +111,7 @@ void SceneView::paintGL() {
 	if (!m_needRepaint)
 		return;
 
-	qDebug() << "SceneView::paintGL() actual painting";
+//	qDebug() << "SceneView::paintGL() actual painting";
 	const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
 	glViewport(0, 0, width() * retinaScale, height() * retinaScale);
 
@@ -125,7 +125,6 @@ void SceneView::paintGL() {
 	QVector3D gridColor(0.3f, 0.3f, 0.6f);
 
 	// *** render box
-
 	SHADER(0)->bind();
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
 	m_boxObject.render(); // render the box
@@ -218,7 +217,7 @@ void SceneView::checkInput() {
 			m_keyboardMouseHandler.keyDown(Qt::Key_E))
 		{
 			m_inputEventReceived = true;
-			qDebug() << "SceneView::checkInput() inputEventReceived";
+//			qDebug() << "SceneView::checkInput() inputEventReceived";
 			renderLater();
 			return;
 		}
@@ -226,7 +225,7 @@ void SceneView::checkInput() {
 		// has the mouse been moved?
 		if (m_keyboardMouseHandler.mouseDownPos() != QCursor::pos()) {
 			m_inputEventReceived = true;
-			qDebug() << "SceneView::checkInput() inputEventReceived: " << QCursor::pos() << m_keyboardMouseHandler.mouseDownPos();
+//			qDebug() << "SceneView::checkInput() inputEventReceived: " << QCursor::pos() << m_keyboardMouseHandler.mouseDownPos();
 			renderLater();
 			return;
 		}
@@ -238,7 +237,7 @@ void SceneView::processInput() {
 	// function must only be called if an input event has been received
 	Q_ASSERT(m_inputEventReceived);
 	m_inputEventReceived = false;
-	qDebug() << "SceneView::processInput()";
+//	qDebug() << "SceneView::processInput()";
 
 	QPoint currentPos = QCursor::pos();
 

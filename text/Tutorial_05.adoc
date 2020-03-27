@@ -1,7 +1,7 @@
 :imagesdir: ./images
 = Tutorial 05: Maus- und Tastatureingaben
 
-In diesem Tutorial geht es primär um Maus- und Tastatureingaben. Und damit das auch interessant wird, erstellen wir ein 3D Modell.
+In diesem Tutorial geht es primär um Maus- und Tastatureingaben. Und damit das irgendwie Sinn macht, brauchen wir ein 3D Modell, und deshalb ist dieses Tutorial auch _sehr sehr lang_.
 
 .Tutorial_05 (Mac Screenshot)
 image::Tutorial_05_mac.png[Tutorial_05,pdfwidth=8cm]
@@ -11,13 +11,81 @@ image::Tutorial_05_mac.png[Tutorial_05,pdfwidth=8cm]
 Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_05[Tutorial_05]
 ====
 
-In diesem Tutorial werden viele Dinge verwendet:
+In diesem Tutorial gibt es viele neue Dinge verwendet:
 
 - zwei Modelle (eins für die Häuser und eins für das Gitter), nebst dazugehörigen, unterschiedlichen Shaderprogrammen (das vom Gitter verwendet in die Tiefe abgeblendete Farben)
 - Tiefenpuffer, sodass Gitterlinien/Häuser korrekt vor/hintereinander gezeichnet werden
 - Model2World und World2View-Matrizen (mit perspektivischer Projektion)
+- Shaderprogramme und Renderobjekte (bzw. Objektgruppen) sind in Klassen zusammengefasst, wodurch der Quelltext deutlich übersichtlicher wird
+- eine Maus+Tastatursteuerung (WASDQE + Mauslook) ist integriert (mit einem nicht ganz einfachen Event-Timing)
+- und das ganze wieder mit dem Schwerpunkt: Rendern nur wenn notwendig!
 
-Als Grundlage für die Implementierung wird die Klasse `QOpenGLWindow` aus _Tutorial 02_ verwendet.
+== Überblick
+
+Das Tutorial ist sehr lang, und der Quelltext entsprechend auch. Daher gehen wir in diesem Tutorial schrittweise vor. Die gezeigten Quelltextausschnitte stimmen daher nicht immer 100% mit dem finalen Quelltext überein (ich hab da aus didaktischen Gründen immer mal was weggelassen).
+
+Folgende Implementierungsschritte werden besprochen:
+
+- Anpassung der Klasse `OpenGLWindow` an die in `QOpenGLWidget` bzw. `QOpenGLWindow` verwendeten Funktionsnamen
+- Vorstellung der Klasse `SceneView`, die das bisherige `TriangleWindow` oder `RectangleWindow` ersetzt
+- Transformationsmatrizen: Model -> World -> Kamera -> Projektion (Klassen `Transform3D` und `Camera`)
+- Kapselung der Shaderprogramme und Initialisierung und Verwendung derselben
+- Kapselung der Zeichenroutinen für das Gitterraster, Abblendeffekt am Horizont im Shader
+- Kapselung der Zeichenroutinen für die Boxen
+
+
+== Fenster-Basisklasse OpenGLWindow
+
+Als Grundlage für die Implementierung wird die Klasse `OpenGLWindow` aus _Tutorial 01_ verwendet, allerdings etwas abgewandelt. Letztlich wird die Schnittstelle angepasst, um ungefähr der des `QOpenGLWidget` zu entsprechend:
+[source,c++]
+----
+class OpenGLWindow : public QWindow, protected QOpenGLFunctions {
+	Q_OBJECT
+public:
+	explicit OpenGLWindow(QWindow *parent = nullptr);
+
+	void initOpenGL();
+
+public slots:
+	void renderLater();
+	void renderNow();
+
+protected:
+	bool event(QEvent *event) override;
+	void exposeEvent(QExposeEvent *event) override;
+	void resizeEvent(QResizeEvent *) override;
+
+	virtual void initializeGL() = 0;
+	virtual void resizeGL(int width, int height) { Q_UNUSED(width) Q_UNUSED(height) }
+	virtual void paintGL() = 0;
+
+	QOpenGLContext *m_context;
+};
+----
+
+Die Funktionen `initializeGL()` und `paintGL()` sind aus den vorangegangen Tutorials bekannt. Die Funktion `resizeGL()` ist eigentlich nur eine Bequemlichkeitsfunktion, welche aus dem Eventhandler `resizeEvent()` aufgerufen wird.
+
+Neu ist jedoch die Funktion `initOpenGL()`, mit der die OpenGL-Initialisierung gezielt angestoßen werden kann. Normalerweise wird die Initialisierung beim ersten Anzeigen des Fensters (genaugenommen bei ersten ResizeEvent) aufgerufen. Dies kann aber für eine sinnvolle Fehlerbehandlung zu spät sein, weil dann das Fenster wahrscheinlich leer angezeigt wird. Daher ist es sinnvoll, die Funktion nach dem Erstellen des Renderfensters, aber vor Aufruf von `show()` auszuführen.
+
+Macht man das nicht, so wird diese Funktion wie bisher automatisch beim ersten Anzeigen aufgerufen, konkret im ResizeEvent-Handler:
+
+.OpenGLWindow.cpp: Funktion resizeEvent()
+[source,c++]
+----
+void OpenGLWindow::resizeEvent(QResizeEvent * event) {
+	QWindow::resizeEvent(event);
+
+	// initialize on first call
+	if (m_context == nullptr)
+		initOpenGL();
+
+	resizeGL(width(), height());
+}
+----
+
+Unabhängig von dieser Initializierungsfunktion muss man natürlich die Funktion `initializeGL()` implementieren. Alles andere in der Klasse ist altbekannt.
+
+== Klasse SceneView - die konkrete Implementierung
 
 
 

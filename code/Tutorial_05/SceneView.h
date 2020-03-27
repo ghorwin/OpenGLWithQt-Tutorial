@@ -31,9 +31,6 @@ public:
 	SceneView();
 	virtual ~SceneView() override;
 
-	/*! All shader programs used in the scene. */
-	QList<ShaderProgram>	m_shaderPrograms;
-
 protected:
 	void initializeGL() override;
 	void resizeGL(int width, int height) override;
@@ -82,6 +79,9 @@ private:
 	Transform3D					m_transform;	// world transformation matrix
 	Camera						m_camera;		// Camera position, orientation and lens data
 	QMatrix4x4					m_worldToView;
+
+	/*! All shader programs used in the scene. */
+	QList<ShaderProgram>		m_shaderPrograms;
 
 	BoxObject					m_boxObject;
 	GridObject					m_gridObject;
