@@ -62,6 +62,6 @@ TestDialog::TestDialog() :
 
 	setLayout(vlay);
 
-	qsrand(428); // for now use fixed seed so that we get the same colors every time
+	resize(1200,900);
 }
 

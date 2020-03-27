@@ -86,7 +86,13 @@ bool OpenGLWindow::event(QEvent *event) {
 
 
 void OpenGLWindow::exposeEvent(QExposeEvent * /*event*/) {
-	renderLater(); // request update
+	renderNow(); // update right now
+
+	// Note: if were just to request an update on next sync, i.e. by
+	//       calling renderLater() (or requestUpdate()) we get
+	//       white glitches when enlarging the window. Since we don't want that,
+	//       we simply render right away so that the new window size
+	//       is already reflected by the adjusted viewport we render into.
 }
 
 

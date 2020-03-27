@@ -172,24 +172,6 @@ void SceneView::wheelEvent(QWheelEvent *event) {
 }
 
 
-void SceneView::exposeEvent(QExposeEvent *event) {
-	if (event->region() != m_cachedRegion) {
-		// the check against the cached region is needed for Windows OS.
-		// There, when the window is moved around, the function onFrameSwapped() is called
-		// due to the frameSwapped() signal and also exposeEvent() is sent, because
-		// the window manager tells us that the entire screen is invalidated.
-		// This results in two QOpenGLWindow::update() calls and a noticable 2 vsync delay.
-		m_cachedRegion = event->region();
-		//qDebug() << "SceneView::exposeEvent" << m_cachedRegion;
-
-		OpenGLWindow::exposeEvent(event); // this will trigger a repaint
-	}
-	else {
-		event->ignore();
-	}
-}
-
-
 void SceneView::checkInput() {
 	// this function is called whenever _any_ key/mouse event was issued
 

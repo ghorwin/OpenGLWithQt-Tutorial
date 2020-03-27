@@ -44,8 +44,6 @@ protected:
 	void mouseMoveEvent(QMouseEvent *event) override;
 	void wheelEvent(QWheelEvent *event) override;
 
-	void exposeEvent(QExposeEvent *event) override;
-
 private:
 	/*! Tests, if any relevant input was received and registers a state change. */
 	void checkInput();
@@ -63,17 +61,14 @@ private:
 	/*! If set to true, an input event was received, which will be evaluated at next repaint. */
 	bool						m_inputEventReceived;
 
-	// Fix for Windows OS, to avoid "2 vsync delay" lag
-	QRegion						m_cachedRegion;
-
 	/*! The input handler, that encapsulates the event handling code. */
 	KeyboardMouseHandler		m_keyboardMouseHandler;
 
 	/*! The projection matrix, updated whenever the viewport geometry changes (in resizeGL() ). */
 	QMatrix4x4					m_projection;
-	Transform3D					m_transform;	// world transformation matrix
+	Transform3D					m_transform;	// world transformation matrix generator
 	Camera						m_camera;		// Camera position, orientation and lens data
-	QMatrix4x4					m_worldToView;
+	QMatrix4x4					m_worldToView;	// cached world to view transformation matrix
 
 	/*! All shader programs used in the scene. */
 	QList<ShaderProgram>		m_shaderPrograms;
