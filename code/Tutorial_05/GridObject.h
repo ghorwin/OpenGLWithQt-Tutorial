@@ -29,10 +29,9 @@ QT_END_NAMESPACE
 */
 class GridObject {
 public:
-	GridObject();
-
 	/*! The function is called during OpenGL initialization, where the OpenGL context is current. */
 	void create(QOpenGLShaderProgram * shaderProgramm);
+	void destroy();
 
 	/*! Binds the buffer and paints. */
 	void render();

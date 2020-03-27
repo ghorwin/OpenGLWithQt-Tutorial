@@ -14,11 +14,6 @@ License    : BSD License,
 #include <QOpenGLShaderProgram>
 #include <vector>
 
-GridObject::GridObject()
-{
-
-}
-
 
 void GridObject::create(QOpenGLShaderProgram * shaderProgramm) {
 	// create the grid lines
@@ -74,6 +69,12 @@ void GridObject::create(QOpenGLShaderProgram * shaderProgramm) {
 
 	m_vao.release();
 	m_vbo.release();
+}
+
+
+void GridObject::destroy() {
+	m_vao.destroy();
+	m_vbo.destroy();
 }
 
 

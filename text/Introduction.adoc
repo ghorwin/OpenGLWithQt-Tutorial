@@ -2,7 +2,7 @@
 
 Dieses Tutorial ist *_kein_* OpenGL Tutorial. Man sollte also OpenGL selbst schon ganz gut kennen. Natürlich kann man die hier vorgestellten Beispiele als Vorlage nehmen, aber es geht hier wirklich darum, die Qt-Klassen und vorbereitete Funktionalität zu verstehen und sinnvoll zu nutzen.
 
-Diese Anleitung soll auch *_nicht_* zeigen, wie man mit Qt ein Spiel- oder eine Spieleengine schreibt. Es geht eher um technische Anwendungen, in denen _Animationen keine Rolle spielen_. Fokus liegt eher darauf, resourcenschonend (und damit Laptop-Akku-schonend) 3D Grafik zu verwenden.
+Diese Anleitung soll auch *_nicht_* zeigen, wie man mit Qt ein Spiel- oder eine Spieleengine schreibt. Es geht eher um technische Anwendungen, in denen _Animationen keine Rolle spielen_. Fokus liegt eher darauf, effizient und resourcenschonend (und damit Laptop-Akku-schonend) 3D Grafik zu verwenden.
 
 Es gibt eine PDF-Version des Tutorials:
 
@@ -44,11 +44,11 @@ Im Rahmen dieses Tutorials wird für die Beispiele das Qt bzw. qmake Buildsystem
 
 Als Einstieg in OpenGL empfehle ich folgende (englischsprachige) Webseiten:
 
-- https://learnopengl.com : ein gutes und aktuelles Tutorial mit guten Abbildungen und guter Mischung aus C++ und C, mein Tutorial orientiert sich inhaltlich an den hier dargestellten Themen
+- https://learnopengl.com : ein gutes und aktuelles Tutorial mit guten Abbildungen und guter Mischung aus C++ und C, eine Lektüre der ersten paar Kapitel dieses Tutorials sollte eigentlich ausreichen, um alle in meinem Tutorial verwendeten OpenGL-Befehle und Techniken zu verstehen.
 - http://antongerdelan.net/opengl : englisch, gute Illustrationen und Erklärungen zu einzelnen Themen
 - http://www.opengl-tutorial.org : eher grundlegendes Tutorialset, C und GLUT werden verwendet
 
 Mein Tutorial selbst basiert zum Teil auf folgenden Webtutorials:
 
-- https://www.trentreed.net/blog/qt5-opengl-part-0-creating-a-window : in diesem Tutorial und den Forumkommentaren gibt es einige Anregungen, allerdings ist dies eher eine Dokumentation eigener Versuche grafisch optimale Effekte zu erziehlen. Es gibt aber interessante Anregungen. Manche Quelltextumsetzung sind nicht ganz optimal, daher mit Vorsicht als Vorlage für eigene Programme verwenden. (Diese Kleinigkeiten, über die ich selber auch gestolpert bin, sind u.A. der Grund für dieses Tutorial.)
+- https://www.trentreed.net/blog/qt5-opengl-part-0-creating-a-window : in diesem Tutorial und den Forumkommentaren gibt es einige Anregungen, allerdings ist dies eher eine Dokumentation eigener Versuche grafisch optimale Effekte zu erziehlen. Es gibt durchaus interessante Anregungen. Manche Quelltextumsetzung sind nicht ganz optimal, daher mit Vorsicht als Vorlage für eigene Programme verwenden (Diese Kleinigkeiten, über die ich selber auch gestolpert bin, sind u.A. der Grund für dieses Tutorial).
 

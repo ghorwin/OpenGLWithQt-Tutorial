@@ -118,6 +118,13 @@ void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
 }
 
 
+void BoxObject::destroy() {
+	m_vao.destroy();
+	m_vertexBuffer.destroy();
+	m_elementBuffer.destroy();
+}
+
+
 void BoxObject::render() {
 	// set the geometry ("position" and "color" arrays)
 	m_vao.bind();

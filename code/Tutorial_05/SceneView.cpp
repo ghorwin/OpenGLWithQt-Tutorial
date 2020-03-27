@@ -20,7 +20,6 @@ License    : BSD License,
 SceneView::SceneView() :
 	m_inputEventReceived(false)
 {
-
 	// tell keyboard handler to monitor certain keys
 	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_W);
 	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_A);
@@ -43,6 +42,8 @@ SceneView::SceneView() :
 	grid.m_uniformNames.append("backColor"); // vec3
 	m_shaderPrograms.append( grid );
 
+	// *** initialize camera placement and model placement in the world
+
 	// move objects a little bit to the back of the scene (negative z coordinates = further back)
 	m_transform.translate(0.0f, 0.0f, -5.0f);
 	m_camera.translate(0,5,0);
@@ -56,6 +57,8 @@ SceneView::~SceneView() {
 	for (ShaderProgram & p : m_shaderPrograms)
 		p.destroy();
 
+	m_boxObject.destroy();
+	m_gridObject.destroy();
 }
 
 

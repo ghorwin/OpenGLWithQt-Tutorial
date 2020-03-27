@@ -27,6 +27,7 @@ public:
 
 	/*! The function is called during OpenGL initialization, where the OpenGL context is current. */
 	void create(QOpenGLShaderProgram * shaderProgramm);
+	void destroy();
 
 	void render();
 
@@ -37,8 +38,6 @@ public:
 
 	/*! Wraps an OpenGL VertexArrayObject, that references the vertex coordinates and color buffers. */
 	QOpenGLVertexArrayObject	m_vao;
-	/*! Holds position and colors in a single buffer. */
-	QOpenGLBuffer				m_vertexDataBuffer;
 
 	/*! Holds position and colors in a single buffer. */
 	QOpenGLBuffer				m_vertexBuffer;
