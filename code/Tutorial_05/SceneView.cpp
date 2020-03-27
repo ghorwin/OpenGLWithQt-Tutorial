@@ -63,20 +63,14 @@ SceneView::~SceneView() {
 
 
 void SceneView::initializeGL() {
-
-	// we process all individual shader programs first
+	// initialize shader programs
 	for (ShaderProgram & p : m_shaderPrograms)
 		p.create();
 
 	// tell OpenGL to show only faces whose normal vector points towards us
 	glEnable(GL_CULL_FACE);
-
-	// Enable depth testing, important for the grid and for the drawing order of several objects
-	glEnable(GL_DEPTH_TEST);  // Enables Depth Testing
-	glDepthFunc(GL_LESS);     // The Type Of Depth Test To Do
-
-	// set the background color = clear color
-	glClearColor(0.1f, 0.1f, 0.3f, 1.0f);
+	// enable depth testing, important for the grid and for the drawing order of several objects
+	glEnable(GL_DEPTH_TEST);
 
 	// initialize drawable objects
 	m_boxObject.create(SHADER(0));
@@ -92,7 +86,7 @@ void SceneView::resizeGL(int width, int height) {
 				/* vertical angle */ 45.0f,
 				/* aspect ratio */   width / float(height),
 				/* near */           0.1f,
-				/* fa r*/            1000.0f
+				/* far */            1000.0f
 		);
 	// Mind: to not use 0.0 for near plane, otherwise depth buffering and depth testing won't work!
 

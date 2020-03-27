@@ -199,15 +199,127 @@ Wie man sieht, wird jedes Mal doppelt gezeichnet, was eine deutlich spürbare Ve
 - beim Größenändern eines Fensters ebenfalls immer ein `ResizeEvent`, gefolgt von einem `ExposeEvent` geschickt wird 
 - beim Minimieren und Maximieren eines Fensters nur je ein (oder auf dem Mac mehrere) `ExposeEvent` geschickt werden. Dies kann man nutzen, um eine Animation zu stoppen und beim erneuten Anzeigen (`isExposed() == true`) wieder zu starten. Dies ist aber nicht der Fokus in diesem Tutorial. Daher könnte man auch das `ExposeEvent` komplett ignorieren und `renderNow()` direkt am Ende von  `OpenGLWindow::resizeEvent()` aufrufen. So wie es aktuell implementiert ist, wird beim Minimieren und Maximieren mehrfach `ExposeEvent` mit `isExposed() == true` aufgerufen und damit wird mehrfach trotz unverändertem Viewport und unveränderte Szene gezeichnet. Das ist aber nicht weiter bemerkbar.
 
-=== Implementierung der Klasse `SceneView`
+=== Verwendung der Klasse 'SceneView'
 
 Die Klasse `SceneView` wird als QWindow-basierte Klasse selbst via Widget-Container in den Testdialog eingebettet (siehe __Tutorial 03__).
 
+Bei der Analyse des Tutorialquelltextes kann man sich von außen nach innen "arbeiten":
 
+- `main.cpp` - Instanziert `TestDialog`
+- `TestDialog.cpp` - Instanziert `SceneView` und bettet das Objekt via Window-Container ein.
 
+Es gibt im Quelltext von `TestDialog.cpp` nur ein neues Feature: Antialiasing (siehe Diskussion dazu im letzten Kapitel dieses Tutorials).
 
+=== Implementierung der Klasse `SceneView`
 
+Und da wären wir auch schon bei der Implementierung des Klasse `SceneView`.
 
+Im Konstruktor werden letztlich 3 Dinge gemacht:
+
+- dem Tastatur/Maus-Eingabemanager werden die für uns interessanten Tasten mitgeteilt, siehe  Abschnitt "Tastatur- und Mauseingabe"
+- die beiden ShaderProgramm-Container Objekte werden erstellt und konfiguriert, siehe Abschnitt "Shaderprogramme"
+- die Kamera- und Welttransformationsmatrizen werden auf ein paar Standardwerte eingestellt, siehe Abschnitt "Transformationsmatrizen"
+
+.SceneView.cpp, Konstruktor
+[source,c++]
+----
+SceneView::SceneView() :
+	m_inputEventReceived(false)
+{
+	// tell keyboard handler to monitor certain keys
+	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_W);
+	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_A);
+	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_S);
+	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_D);
+	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_Q);
+	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_E);
+
+	// *** create scene (no OpenGL calls are being issued below, just the data structures are created.
+
+	// Shaderprogram #0 : regular geometry (painting triangles via element index)
+	ShaderProgram blocks(":/shaders/withWorldAndCamera.vert",":/shaders/simple.frag");
+	blocks.m_uniformNames.append("worldToView");
+	m_shaderPrograms.append( blocks );
+
+	// Shaderprogram #1 : grid (painting grid lines)
+	ShaderProgram grid(":/shaders/grid.vert",":/shaders/simple.frag");
+	grid.m_uniformNames.append("worldToView"); // mat4
+	grid.m_uniformNames.append("gridColor"); // vec3
+	grid.m_uniformNames.append("backColor"); // vec3
+	m_shaderPrograms.append( grid );
+
+	// *** initialize camera placement and model placement in the world
+
+	// move objects a little bit to the back of the scene (negative z coordinates = further back)
+	m_transform.translate(0.0f, 0.0f, -5.0f);
+	m_camera.translate(0,5,0);
+	m_camera.rotate(-30, m_camera.right());
+}
+----
+
+[NOTE]
+====
+Im Konstruktor werden nur Eigenschaften für die Shaderprogramme festgelegt, die eigentliche Initialisierung (OpenGL-Aufrufe) findet in `initializeGL()` statt.
+====
+
+Im Destruktor der Klasse werden die OpenGL-Objekte wieder freigegeben:
+
+.SceneView.cpp, Destruktor
+[source,c++]
+----
+SceneView::~SceneView() {
+	m_context->makeCurrent(this);
+
+	for (ShaderProgram & p : m_shaderPrograms)
+		p.destroy();
+
+	m_boxObject.destroy();
+	m_gridObject.destroy();
+}
+----
+
+Wichtig ist hier, dass der OpenGL-Context für das aktuelle Fenster aktuell gesetzt wird (`m_context->makeCurrent(this)`). Damit können dann die OpenGL-Objekte freigegeben werden. Das erfolgt in den `destroy()` Funktionen der Shaderprogramm-Wrapper-Klasse und DrawObjekt-Wrapper-Klassen.
+
+=== OpenGL-Initialisierung
+
+Die eigentlich Initialisierung der OpenGL Objekte (Shaderprogramme und Pufferobjekte) erfolgt in `initializeGL()`:
+
+.SceneView.cpp:initializeGL()
+[source,c++]
+----
+#define SHADER(x) m_shaderPrograms[x].shaderProgram()
+
+void SceneView::initializeGL() {
+	// initialize shader programs
+	for (ShaderProgram & p : m_shaderPrograms)
+		p.create();
+
+	// tell OpenGL to show only faces whose normal vector points towards us
+	glEnable(GL_CULL_FACE);
+	// enable depth testing, important for the grid and for the drawing order of several objects
+	glEnable(GL_DEPTH_TEST);
+
+	// initialize drawable objects
+	m_boxObject.create(SHADER(0));
+	m_gridObject.create(SHADER(1));
+}
+----
+
+Dank der Kapselung der Shaderprogramm-Initialisierung in der Klasse `ShaderProgram`, und der Kapselung der Zeichenobjekt-spezifischen Initialisierung in den Objekten, ist diese Funktion sehr viel übersichtlicher als in den bisherigen Tutorials.
+
+Das Makro `SHADER(x)` wird verwendet, um bequem auf das `QOpenGLShaderProgram` Objekt in der Wrapper-Klasse zuzugreifen.
+
+Die beiden `glXXX` Befehle in der Mitte der Funktion schalten zwei für 3D Szenen wichtige Funktionen ein:
+
+- `GL_CULL_FACE` - Zeichne Flächen nicht, welche mit dem "Rücken" zu uns stehen
+- `GL_DEPTH_TEST` - Führe beim Zeichnen der Fragmente einen Tiefentest durch, und verwerfe weiter hintenliegende Fragmente. Das ist wichtig dafür, dass die gezeichneten Boxen das dahinterliegende Gitter überdecken. Der dafür benötigte Tiefenpuffer wird über `QSurfaceFormat` konfiguriert (https://doc.qt.io/qt-5/qsurfaceformat.html#setDepthBufferSize[QSurfaceFormat::setDepthBufferSize()]).
+
+Die Funktion `glDepthFunc(GL_LESS)` muss nicht aufgerufen werden, da das bei OpenGL der Standard ist.
+
+[TIP]
+====
+Man kann testweise mal das Flag `GL_DEPTH_TEST` nicht setzen - die etwas verwirrende Darstellung ist, nun ja, verwirrend.
+====
 
 
 == Antialiasing

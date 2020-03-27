@@ -31,6 +31,7 @@ TestDialog::TestDialog() :
 	format.setProfile(QSurfaceFormat::CoreProfile);
 	format.setVersion(3,3);
 	format.setSamples(4);	// enable multisampling (antialiasing)
+	format.setDepthBufferSize(8);
 
 	m_sceneView = new SceneView;
 	m_sceneView->setFormat(format);
