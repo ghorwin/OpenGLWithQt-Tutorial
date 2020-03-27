@@ -93,19 +93,19 @@ void SceneView::resizeGL(int width, int height) {
 		);
 	// Mind: to not use 0.0 for near plane, otherwise depth buffering and depth testing won't work!
 
+	// update cached world2view matrix
 	updateWorld2ViewMatrix();
 }
 
 
 void SceneView::paintGL() {
-//	qDebug() << "SceneView::paintGL()";
 	// process input, i.e. check if any keys have been pressed
 	if (m_inputEventReceived)
-		processInput(); // this sets the m_needRepaint flag if user has pressed some keys
+		processInput();
 
-//	qDebug() << "SceneView::paintGL() actual painting";
 	const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
 	glViewport(0, 0, width() * retinaScale, height() * retinaScale);
+//	qDebug() << "SceneView::paintGL(): Rendering to:" << width() << "x" << height();
 
 	// set the background color = clear color
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -242,6 +242,7 @@ void SceneView::processInput() {
 	// finally, reset "WasPressed" key states
 	m_keyboardMouseHandler.clearWasPressedKeyStates();
 	updateWorld2ViewMatrix();
+	// not need to request update here, since we are called from paint anyway
 }
 
 
@@ -252,5 +253,4 @@ void SceneView::updateWorld2ViewMatrix() {
 	//   world space -> camera/eye -> camera view
 	//   camera view -> projection -> normalized device coordinates (NDC)
 	m_worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();
-	renderLater(); // request update
 }

@@ -2,6 +2,8 @@
 
 Dieses Tutorial ist *_kein_* OpenGL Tutorial. Man sollte also OpenGL selbst schon ganz gut kennen. Natürlich kann man die hier vorgestellten Beispiele als Vorlage nehmen, aber es geht hier wirklich darum, die Qt-Klassen und vorbereitete Funktionalität zu verstehen und sinnvoll zu nutzen.
 
+Diese Anleitung soll auch *_nicht_* zeigen, wie man mit Qt ein Spiel- oder eine Spieleengine schreibt. Es geht eher um technische Anwendungen, in denen _Animationen keine Rolle spielen_. Fokus liegt eher darauf, resourcenschonend (und damit Laptop-Akku-schonend) 3D Grafik zu verwenden.
+
 Es gibt eine PDF-Version des Tutorials:
 
 https://github.com/ghorwin/OpenGLWithQt-Tutorial/raw/master/docs/OpenGLQtTutorial.pdf

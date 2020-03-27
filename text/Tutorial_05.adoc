@@ -65,7 +65,7 @@ protected:
 
 Die Funktionen `initializeGL()` und `paintGL()` sind aus den vorangegangen Tutorials bekannt. Die Funktion `resizeGL()` ist eigentlich nur eine Bequemlichkeitsfunktion, welche aus dem Eventhandler `resizeEvent()` aufgerufen wird.
 
-Neu ist jedoch die Funktion `initOpenGL()`, mit der die OpenGL-Initialisierung gezielt angestoßen werden kann. Normalerweise wird die Initialisierung beim ersten Anzeigen des Fensters (genaugenommen bei ersten ResizeEvent) aufgerufen. Dies kann aber für eine sinnvolle Fehlerbehandlung zu spät sein, weil dann das Fenster wahrscheinlich leer angezeigt wird. Daher ist es sinnvoll, die Funktion nach dem Erstellen des Renderfensters, aber vor Aufruf von `show()` auszuführen.
+Neu ist jedoch die Funktion `initOpenGL()`, mit der die OpenGL-Initialisierung gezielt angestoßen werden kann. Normalerweise wird die Initialisierung beim ersten Anzeigen des Fensters (genaugenommen beim ersten ResizeEvent) aufgerufen. Dies kann aber für eine sinnvolle Fehlerbehandlung zu spät sein, weil dann das Fenster wahrscheinlich leer angezeigt wird. Daher ist es sinnvoll, die Funktion nach dem Erstellen des Renderfensters, aber vor Aufruf von `show()` auszuführen.
 
 Macht man das nicht, so wird diese Funktion wie bisher automatisch beim ersten Anzeigen aufgerufen, konkret im ResizeEvent-Handler:
 
@@ -86,6 +86,126 @@ void OpenGLWindow::resizeEvent(QResizeEvent * event) {
 Unabhängig von dieser Initializierungsfunktion muss man natürlich die Funktion `initializeGL()` implementieren. Alles andere in der Klasse ist altbekannt.
 
 == Klasse SceneView - die konkrete Implementierung
+
+=== Klassendeklaration
+
+Zwecks Überblick, die Klassendeklaration in Teilen. Zunächst die üblichen Verdächtigen:
+
+.SceneView.h
+[source,c++]
+----
+class SceneView : public OpenGLWindow {
+public:
+	SceneView();
+	virtual ~SceneView() override;
+
+protected:
+	void initializeGL() override;
+	void resizeGL(int width, int height) override;
+	void paintGL() override;
+----
+
+Dann kommen die Ereignisbehandlungsroutinen für die Tastatur- und Mauseingaben. Dazu gehören auch die Hilfsfunktionen `checkInput()` und `processInput()`, die im Abschnitt zur Tastatur- und Mauseingabe erklärt sind. Die Member-Variablen `m_keyboardMouseHandler` und `m_inputEventReceived` gehören auch dazu.
+
+.SceneView.h, Deklaration der Klasse SceneView
+[source,c++]
+----
+	void keyPressEvent(QKeyEvent *event) override;
+	void keyReleaseEvent(QKeyEvent *event) override;
+	void mousePressEvent(QMouseEvent *event) override;
+	void mouseReleaseEvent(QMouseEvent *event) override;
+	void mouseMoveEvent(QMouseEvent *event) override;
+	void wheelEvent(QWheelEvent *event) override;
+
+private:
+	void checkInput();
+	void processInput();
+
+	KeyboardMouseHandler		m_keyboardMouseHandler;
+	bool						m_inputEventReceived;
+----
+
+Dann kommt die Funktion `updateWorld2ViewMatrix()` zur Koordinatentransformation und die dazugehörigen Member-Variablen.
+
+.SceneView.h, Deklaration der Klasse SceneView, fortgesetzt
+[source,c++]
+----
+	void updateWorld2ViewMatrix();
+
+	QMatrix4x4					m_projection;
+	Transform3D					m_transform;
+	Camera						m_camera;
+	QMatrix4x4					m_worldToView;
+----
+
+Zuletzt kommen Member-Variablen, die die Shader-Programme und Zeichenobjekte kapseln (beinhalten Shader, VAO, VBO, EBO, etc.)
+
+.SceneView.h, Deklaration der Klasse SceneView, fortgesetzt
+[source,c++]
+----
+	QList<ShaderProgram>		m_shaderPrograms;
+
+	BoxObject					m_boxObject;
+	GridObject					m_gridObject;
+};
+----
+
+Und das war's auch schon - recht kompakt, oder?
+
+=== Das Aktualisierungskonzept
+
+Die zuletzt gezeigten Member-Variablen gehören zum Aktualisierungskonzept der Klasse. Erklärtes Ziel ist es, nur dann zu renddern, wenn es wirklich notwendig ist, also:
+
+- wenn die Fenstergröße (Viewport) verändert wurde,
+- wenn das Fenster angezeigt/sichtbar wird (exposed),
+- wenn durch Nutzerinteraktion die Kameraposition verändert wird
+- wenn die Szene selbst transformiert wird (z.B. programmgesteuerte Animation...)
+
+Wenn man jetzt bei jedem Eintreffen eines solchen Ereignisses jedesmal neu zeichnen würde, wäre das mit ziemlichem Overhead verbunden. Besser ist es, beim Eintreffen eines solchen Ereignisses einfach nur ein neuzeichnen anzufordern. Da die `UpdateRequest`-Ereignisse normalerweise mit der Bildschirmfrequenz synchronisiert sind, kann es natürlich sein, dass mehrfach hintereinander `UpdateRequest`-Events an die Eventloop angehängt werden. Dabei werden diese aber zusammengefasst und nur ein Event ausgeschickt. Es muss ja auch nur einmal je angezeigtem Frame gezeichnet werden.
+
+Grundsätzlich muss man also nur die Funktion https://doc.qt.io/qt-5/qwindow.html#requestUpdate[QWindow::requestUpdate()] (oder unsere Bequemlichkeitsfunktion `renderLater()`) aufrufen, damit beim nächsten VSync wieder neu gezeichnet wird.
+
+Leider funktionier das Verfahren im Fall des `ExposeEvent` nicht perfekt. Gerade unter Windows führt das beim Vergrößern des Fensters zu unschönen Artefakten am rechten und unteren Bildschirmrand. Daher muss man in diesem Fall tatsächlich gleich in der Ereignisbehandlungsroutine neu zeichnen und dabei den OpenGL Viewport bereits an die neue Fenstergröße anpassen (das geschieht aber bereits in `OpenGLWindow::exposeEvent()`).
+
+Beim `ResizeEvent` ist zu beachten, dass beim Vergrößern des Fensters allerdings __nur__, wenn der Aufruf nicht zusammen mit einem `ExposeEvent` stattfindet. Daher sollte man in der Funktion `SceneView::resizeEvent()` _nicht_ `renderLater()` aufrufen!
+
+Ohne eine Aufruf von `renderLater()` im ResizeEvent-Handler, erhält man folgende Aufrufreihenfolge bei der Fenstervergrößerung:
+
+----
+OpenGLWindow::resizeEvent()
+OpenGLWindow::exposeEvent()
+SceneView::paintGL(): Rendering to: 1222 x 891
+OpenGLWindow::resizeEvent()
+OpenGLWindow::exposeEvent()
+SceneView::paintGL(): Rendering to: 1224 x 892
+----
+
+Ruft man stattdessen `renderLater()` auf, erhält man:
+
+----
+OpenGLWindow::resizeEvent()
+OpenGLWindow::exposeEvent()
+SceneView::paintGL(): Rendering to: 1283 x 910
+SceneView::paintGL(): Rendering to: 1283 x 910
+OpenGLWindow::resizeEvent()
+OpenGLWindow::exposeEvent()
+SceneView::paintGL(): Rendering to: 1288 x 912
+SceneView::paintGL(): Rendering to: 1288 x 912
+----
+
+Wie man sieht, wird jedes Mal doppelt gezeichnet, was eine deutlich spürbare Verzögerung bedeutet. Grundsätzlich hilf es zu wissen, dass:
+
+- beim ersten Anzeigen eines Fensters immer erst ein `ResizeEvent`, gefolgt von einem `ExposeEvent` geschickt wird
+- beim Größenändern eines Fensters ebenfalls immer ein `ResizeEvent`, gefolgt von einem `ExposeEvent` geschickt wird 
+- beim Minimieren und Maximieren eines Fensters nur je ein (oder auf dem Mac mehrere) `ExposeEvent` geschickt werden. Dies kann man nutzen, um eine Animation zu stoppen und beim erneuten Anzeigen (`isExposed() == true`) wieder zu starten. Dies ist aber nicht der Fokus in diesem Tutorial. Daher könnte man auch das `ExposeEvent` komplett ignorieren und `renderNow()` direkt am Ende von  `OpenGLWindow::resizeEvent()` aufrufen. So wie es aktuell implementiert ist, wird beim Minimieren und Maximieren mehrfach `ExposeEvent` mit `isExposed() == true` aufgerufen und damit wird mehrfach trotz unverändertem Viewport und unveränderte Szene gezeichnet. Das ist aber nicht weiter bemerkbar.
+
+=== Implementierung der Klasse `SceneView`
+
+Die Klasse `SceneView` wird als QWindow-basierte Klasse selbst via Widget-Container in den Testdialog eingebettet (siehe __Tutorial 03__).
+
+
+
+
 
 
 

@@ -53,9 +53,7 @@ private:
 	*/
 	void processInput();
 
-	/*! Compines camera matrix and project matrix to form the world2view matrix and also
-		marks the scene as dirty (needs repaint).
-	*/
+	/*! Compines camera matrix and project matrix to form the world2view matrix. */
 	void updateWorld2ViewMatrix();
 
 	/*! If set to true, an input event was received, which will be evaluated at next repaint. */
