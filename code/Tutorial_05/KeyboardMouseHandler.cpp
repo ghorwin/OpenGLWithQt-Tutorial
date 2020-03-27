@@ -39,7 +39,7 @@ void KeyboardMouseHandler::keyReleaseEvent(QKeyEvent *event) {
 
 
 void KeyboardMouseHandler::mousePressEvent(QMouseEvent *event) {
-	pressButton(static_cast<Qt::MouseButton>(event->button()), event->pos());
+	pressButton(static_cast<Qt::MouseButton>(event->button()), event->globalPos());
 }
 
 
@@ -48,13 +48,7 @@ void KeyboardMouseHandler::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 
-void KeyboardMouseHandler::mouseMoveEvent(QMouseEvent *) {
-	// if needed, implement some logic here
-}
-
-
 void KeyboardMouseHandler::wheelEvent(QWheelEvent *event) {
-
 }
 
 

@@ -29,17 +29,24 @@ protected:
 	void paintGL() override;
 
 	// Functions to handle key press and mouse press events, all the work is done in class KeyboardMouseHandler
-	void keyPressEvent(QKeyEvent *event) override			{ m_keyboardMouseHandler.keyPressEvent(event); }
-	void keyReleaseEvent(QKeyEvent *event) override			{ m_keyboardMouseHandler.keyReleaseEvent(event); }
-	void mousePressEvent(QMouseEvent *event) override		{ m_keyboardMouseHandler.mousePressEvent(event); }
-	void mouseReleaseEvent(QMouseEvent *event) override		{ m_keyboardMouseHandler.mouseReleaseEvent(event); }
-	void mouseMoveEvent(QMouseEvent *event) override		{ m_keyboardMouseHandler.mouseMoveEvent(event); }
-	void wheelEvent(QWheelEvent *event) override			{ m_keyboardMouseHandler.wheelEvent(event); }
+	void keyPressEvent(QKeyEvent *event) override;
+	void keyReleaseEvent(QKeyEvent *event) override;
+	void mousePressEvent(QMouseEvent *event) override;
+	void mouseReleaseEvent(QMouseEvent *event) override;
+	void mouseMoveEvent(QMouseEvent *event) override;
+	void wheelEvent(QWheelEvent *event) override;
 
 	void exposeEvent(QExposeEvent *event) override;
 
 private:
+	/*! Tests, if any relevant input was received and registers a state change. */
+	void checkInput();
+
+	/*! This function is called first thing in the paintGL() routine and
+		processes input received so far and updates camera position.
+	*/
 	void processInput();
+
 	/*! Compines camera matrix and project matrix to form the world2view matrix and also
 		marks the scene as dirty (needs repaint).
 	*/
@@ -49,7 +56,9 @@ private:
 		in next call to paintGL(). If this flag is false, paintGL() does nothing and thus also does
 		not waste resources.
 	*/
-	bool						 m_needRepaint;
+	bool						m_needRepaint;
+	/*! If set to true, an input event was received, which will be evaluated at next repaint. */
+	bool						m_inputEventReceived;
 
 	// Fix for Windows OS, to avoid "2 vsync delay" lag
 	QRegion						m_cachedRegion;

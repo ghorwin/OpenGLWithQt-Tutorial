@@ -10,7 +10,8 @@
 #define SHADER(x) m_shaderPrograms[x].shaderProgram()
 
 SceneView::SceneView() :
-	m_needRepaint(false)
+	m_needRepaint(false),
+	m_inputEventReceived(false)
 {
 
 	// tell keyboard handler to monitor certain keys
@@ -35,11 +36,10 @@ SceneView::SceneView() :
 	grid.m_uniformNames.append("backColor"); // vec3
 	m_shaderPrograms.append( grid );
 
-	// move object a little bit to the back of the scene (negative z coordinates = further back)
+	// move objects a little bit to the back of the scene (negative z coordinates = further back)
 	m_transform.translate(0.0f, 0.0f, -5.0f);
 	m_camera.translate(0,5,0);
 	m_camera.rotate(-30, m_camera.right());
-	updateWorld2ViewMatrix();
 }
 
 
@@ -91,13 +91,16 @@ void SceneView::resizeGL(int width, int height) {
 
 
 void SceneView::paintGL() {
+	qDebug() << "SceneView::paintGL()";
 	// process input, i.e. check if any keys have been pressed
-	processInput(); // this sets the m_needRepaint flag if user has pressed some keys
+	if (m_inputEventReceived)
+		processInput(); // this sets the m_needRepaint flag if user has pressed some keys
 
 	// only paint if we need to
 	if (!m_needRepaint)
 		return;
 
+	qDebug() << "SceneView::paintGL() actual painting";
 	const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
 	glViewport(0, 0, width() * retinaScale, height() * retinaScale);
 
@@ -126,10 +129,44 @@ void SceneView::paintGL() {
 	m_gridObject.render(); // render the grid
 	SHADER(1)->release();
 
+#if 0
 	// do some animation stuff
 	m_transform.rotate(1.0f, QVector3D(0.0f, 0.1f, 0.0f));
 	updateWorld2ViewMatrix();
 	renderLater();
+#endif
+
+	checkInput();
+}
+
+
+void SceneView::keyPressEvent(QKeyEvent *event) {
+	m_keyboardMouseHandler.keyPressEvent(event);
+	checkInput();
+}
+
+void SceneView::keyReleaseEvent(QKeyEvent *event) {
+	m_keyboardMouseHandler.keyReleaseEvent(event);
+	checkInput();
+}
+
+void SceneView::mousePressEvent(QMouseEvent *event) {
+	m_keyboardMouseHandler.mousePressEvent(event);
+	checkInput();
+}
+
+void SceneView::mouseReleaseEvent(QMouseEvent *event) {
+	m_keyboardMouseHandler.mouseReleaseEvent(event);
+	checkInput();
+}
+
+void SceneView::mouseMoveEvent(QMouseEvent *event) {
+	checkInput();
+}
+
+void SceneView::wheelEvent(QWheelEvent *event) {
+	m_keyboardMouseHandler.wheelEvent(event);
+	checkInput();
 }
 
 
@@ -152,9 +189,77 @@ void SceneView::exposeEvent(QExposeEvent *event) {
 }
 
 
-void SceneView::processInput() {
+void SceneView::checkInput() {
+	// this function is called whenever _any_ key/mouse event was issued
 
+	// we test, if the current state of the key handler requires a scene update
+	// (camera movement) and if so, we just set a flag to do that upon next repaint
+	// and we schedule a repaint
+
+	// trigger key held?
+	if (m_keyboardMouseHandler.buttonDown(Qt::RightButton)) {
+		// any of the interesting keys held?
+		if (m_keyboardMouseHandler.keyDown(Qt::Key_W) ||
+			m_keyboardMouseHandler.keyDown(Qt::Key_A) ||
+			m_keyboardMouseHandler.keyDown(Qt::Key_S) ||
+			m_keyboardMouseHandler.keyDown(Qt::Key_D) ||
+			m_keyboardMouseHandler.keyDown(Qt::Key_Q) ||
+			m_keyboardMouseHandler.keyDown(Qt::Key_E))
+		{
+			m_inputEventReceived = true;
+			qDebug() << "SceneView::checkInput() inputEventReceived";
+			renderLater();
+			return;
+		}
+
+		// has the mouse been moved?
+		if (m_keyboardMouseHandler.mouseDownPos() != QCursor::pos()) {
+			m_inputEventReceived = true;
+			qDebug() << "SceneView::checkInput() inputEventReceived: " << QCursor::pos() << m_keyboardMouseHandler.mouseDownPos();
+			renderLater();
+			return;
+		}
+	}
 }
+
+
+void SceneView::processInput() {
+	// function must only be called if an input event has been received
+	Q_ASSERT(m_inputEventReceived);
+	m_inputEventReceived = false;
+	qDebug() << "SceneView::processInput()";
+
+	QPoint currentPos = QCursor::pos();
+
+	// Handle translations
+	QVector3D translation;
+
+	if (m_keyboardMouseHandler.keyDown(Qt::Key_W)) 		translation += m_camera.forward();
+	if (m_keyboardMouseHandler.keyDown(Qt::Key_S)) 		translation -= m_camera.forward();
+	if (m_keyboardMouseHandler.keyDown(Qt::Key_A)) 		translation -= m_camera.right();
+	if (m_keyboardMouseHandler.keyDown(Qt::Key_D)) 		translation += m_camera.right();
+	if (m_keyboardMouseHandler.keyDown(Qt::Key_Q)) 		translation -= m_camera.up();
+	if (m_keyboardMouseHandler.keyDown(Qt::Key_E)) 		translation += m_camera.up();
+
+	// get and reset time delta
+	double timeSinceLastCheck = 100;//m_keyboardMouseHandler.timeDelta(); // in ms
+
+	static const float transSpeed = 0.001f;
+	static const float rotatationSpeed   = 0.001f;
+
+	// Handle rotations
+	// get and reset mouse delta (pass current mouse cursor position)
+	QPoint mouseDelta = m_keyboardMouseHandler.mouseDelta(currentPos); // resets the internal position
+	m_camera.rotate(-rotatationSpeed * timeSinceLastCheck * mouseDelta.x(), Camera::LocalUp);
+	m_camera.rotate(-rotatationSpeed * timeSinceLastCheck * mouseDelta.y(), m_camera.right());
+
+	m_camera.translate(transSpeed * timeSinceLastCheck * translation);
+
+	// finally, reset "WasPressed" key states
+	m_keyboardMouseHandler.clearWasPressedKeyStates();
+	updateWorld2ViewMatrix();
+}
+
 
 
 void SceneView::updateWorld2ViewMatrix() {

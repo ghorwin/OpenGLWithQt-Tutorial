@@ -2,6 +2,7 @@
 #define KeyboardMouseHandlerH
 
 #include <QPoint>
+#include <QElapsedTimer>
 #include <vector>
 
 class QKeyEvent;
@@ -64,11 +65,12 @@ public:
 	virtual ~KeyboardMouseHandler();
 
 	// Functions to handle key press and mouse press events
+	// These function return true, if a recognized key/mouse button was pressed and
+	// the scene may need to be updated.
 	void keyPressEvent(QKeyEvent *event);
 	void keyReleaseEvent(QKeyEvent *event);
 	void mousePressEvent(QMouseEvent *event);
 	void mouseReleaseEvent(QMouseEvent *event);
-	void mouseMoveEvent(QMouseEvent *event);
 	void wheelEvent(QWheelEvent *event);
 
 	enum KeyStates {
@@ -94,8 +96,13 @@ public:
 	/*! Called when a mousebutton was released. */
 	bool releaseButton(Qt::MouseButton btn);
 
-	/*! Returns the position that was recorded, when a mouse button was pressed. */
+	/*! Returns the position (global pos) that was recorded, when a mouse button was pressed. */
 	QPoint mouseDownPos() const { return m_mouseDownPos; }
+
+	/*! Returns, whether the key is pressed. */
+	bool keyDown(Qt::Key k) const;
+	/*! Returns, whether the mouse button is pressed. */
+	bool buttonDown(Qt::MouseButton btn) const;
 
 	/*! Returns the difference between last and current mouse position and *updates*
 		last mouse position to currentPos.
@@ -103,10 +110,9 @@ public:
 	*/
 	QPoint mouseDelta(const QPoint currentPos);
 
-	/*! Returns, whether the key is pressed. */
-	bool keyDown(Qt::Key k) const;
-	/*! Returns, whether the mouse button is pressed. */
-	bool buttonDown(Qt::MouseButton btn) const;
+	/*! Returns time since last call and resets counter. */
+//	double timeDelta();
+
 
 private:
 	std::vector<Qt::Key>	m_keys;
@@ -117,6 +123,8 @@ private:
 	KeyStates				m_rightButtonDown;
 
 	QPoint					m_mouseDownPos;
+
+	QElapsedTimer			m_updateTimer;
 };
 
 #endif // KeyboardMouseHandlerH
