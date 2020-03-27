@@ -5,10 +5,10 @@
 #include <QVector3D>
 #include <QtGui/qopengl.h>
 
-/*! A simple class that generates a rectangle mesh.
+/*! A simple class that generates a rectangle mesh, that is two triangles that form a rectangle.
 	The rectangle is defined by 3 points in space, a, b and c, where
 	ab and ac are orthogonal vectors, and the cross-product of a, b, and c
-	points towards the viewer (face normal).
+	points towards the viewer (face normal). A uniform color is assigned.
 */
 class RectMesh {
 public:

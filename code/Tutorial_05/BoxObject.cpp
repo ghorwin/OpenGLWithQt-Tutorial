@@ -2,7 +2,6 @@
 
 #include <QVector3D>
 #include <QOpenGLShaderProgram>
-#include <QOpenGLFunctions>
 
 BoxObject::BoxObject() :
 	m_vertexBuffer(QOpenGLBuffer::VertexBuffer), // actually the default, so default constructor would have been enough
@@ -34,12 +33,6 @@ BoxObject::BoxObject() :
 	// bottom
 	m_rectangles.push_back( RectMesh(VERTEX_BBL, VERTEX_BBR, VERTEX_FBL, Qt::magenta ));
 
-	// bottom 2
-//	m_rectangles.push_back( RectMesh(VERTEX_BBL, VERTEX_BBR, VERTEX_FBL, Qt::magenta ));
-//	m_rectangles.back().m_a.setZ(5);
-//	m_rectangles.back().m_b.setZ(5);
-//	m_rectangles.back().m_c.setZ(5);
-
 	#undef VERTEX_BBR
 	#undef VERTEX_BBL
 	#undef VERTEX_BTL
@@ -56,11 +49,9 @@ BoxObject::BoxObject() :
 	// we have 6 sides of a cube, and each side needs 4 vertexes, and each vertex requires 2 vectors3d of float
 	unsigned int sizeOfVertex = 2*3; // number of floats
 	m_vertexBufferData.resize(Nrects*4*sizeOfVertex);
-	std::fill(m_vertexBufferData.begin(), m_vertexBufferData.end(), 0);
 
 	// we have 6 sides of cube, and each side has two triangles, with 3 indexes each
 	m_elementBufferData.resize(Nrects*2*3);
-	std::fill(m_elementBufferData.begin(), m_elementBufferData.end(), 0);
 
 	// update the buffers
 	float * vertexBuffer = m_vertexBufferData.data();
@@ -72,7 +63,6 @@ BoxObject::BoxObject() :
 		vertexCount += 4;
 		elementCount += 2;
 	}
-
 }
 
 
@@ -114,17 +104,16 @@ void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
 	// Release (unbind) all
 	m_vertexBuffer.release();
 	m_elementBuffer.release();
-
 }
 
 
-void BoxObject::render(QOpenGLFunctions * f) {
+void BoxObject::render() {
 	// set the geometry ("position" and "color" arrays)
 	m_vao.bind();
 
 	// now draw the cube by drawing individual triangles
 	// - GL_TRIANGLES - draw individual triangles via elements
-	f->glDrawElements(GL_TRIANGLES, m_elementBufferData.size(), GL_UNSIGNED_INT, nullptr);
+	glDrawElements(GL_TRIANGLES, m_elementBufferData.size(), GL_UNSIGNED_INT, nullptr);
 	// release vertices again
 	m_vao.release();
 }

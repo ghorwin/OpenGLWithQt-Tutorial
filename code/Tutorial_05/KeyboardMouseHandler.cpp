@@ -23,7 +23,7 @@ void KeyboardMouseHandler::keyPressEvent(QKeyEvent *event) {
 		event->ignore();
 	}
 	else {
-		keyPressed(static_cast<Qt::Key>((event->key())));
+		pressKey(static_cast<Qt::Key>((event->key())));
 	}
 }
 
@@ -33,18 +33,18 @@ void KeyboardMouseHandler::keyReleaseEvent(QKeyEvent *event) {
 		event->ignore();
 	}
 	else {
-		keyReleased(static_cast<Qt::Key>((event->key())));
+		releaseKey(static_cast<Qt::Key>((event->key())));
 	}
 }
 
 
 void KeyboardMouseHandler::mousePressEvent(QMouseEvent *event) {
-	buttonPressed(static_cast<Qt::MouseButton>(event->button()), event->pos());
+	pressButton(static_cast<Qt::MouseButton>(event->button()), event->pos());
 }
 
 
 void KeyboardMouseHandler::mouseReleaseEvent(QMouseEvent *event) {
-	buttonReleased(static_cast<Qt::MouseButton>(event->button()));
+	releaseButton(static_cast<Qt::MouseButton>(event->button()));
 }
 
 
@@ -84,7 +84,7 @@ void KeyboardMouseHandler::clearWasPressedKeyStates() {
 
 
 
-bool KeyboardMouseHandler::keyPressed(Qt::Key k) {
+bool KeyboardMouseHandler::pressKey(Qt::Key k) {
 	for (unsigned int i=0; i<m_keys.size(); ++i) {
 		if (m_keys[i] == k) {
 			m_keyStates[i] = StateHeld;
@@ -95,7 +95,7 @@ bool KeyboardMouseHandler::keyPressed(Qt::Key k) {
 }
 
 
-bool KeyboardMouseHandler::keyReleased(Qt::Key k) {
+bool KeyboardMouseHandler::releaseKey(Qt::Key k) {
 	for (unsigned int i=0; i<m_keys.size(); ++i) {
 		if (m_keys[i] == k) {
 			m_keyStates[i] = StateWasPressed;
@@ -106,7 +106,7 @@ bool KeyboardMouseHandler::keyReleased(Qt::Key k) {
 }
 
 
-bool KeyboardMouseHandler::buttonPressed(Qt::MouseButton btn, QPoint currentPos) {
+bool KeyboardMouseHandler::pressButton(Qt::MouseButton btn, QPoint currentPos) {
 	switch (btn) {
 		case Qt::LeftButton		: m_leftButtonDown = StateHeld; break;
 		case Qt::MiddleButton	: m_middleButtonDown = StateHeld; break;
@@ -118,7 +118,7 @@ bool KeyboardMouseHandler::buttonPressed(Qt::MouseButton btn, QPoint currentPos)
 }
 
 
-bool KeyboardMouseHandler::buttonReleased(Qt::MouseButton btn) {
+bool KeyboardMouseHandler::releaseButton(Qt::MouseButton btn) {
 	switch (btn) {
 		case Qt::LeftButton		: m_leftButtonDown = StateWasPressed; break;
 		case Qt::MiddleButton	: m_middleButtonDown = StateWasPressed; break;

@@ -6,7 +6,6 @@
 
 QT_BEGIN_NAMESPACE
 class QOpenGLShaderProgram;
-class QOpenGLFunctions;
 QT_END_NAMESPACE
 
 
@@ -24,7 +23,8 @@ public:
 	/*! The function is called during OpenGL initialization, where the OpenGL context is current. */
 	void create(QOpenGLShaderProgram * shaderProgramm);
 
-	void render(QOpenGLFunctions * f);
+	/*! Binds the buffer and paints. */
+	void render();
 
 	unsigned int				m_NVertexes;
 

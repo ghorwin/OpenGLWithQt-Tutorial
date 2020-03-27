@@ -39,6 +39,7 @@ protected:
 	void exposeEvent(QExposeEvent *event) override;
 
 private:
+	void processInput();
 	/*! Compines camera matrix and project matrix to form the world2view matrix and also
 		marks the scene as dirty (needs repaint).
 	*/

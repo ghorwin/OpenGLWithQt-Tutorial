@@ -86,13 +86,13 @@ public:
 	void clearWasPressedKeyStates();
 
 	/*! Called when a key was pressed. */
-	bool keyPressed(Qt::Key k);
+	bool pressKey(Qt::Key k);
 	/*! Called when a key was released. */
-	bool keyReleased(Qt::Key k);
+	bool releaseKey(Qt::Key k);
 	/*! Called when a mousebutton was pressed. */
-	bool buttonPressed(Qt::MouseButton btn, QPoint currentPos);
+	bool pressButton(Qt::MouseButton btn, QPoint currentPos);
 	/*! Called when a mousebutton was released. */
-	bool buttonReleased(Qt::MouseButton btn);
+	bool releaseButton(Qt::MouseButton btn);
 
 	/*! Returns the position that was recorded, when a mouse button was pressed. */
 	QPoint mouseDownPos() const { return m_mouseDownPos; }

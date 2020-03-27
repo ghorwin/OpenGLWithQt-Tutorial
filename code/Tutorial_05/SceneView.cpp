@@ -13,6 +13,7 @@ SceneView::SceneView() :
 	m_needRepaint(false)
 {
 
+	// tell keyboard handler to monitor certain keys
 	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_W);
 	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_A);
 	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_S);
@@ -33,7 +34,6 @@ SceneView::SceneView() :
 	grid.m_uniformNames.append("gridColor"); // vec3
 	grid.m_uniformNames.append("backColor"); // vec3
 	m_shaderPrograms.append( grid );
-
 
 	// move object a little bit to the back of the scene (negative z coordinates = further back)
 	m_transform.translate(0.0f, 0.0f, -5.0f);
@@ -91,6 +91,9 @@ void SceneView::resizeGL(int width, int height) {
 
 
 void SceneView::paintGL() {
+	// process input, i.e. check if any keys have been pressed
+	processInput(); // this sets the m_needRepaint flag if user has pressed some keys
+
 	// only paint if we need to
 	if (!m_needRepaint)
 		return;
@@ -111,7 +114,7 @@ void SceneView::paintGL() {
 
 	SHADER(0)->bind();
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
-	m_boxObject.render(this); // render the box
+	m_boxObject.render(); // render the box
 	SHADER(0)->release();
 
 	// *** render grid afterwards ***
@@ -120,7 +123,7 @@ void SceneView::paintGL() {
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[0], m_worldToView);
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], gridColor);
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[2], backColor);
-	m_gridObject.render(this); // render the grid
+	m_gridObject.render(); // render the grid
 	SHADER(1)->release();
 
 	// do some animation stuff
@@ -138,7 +141,7 @@ void SceneView::exposeEvent(QExposeEvent *event) {
 		// the window manager tells us that the entire screen is invalidated.
 		// This results in two QOpenGLWindow::update() calls and a noticable 2 vsync delay.
 		m_cachedRegion = event->region();
-		qDebug() << "SceneView::exposeEvent" << m_cachedRegion;
+		//qDebug() << "SceneView::exposeEvent" << m_cachedRegion;
 
 		m_needRepaint = true;
 		OpenGLWindow::exposeEvent(event); // this will trigger a repaint
@@ -149,7 +152,16 @@ void SceneView::exposeEvent(QExposeEvent *event) {
 }
 
 
+void SceneView::processInput() {
+
+}
+
+
 void SceneView::updateWorld2ViewMatrix() {
+	// transformation steps:
+	//   model space -> transform -> world space
+	//   world space -> camera/eye -> camera view
+	//   camera view -> projection -> normalized device coordinates (NDC)
 	m_worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();
 	m_needRepaint = true;
 }

@@ -1,7 +1,6 @@
 #include "GridObject.h"
 
 #include <QOpenGLShaderProgram>
-#include <QOpenGLFunctions>
 #include <vector>
 
 GridObject::GridObject()
@@ -67,12 +66,12 @@ void GridObject::create(QOpenGLShaderProgram * shaderProgramm) {
 }
 
 
-void GridObject::render(QOpenGLFunctions * f) {
+void GridObject::render() {
 	// set the geometry ("position" and "color" arrays)
 	m_vao.bind();
 
 	// now draw the grid lines
-	f->glDrawArrays(GL_LINES, 0, m_NVertexes);
+	glDrawArrays(GL_LINES, 0, m_NVertexes);
 	// release vertices again
 	m_vao.release();
 }
