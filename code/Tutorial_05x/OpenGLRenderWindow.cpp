@@ -41,8 +41,6 @@ OpenGLRenderWindow::OpenGLRenderWindow() :
 	m_inputHandler.addRecognizedKey(Qt::Key_Q);
 	m_inputHandler.addRecognizedKey(Qt::Key_E);
 
-
-	updateScene();
 }
 
 

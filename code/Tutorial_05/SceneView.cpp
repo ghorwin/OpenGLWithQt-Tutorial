@@ -39,7 +39,7 @@ SceneView::SceneView() :
 	m_transform.translate(0.0f, 0.0f, -5.0f);
 	m_camera.translate(0,5,0);
 	m_camera.rotate(-30, m_camera.right());
-
+	updateWorld2ViewMatrix();
 }
 
 
@@ -99,37 +99,33 @@ void SceneView::paintGL() {
 	glViewport(0, 0, width() * retinaScale, height() * retinaScale);
 
 	// set the background color = clear color
-	QVector3D backgroundColor(0.1f, 0.1f, 0.3f);
-	glClearColor(backgroundColor.x(), backgroundColor.y(), backgroundColor.z(), 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// set the background color = clear color
 	QVector3D backColor(0.1f, 0.15f, 0.3f);
 	glClearColor(0.1f, 0.15f, 0.3f, 1.0f);
 
-	// render using our shader
-	SHADER(0)->bind();
+	QVector3D gridColor(0.3f, 0.3f, 0.6f);
 
-	QMatrix4x4 worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();
-	// assign the projection matrix to the parameter identified by 'u_worldToView' in the shader code
-	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], worldToView);
-	m_boxObject.render(this);
+	// *** render box
+
+	SHADER(0)->bind();
+	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
+	m_boxObject.render(this); // render the box
 	SHADER(0)->release();
 
 	// *** render grid afterwards ***
 
-	// render using our shader
 	SHADER(1)->bind();
-	// assign the projection matrix to the parameter identified by 'u_worldToView' in the shader code
-	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[0], worldToView);
-	QVector3D color(0.3f, 0.3f, 0.6f);
-	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], color);
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[0], m_worldToView);
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], gridColor);
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[2], backColor);
-	m_gridObject.render(this);
+	m_gridObject.render(this); // render the grid
 	SHADER(1)->release();
 
+	// do some animation stuff
 	m_transform.rotate(1.0f, QVector3D(0.0f, 0.1f, 0.0f));
-	m_needRepaint = true;
+	updateWorld2ViewMatrix();
 	renderLater();
 }
 
@@ -154,12 +150,6 @@ void SceneView::exposeEvent(QExposeEvent *event) {
 
 
 void SceneView::updateWorld2ViewMatrix() {
-	qDebug() << "SceneView::updateWorld2ViewMatrix";
-
 	m_worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();
-//	qDebug() << "m_projection = " << m_projection;
-//	qDebug() << "m_camera = " << m_camera.toMatrix();
-//	qDebug() << "m_transform = " << transform.toMatrix();
-//	qDebug() << "world2View = " << m_worldToView;
 	m_needRepaint = true;
 }
