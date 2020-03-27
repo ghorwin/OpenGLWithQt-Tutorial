@@ -1,3 +1,14 @@
+/************************************************************************************
+
+OpenGL with Qt - Tutorial
+-------------------------
+Autor      : Andreas Nicolai <andreas.nicolai@gmx.net>
+Repository : https://github.com/ghorwin/OpenGLWithQt-Tutorial
+License    : BSD License,
+			 see https://github.com/ghorwin/OpenGLWithQt-Tutorial/blob/master/LICENSE
+
+************************************************************************************/
+
 #include "SceneView.h"
 
 #include <QExposeEvent>
@@ -250,7 +261,8 @@ void SceneView::processInput() {
 	// Handle rotations
 	// get and reset mouse delta (pass current mouse cursor position)
 	QPoint mouseDelta = m_keyboardMouseHandler.mouseDelta(currentPos); // resets the internal position
-	m_camera.rotate(-rotatationSpeed * timeSinceLastCheck * mouseDelta.x(), Camera::LocalUp);
+	const QVector3D LocalUp(0.0f, 1.0f, 0.0f); // same as in Camera::up()
+	m_camera.rotate(-rotatationSpeed * timeSinceLastCheck * mouseDelta.x(), LocalUp);
 	m_camera.rotate(-rotatationSpeed * timeSinceLastCheck * mouseDelta.y(), m_camera.right());
 
 	m_camera.translate(transSpeed * timeSinceLastCheck * translation);

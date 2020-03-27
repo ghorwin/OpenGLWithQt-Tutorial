@@ -1,3 +1,14 @@
+/************************************************************************************
+
+OpenGL with Qt - Tutorial
+-------------------------
+Autor      : Andreas Nicolai <andreas.nicolai@gmx.net>
+Repository : https://github.com/ghorwin/OpenGLWithQt-Tutorial
+License    : BSD License,
+			 see https://github.com/ghorwin/OpenGLWithQt-Tutorial/blob/master/LICENSE
+
+************************************************************************************/
+
 #ifndef KeyboardMouseHandlerH
 #define KeyboardMouseHandlerH
 
@@ -27,8 +38,6 @@ class QWheelEvent;
 	- the mouse position is updated in mouseDelta(), which requires the new mouse cursor position to update
 	  the mouse position for the next call cycle
 
-	The time elapsed since last call is retrieved with timeDelta(), which also resets the time again.
-
 	\code
 	// usage pattern
 
@@ -45,13 +54,10 @@ class QWheelEvent;
 	// get and reset mouse delta (pass current mouse cursor position)
 	QPoint mouseDelta = m_inputHandler.mouseDelta(QCursor::pos());
 
-	// get and reset time delta
-	double timeSinceLastCheck = m_inputHandler.timeDelta(); // in ms
-
 	// compute mouse speed
-	static const float rotatationSpeed   = 0.001f; // in space units/ms
+	static const float rotatationSpeed   = 0.1f; // in space units/frame
 
-	float yRot = rotationSpeed * timeSinceLastCheck * mouseDelta.y();
+	float yRot = rotationSpeed * mouseDelta.y();
 
 	...
 

@@ -1,3 +1,14 @@
+/************************************************************************************
+
+OpenGL with Qt - Tutorial
+-------------------------
+Autor      : Andreas Nicolai <andreas.nicolai@gmx.net>
+Repository : https://github.com/ghorwin/OpenGLWithQt-Tutorial
+License    : BSD License,
+			 see https://github.com/ghorwin/OpenGLWithQt-Tutorial/blob/master/LICENSE
+
+************************************************************************************/
+
 #include "KeyboardMouseHandler.h"
 
 #include <QKeyEvent>
@@ -133,7 +144,7 @@ QPoint KeyboardMouseHandler::mouseDelta(const QPoint currentPos) {
 bool KeyboardMouseHandler::keyDown(Qt::Key k) const {
 	for (unsigned int i=0; i<m_keys.size(); ++i) {
 		if (m_keys[i] == k)
-			return (bool)m_keyStates[i];
+			return m_keyStates[i] == StateHeld;
 	}
 	return false;
 }
@@ -141,9 +152,9 @@ bool KeyboardMouseHandler::keyDown(Qt::Key k) const {
 
 bool KeyboardMouseHandler::buttonDown(Qt::MouseButton btn) const {
 	switch (btn) {
-		case Qt::LeftButton		: return m_leftButtonDown;
-		case Qt::MiddleButton	: return m_middleButtonDown;
-		case Qt::RightButton	: return m_rightButtonDown;
+		case Qt::LeftButton		: return m_leftButtonDown == StateHeld;
+		case Qt::MiddleButton	: return m_middleButtonDown == StateHeld;
+		case Qt::RightButton	: return m_rightButtonDown == StateHeld;
 		default: return false;
 	}
 }

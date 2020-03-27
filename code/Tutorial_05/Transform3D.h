@@ -1,4 +1,16 @@
-// Taken from https://www.trentreed.net/blog/qt5-opengl-part-1-basic-rendering
+/************************************************************************************
+
+OpenGL with Qt - Tutorial
+-------------------------
+Autor      : Andreas Nicolai <andreas.nicolai@gmx.net>
+Repository : https://github.com/ghorwin/OpenGLWithQt-Tutorial
+License    : BSD License,
+			 see https://github.com/ghorwin/OpenGLWithQt-Tutorial/blob/master/LICENSE
+
+Code is taken from https://www.trentreed.net/blog/qt5-opengl-part-3b-camera-control
+
+************************************************************************************/
+
 
 #ifndef TRANSFORM3D_H
 #define TRANSFORM3D_H
@@ -46,7 +58,7 @@ public:
 	const QQuaternion& rotation() const;
 	const QMatrix4x4& toMatrix() const;
 
-private:
+protected:
 	QVector3D m_translation;
 	QVector3D m_scale;
 	QQuaternion m_rotation;
@@ -57,7 +69,7 @@ private:
 #ifndef QT_NO_DATASTREAM
 	friend QDataStream &operator<<(QDataStream &out, const Transform3D &transform);
 	friend QDataStream &operator>>(QDataStream &in, Transform3D &transform);
-	#endif
+#endif
 };
 
 Q_DECLARE_TYPEINFO(Transform3D, Q_MOVABLE_TYPE);

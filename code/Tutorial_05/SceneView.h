@@ -1,3 +1,14 @@
+/************************************************************************************
+
+OpenGL with Qt - Tutorial
+-------------------------
+Autor      : Andreas Nicolai <andreas.nicolai@gmx.net>
+Repository : https://github.com/ghorwin/OpenGLWithQt-Tutorial
+License    : BSD License,
+			 see https://github.com/ghorwin/OpenGLWithQt-Tutorial/blob/master/LICENSE
+
+************************************************************************************/
+
 #ifndef SCENEVIEW_H
 #define SCENEVIEW_H
 
@@ -7,9 +18,9 @@
 #include "ShaderProgram.h"
 #include "KeyboardMouseHandler.h"
 #include "GridObject.h"
-#include "Camera.h"
 #include "BoxObject.h"
 #include "RectMesh.h"
+#include "Camera.h"
 
 /*! The class SceneView extends the primitive OpenGLWindow
 	by adding keyboard/mouse event handling, and rendering of different

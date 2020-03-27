@@ -29,7 +29,6 @@ win32 {
 
 SOURCES += \
 		BoxObject.cpp \
-		Camera.cpp \
 		GridObject.cpp \
 		KeyboardMouseHandler.cpp \
 		OpenGLWindow.cpp \
