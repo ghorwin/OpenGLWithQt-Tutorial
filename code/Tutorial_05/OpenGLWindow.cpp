@@ -14,6 +14,7 @@ Source code is based on Qt Example OpenGLWindow, but has been simplified a lot.
 #include "OpenGLWindow.h"
 
 #include <QtCore/QCoreApplication>
+#include <QtCore/QDebug>
 
 #include <QtGui/QOpenGLContext>
 #include <QtGui/QOpenGLPaintDevice>
@@ -85,7 +86,7 @@ bool OpenGLWindow::event(QEvent *event) {
 
 
 void OpenGLWindow::exposeEvent(QExposeEvent * /*event*/) {
-	renderNow(); // simply redirect call to renderNow(), isExposed() is checked there
+	renderLater(); // request update
 }
 
 

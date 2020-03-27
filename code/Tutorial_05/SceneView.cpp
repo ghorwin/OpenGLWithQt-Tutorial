@@ -18,7 +18,6 @@ License    : BSD License,
 #define SHADER(x) m_shaderPrograms[x].shaderProgram()
 
 SceneView::SceneView() :
-	m_needRepaint(false),
 	m_inputEventReceived(false)
 {
 
@@ -104,10 +103,6 @@ void SceneView::paintGL() {
 	if (m_inputEventReceived)
 		processInput(); // this sets the m_needRepaint flag if user has pressed some keys
 
-	// only paint if we need to
-	if (!m_needRepaint)
-		return;
-
 //	qDebug() << "SceneView::paintGL() actual painting";
 	const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
 	glViewport(0, 0, width() * retinaScale, height() * retinaScale);
@@ -187,7 +182,6 @@ void SceneView::exposeEvent(QExposeEvent *event) {
 		m_cachedRegion = event->region();
 		//qDebug() << "SceneView::exposeEvent" << m_cachedRegion;
 
-		m_needRepaint = true;
 		OpenGLWindow::exposeEvent(event); // this will trigger a repaint
 	}
 	else {
@@ -276,5 +270,5 @@ void SceneView::updateWorld2ViewMatrix() {
 	//   world space -> camera/eye -> camera view
 	//   camera view -> projection -> normalized device coordinates (NDC)
 	m_worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();
-	m_needRepaint = true;
+	renderLater(); // request update
 }

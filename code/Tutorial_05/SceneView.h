@@ -60,11 +60,6 @@ private:
 	*/
 	void updateWorld2ViewMatrix();
 
-	/*! This flag marks the scene/camera/project matrix as invalid and will cause a render update
-		in next call to paintGL(). If this flag is false, paintGL() does nothing and thus also does
-		not waste resources.
-	*/
-	bool						m_needRepaint;
 	/*! If set to true, an input event was received, which will be evaluated at next repaint. */
 	bool						m_inputEventReceived;
 
