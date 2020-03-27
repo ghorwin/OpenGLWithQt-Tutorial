@@ -15,9 +15,6 @@ License    : BSD License,
 #include <QOpenGLShaderProgram>
 #include <QDateTime>
 
-#include "Vertex.h"
-
-
 #define SHADER(x) m_shaderPrograms[x].shaderProgram()
 
 SceneView::SceneView() :
