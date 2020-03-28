@@ -373,8 +373,8 @@ public:
     
 
     QOpenGLVertexArrayObject	m_vao;
-	QOpenGLBuffer				m_vbo;
-	QOpenGLBuffer				m_ebo;
+	QOpenGLBuffer				m_vbo; // Vertex buffer
+	QOpenGLBuffer				m_ebo; // Element/index buffer
 	
 	// other buffer objects
 	
@@ -527,17 +527,66 @@ Die Funktion `destroy()` ist sicher selbsterklärend. Und die Render-Funktion eb
 Beachte, dass die Funktion `glDrawArrays()` als drittes Argument die Länge des Puffers als Anzahl der Elemente vom Typ des Puffers (hier GL_FLOAT) erwartet, und _nicht_ die Länge in Bytes.
 ====
 
-Das Ergebnis dieses Zeichnens ist zunächst ganz nett:
+Das Ergebnis dieses Zeichnens (mit uniformer Gitterfarbe) ist zunächst ganz nett:
 
-.Einfaches Gitterraster mit sichtbarer endlicher Ausdehnung
+.Einfaches Gitterraster (einfarbig) mit sichtbarer endlicher Ausdehnung
 image::Tutorial_05_gridplain.png[Raster,pdfwidth=8cm]
 
 Aber schöne wäre es, wenn das Gitter mit zunehmender Tiefe verblasst.
 
 === Gitter mit Abblendung in der Tiefe
 
-Das Gitter sollte nun 
-Es gibt jetzt mehrere Möglichkeiten, 
+Das Gitter sollte sich nun in weiter Ferne der Hintergrundfarbe annähern. Man könnte das zum Beispiel erreichen, wenn man die Farbe des Gitters an weiter entfernten Punkte einfärbt.
+
+Den Vertexshader könnte man wie folgt erweitern:
+
+[source,c]
+----
+#version 330
+
+// GLSL version 3.3
+// vertex shader
+
+layout(location = 0) in vec2 position; // input:  attribute with index '0' 
+                                       //         with 2 floats (x, z coords) per vertex
+out vec4 fragColor;                    // output: computed fragmentation color
+
+const float FARPLANE = 50;             // threshold
+float fragDepth;                       // normalized depth value
+
+uniform mat4 worldToView;              // parameter: the view transformation matrix
+uniform vec3 gridColor;                // parameter: grid color as rgb triple
+uniform vec3 backColor;                // parameter: background color as rgb triple
+
+void main() {
+  gl_Position = worldToView * vec4(position.x, 0.0, position.y, 1.0);
+  fragDepth = max(0, min(1, gl_Position.z / FARPLANE));
+  fragColor = vec4( mix(gridColor, backColor, fragDepth), 1.0);
+}
+----
+
+Es gibt 3 Parameter, die dem Shaderprogramm gegeben werden müssen:
+
+- `worldToView` - Transformationsmatrix (von Weltkoordinaten zur perspektivischen Ansicht)
+- `gridColor` - Farbe des Gitters
+- `backColor` - Hintergrundfarbe
+
+Die Variable `gl_Position` enthält nach der Transformation die normalisierten Koordinaten. In der Berechnung wird die zweite Komponente des Vertex-Vektors (angesprochen über `.y`) als z-Koordinate verwendet.
+
+Für die Abblendefunktionalität ist die Entfernung des Linienstart- bzw. -endpunktes  interessant. Nun sind die z-Koordinaten dieser normalisierten Position alle sehr dicht an 1 dran. Deshalb werden sie noch skaliert (entsprechend der perspektivischen Transformationsregeln etwas wie eine Farplane). Nun kann man diese Tiefe, gespeichert in der Variable `fragDepth` nutzen, um zwischen Gitterfarbe und Hintergrundfarbe linear mit der GLSL-Funktion `mix()` zu interpolieren.
+
+
+.Gitterraster mit Vertex-basierter Abblendung
+image::Tutorial_05_grid_vertexfade.png[Raster,pdfwidth=8cm]
+
+Das Ergebnis geht schon in die richtige Richtung, aber es gibt einen unschönen Effekt, wenn man parallel zu den Linien schaut. Die Koordinaten der Endpunkte der seitlich laufenden Linien sind sehr weit weg (in der perspektivischen Projekten), sodass beide Linienenden nahezu Hintergrundfarbe bekommen. Und da die Fragmentfarbe eine lineare Interpolation zwischen den Vertexfarben ist, verschwindet die gesamte Linie.
+
+Das Problem lässt sich nur beheben, wenn man die Ablendfunktionalität in den Fragment-Shader steckt.
+
+
+
+
+
 
 
 == Antialiasing
