@@ -16,48 +16,47 @@ License    : BSD License,
 
 
 void GridObject::create(QOpenGLShaderProgram * shaderProgramm) {
-	// create the grid lines
-
 	const unsigned int N = 100; // number of lines to draw in x and z direction
-	float width = 500; // grid is centered around origin, and expands to width/2 in -x, +x, -z and +z direction
 	// width is in "space units", whatever that means for you (meters, km, nanometers...)
+	float width = 500;
+	// grid is centered around origin, and expands to width/2 in -x, +x, -z and +z direction
 
 	// create a temporary buffer that will contain the x-z coordinates of all grid lines
 	std::vector<float>			gridVertexBufferData;
 	// we have 2*N lines, each line requires two vertexes, with two floats (x and z coordinates) each.
-	m_NVertexes = 2*N*2*2;
-	gridVertexBufferData.resize(m_NVertexes);
+	m_bufferSize = 2*N*2*2;
+	gridVertexBufferData.resize(m_bufferSize);
 	float * gridVertexBufferPtr = gridVertexBufferData.data();
 	// compute grid lines with z = const
 	float x1 = -width*0.5;
 	float x2 = width*0.5;
-	for (unsigned int i=0; i<N; ++i, ++gridVertexBufferPtr) {
+	for (unsigned int i=0; i<N; ++i, gridVertexBufferPtr += 4) {
 		float z = width/(N-1)*i-width*0.5;
-		*gridVertexBufferPtr = x1;
-		*(++gridVertexBufferPtr) = z;
-		*(++gridVertexBufferPtr) = x2;
-		*(++gridVertexBufferPtr) = z;
+		gridVertexBufferPtr[0] = x1;
+		gridVertexBufferPtr[1] = z;
+		gridVertexBufferPtr[2] = x2;
+		gridVertexBufferPtr[3] = z;
 	}
 	// compute grid lines with x = const
 	float z1 = -width*0.5;
 	float z2 = width*0.5;
-	for (unsigned int i=0; i<N; ++i, ++gridVertexBufferPtr) {
+	for (unsigned int i=0; i<N; ++i, gridVertexBufferPtr += 4) {
 		float x = width/(N-1)*i-width*0.5;
-		*gridVertexBufferPtr = x;
-		*(++gridVertexBufferPtr) = z1;
-		*(++gridVertexBufferPtr) = x;
-		*(++gridVertexBufferPtr) = z2;
+		gridVertexBufferPtr[0] = x;
+		gridVertexBufferPtr[1] = z1;
+		gridVertexBufferPtr[2] = x;
+		gridVertexBufferPtr[3] = z2;
 	}
 
 	// Create Vertex Array Object
 	m_vao.create();		// create Vertex Array Object
-	m_vao.bind();		// sets the Vertex Array Object current to the OpenGL context so we can write attributes to it
+	m_vao.bind();		// and bind it
 
-	// Create Buffer (Do not release until VAO is created and released)
+	// Create Vertex Buffer Object
 	m_vbo.create();
 	m_vbo.bind();
 	m_vbo.setUsagePattern(QOpenGLBuffer::StaticDraw);
-	int vertexMemSize = m_NVertexes*sizeof(float);
+	int vertexMemSize = m_bufferSize*sizeof(float);
 	m_vbo.allocate(gridVertexBufferData.data(), vertexMemSize);
 
 	// layout(location = 0) = vec2 position
@@ -79,11 +78,8 @@ void GridObject::destroy() {
 
 
 void GridObject::render() {
-	// set the geometry ("position" and "color" arrays)
 	m_vao.bind();
-
-	// now draw the grid lines
-	glDrawArrays(GL_LINES, 0, m_NVertexes);
-	// release vertices again
+	// draw the grid lines, m_NVertexes = number of floats in buffer
+	glDrawArrays(GL_LINES, 0, m_bufferSize);
 	m_vao.release();
 }

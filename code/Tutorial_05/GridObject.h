@@ -36,7 +36,7 @@ public:
 	/*! Binds the buffer and paints. */
 	void render();
 
-	unsigned int				m_NVertexes;
+	unsigned int				m_bufferSize;
 
 	/*! Wraps an OpenGL VertexArrayObject, that references the vertex coordinates. */
 	QOpenGLVertexArrayObject	m_vao;

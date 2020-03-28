@@ -39,7 +39,8 @@ TestDialog::TestDialog() :
 	// *** create window container widget
 
 	QWidget *container = QWidget::createWindowContainer(m_sceneView);
-	container->setMinimumSize(QSize(1000,800));
+	container->setFocusPolicy(Qt::TabFocus);
+	container->setMinimumSize(QSize(640,400));
 
 	// *** create the layout and insert widget container
 
@@ -63,6 +64,8 @@ TestDialog::TestDialog() :
 
 	setLayout(vlay);
 
-	resize(1200,900);
+	resize(700,450);
+
+	container->setFocus();
 }
 

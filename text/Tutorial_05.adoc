@@ -322,6 +322,224 @@ Man kann testweise mal das Flag `GL_DEPTH_TEST` nicht setzen - die etwas verwirr
 ====
 
 
+== Zeichenobjekte
+
+In diesem Abschnitt geht es um die Verwaltung von Zeichenobjekten. Dies ist nicht wirklich ein Qt-Thema, da diese Art von Datenmanagement in der einen oder anderen Art in jeder OpenGL-Anwendung zu finden ist. Wen also nur die Qt-spezifischen Dinge interessieren, kann dieses Kapitel gerne überspringen.
+
+Es gibt eine wesentliche Grundregel in OpenGL:
+
+[IMPORTANT]
+====
+Wenn man effizient große Geometrien zeichnen möchte, dann muss man die Anzahl der `glDrawXXX` Aufrufe so klein wie möglich halten.
+====
+
+Ein Beispiel: wenn man z.B. 2 Würfel zeichen möchte, hat man folgende Möglichkeiten:
+
+- alle 12 Seiten einzeln Zeichen (12 `glDrawXXX` Aufrufe), z.B. als:
+    * `GL_TRIANGLES` (6 Vertices)
+    * `GL_TRIANGLE_STRIP` (4 Vertices) 
+    * `GL_QUADS` (4 Vertices)
+- jeden Würfel einzeln zeichnen (2 `glDrawXXX` Aufrufe), dabei alle Seiten des Würfels zusammen zeichnen via:
+    * `GL_TRIANGLES` (8 Vertices, 6*6 Elementindices)
+    * `GL_QUADS` (8 Vertices, 6*4 Elementindices)
+- beide Würfel zusammen zeichnen (1 `glDrawXXX` Aufruf), dabei alle Seiten beider Würfels zusammen zeichnen via:
+    * `GL_TRIANGLES` (2*8 Vertices, 2*6*6 Elementindices)
+    * `GL_QUADS` (2*8 Vertices, 2*6*4 Elementindices)
+
+Wenn man Objekte mit gemischten Flächenprimitiven hat (also z.B. Dreiecke und Rechtecke, oder Polygone), dann kann man entweder nach Flächentyp zusammenfassen und je Flächentyp ein `glDrawXXX` Aufruf ausführen, oder eben alles als Dreiecke behandeln und nur einen Zeichenaufruf verwenden. Kann man mal durch Profiling ausprobieren, was dann schneller ist. Der Speicherverbrauch spielt auch eine Rolle, da der Datentransfer zwischen CPU und GPU immer auch an der Geschwindigkeit der Speicheranbindung hängt.
+
+=== Zeichenobjekte
+
+Eine Möglichkeit, die für das Zeichnen derart gruppierter Daten benötigten Objekte, d.h. VertexArrayObject (VAO), VertexBufferObject (VBO) und ElementBufferObject (EBO), zu verwalten, ist eigene Datenhalteklassen zu verwenden. Diese sehen allgemein so aus:
+
+.Deklaration einer Zeichenobjektklasse
+[source,c++]
+----
+class DrawObject {
+public:
+	DrawObject();
+
+    // create native OpenGL objects
+    void create(QOpenGLShaderProgram * shaderProgramm);
+    // release native OpenGL objects
+	void destroy();
+
+    // actual render objects
+	void render();
+
+    // Data members to store state
+    
+    ....
+    
+
+    QOpenGLVertexArrayObject	m_vao;
+	QOpenGLBuffer				m_vbo;
+	QOpenGLBuffer				m_ebo;
+	
+	// other buffer objects
+	
+	....
+};
+----
+
+Die drei wichtigen Lebenszyklusphasen der Objekte sind durch die Funktionen `create()`, `destroy()` und `render()` abgebildet.
+
+[CAUTION]
+====
+Speichermanagement bei OpenGL Objekten sollte explizit erfolgen, und nicht im Destruktor von Klassen. Es ist beim Aufräumen im Destruktor durch die automatisiert generierte Aufrufreihenfolge der einzelnen Destruktoren schwierig sicherzustellen, dass der dazugehörige OpenGL-Kontext aktiv ist. Daher empfiehlt es sich, stets eine explizite `destroy()` Funktion zu verwenden.
+====
+
+Am Besten wird das Datenmanagement in einer Beispielimplementierung sichtbar.
+
+=== Zeichenobjekt #1: Gitterraster in X-Z Ebene
+
+Beginnen wir mit einem einfachen Beispiel: Ein Gitterraster soll auf dem Bildschirm gezeichnet werden, sozusagen als "Boden". Es werden also Linien in der X-Z-Ebene (y=0) gezeichnet, wofür der Elementtyp `GL_LINES` zum Zeichnen verwendet wird.
+
+Für jede Linie sind Start- und Endkoordinaten anzugeben, wobei die y-Koordinate eingespart werden kann.
+
+[TIP]
+====
+Man muss nicht immer alle Koordinaten (x,y,z) an den Vertexshader übergeben, wenn es nicht notwendig ist.
+====
+
+Wir stellen also den Vertexpuffer mit folgendem Schema zusammen:
+
+`x1sz1sx1ez1ex2sz2sx2ez2e...` also jeweils x und z Koordinatentuple für je Start- (s) und Endpunkt (e) einer Linie nacheinander.
+
+Diese Geometrieinformation wird in der Klasse `GridObject` zusammengestellt:
+
+.GridObject.h, Klassendeklaration
+[source,c++]
+----
+class GridObject {
+public:
+	void create(QOpenGLShaderProgram * shaderProgramm);
+	void destroy();
+
+	void render();
+
+	unsigned int				m_bufferSize;
+	QOpenGLVertexArrayObject	m_vao;
+	QOpenGLBuffer				m_vbo;
+};
+----
+
+Die Implementierung der `create()` Funktion ist das eigentlich Interessante:
+
+.GridObject.cpp:create()
+[source,c++]
+----
+void GridObject::create(QOpenGLShaderProgram * shaderProgramm) {
+	const unsigned int N = 100; // number of lines to draw in x and z direction
+	// width is in "space units", whatever that means for you (meters, km, nanometers...)
+	float width = 500;
+	// grid is centered around origin, and expands to width/2 in -x, +x, -z and +z direction
+
+	// create a temporary buffer that will contain the x-z coordinates of all grid lines
+	std::vector<float>			gridVertexBufferData;
+	// we have 2*N lines, each line requires two vertexes, with two floats (x and z coordinates) each.
+	m_bufferSize = 2*N*2;
+	gridVertexBufferData.resize(m_bufferSize);
+	float * gridVertexBufferPtr = gridVertexBufferData.data();
+	// compute grid lines with z = const
+	float x1 = -width*0.5;
+	float x2 = width*0.5;
+	for (unsigned int i=0; i<N; ++i, gridVertexBufferPtr += 4) {
+		float z = width/(N-1)*i-width*0.5;
+		gridVertexBufferPtr[0] = x1;
+		gridVertexBufferPtr[1] = z;
+		gridVertexBufferPtr[2] = x2;
+		gridVertexBufferPtr[3] = z;
+	}
+	// compute grid lines with x = const
+	float z1 = -width*0.5;
+	float z2 = width*0.5;
+	for (unsigned int i=0; i<N; ++i, gridVertexBufferPtr += 4) {
+		float x = width/(N-1)*i-width*0.5;
+		gridVertexBufferPtr[0] = x;
+		gridVertexBufferPtr[1] = z1;
+		gridVertexBufferPtr[2] = x;
+		gridVertexBufferPtr[3] = z2;
+	}
+----
+
+Im ersten Teil wird ein linearer Speicherbereich (bereitgestellt in einem `std::vector`) mit den Liniendaten gefüllt. Das Raster besteht aus Linien in X und Z Richtung (2), jeweils N Linien, und jede Linie hat einen Start- und einen Endpunkt (2) und jeder Punkt besteht aus 2 Koordinaten. Dies macht 2*N*2*2 floats (=NVertices). 
+
+[NOTE]
+====
+Es ist ok an dieser Stelle den Speicherbereich in einem temporären Vektor anzulegen, da beim Erzeugen des OpenGL-Vertexpuffers die Daten kopiert werden und der Vektor danach nicht mehr benötigt wird. Dies ist im Falle von veränderlichen Daten (siehe BoxObjekte unten) anders.
+====
+
+Im zweiten Teil der Funktion werden dann wie gehabt die OpenGL-Pufferobjekte erstellt:
+
+
+.GridObject.cpp:create(), fortgesetzt
+[source,c++]
+----
+	// Create Vertex Array Object
+	m_vao.create();		// create Vertex Array Object
+	m_vao.bind();		// and bind it
+
+	// Create Vertex Buffer Object
+	m_vbo.create();
+	m_vbo.bind();
+	m_vbo.setUsagePattern(QOpenGLBuffer::StaticDraw);
+	int vertexMemSize = m_bufferSize*sizeof(float);
+	m_vbo.allocate(gridVertexBufferData.data(), vertexMemSize);
+
+	// layout(location = 0) = vec2 position
+	shaderProgramm->enableAttributeArray(0); // array with index/id 0
+	shaderProgramm->setAttributeBuffer(0, GL_FLOAT,
+								  0 /* position/vertex offset */,
+								  2 /* two floats per position = vec2 */,
+								  0 /* vertex after vertex, no interleaving */);
+
+	m_vao.release();
+	m_vbo.release();
+}
+----
+
+Die Aufrufe von `shaderProgramm->enableAttributeArray` und `shaderProgramm->setAttributeBuffer` definieren, wie der Vertexshader auf diesen Speicherbereich zugreifen soll. Deshalb muss die Funktion `create()` auch das dazugehörige Shaderprogramm als Funktionsargument erhalten.
+
+Nachdem nun die Puffer erstellt und konfiguriert wurden, ist der Rest der Klassenimplementierung recht übersichtlich:
+
+.GridObject.cpp:destroy() und render()
+[source,c++]
+----
+void GridObject::destroy() {
+	m_vao.destroy();
+	m_vbo.destroy();
+}
+
+
+void GridObject::render() {
+	m_vao.bind();
+	// draw the grid lines, m_bufferSize = number of floats in buffer
+	glDrawArrays(GL_LINES, 0, m_bufferSize);
+	m_vao.release();
+}
+----
+
+Die Funktion `destroy()` ist sicher selbsterklärend. Und die Render-Funktion ebenso.
+
+[CAUTION]
+====
+Beachte, dass die Funktion `glDrawArrays()` als drittes Argument die Länge des Puffers als Anzahl der Elemente vom Typ des Puffers (hier GL_FLOAT) erwartet, und _nicht_ die Länge in Bytes.
+====
+
+Das Ergebnis dieses Zeichnens ist zunächst ganz nett:
+
+.Einfaches Gitterraster mit sichtbarer endlicher Ausdehnung
+image::Tutorial_05_gridplain.png[Raster,pdfwidth=8cm]
+
+Aber schöne wäre es, wenn das Gitter mit zunehmender Tiefe verblasst.
+
+=== Gitter mit Abblendung in der Tiefe
+
+Das Gitter sollte nun 
+Es gibt jetzt mehrere Möglichkeiten, 
+
+
 == Antialiasing
 
 Es gibt hier verschiedene Möglichkeiten, die wohl einfachste aus Sicht der Programmierung ist das Einschalten von Multisampling (MSAA) (siehe Erläuterung auf https://www.khronos.org/opengl/wiki/Multisampling).
