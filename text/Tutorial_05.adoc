@@ -549,7 +549,7 @@ Den Vertexshader könnte man wie folgt erweitern:
 
 layout(location = 0) in vec2 position; // input:  attribute with index '0' 
                                        //         with 2 floats (x, z coords) per vertex
-out vec4 fragColor;                    // output: computed fragmentation color
+out vec4 fragColor;                    // output: computed vertex color for shader
 
 const float FARPLANE = 50;             // threshold
 float fragDepth;                       // normalized depth value
@@ -575,17 +575,59 @@ Die Variable `gl_Position` enthält nach der Transformation die normalisierten K
 
 Für die Abblendefunktionalität ist die Entfernung des Linienstart- bzw. -endpunktes  interessant. Nun sind die z-Koordinaten dieser normalisierten Position alle sehr dicht an 1 dran. Deshalb werden sie noch skaliert (entsprechend der perspektivischen Transformationsregeln etwas wie eine Farplane). Nun kann man diese Tiefe, gespeichert in der Variable `fragDepth` nutzen, um zwischen Gitterfarbe und Hintergrundfarbe linear mit der GLSL-Funktion `mix()` zu interpolieren.
 
-
 .Gitterraster mit Vertex-basierter Abblendung
-image::Tutorial_05_grid_vertexfade.png[Raster,pdfwidth=8cm]
+image::Tutorial_05_grid_vertexshaderfade.png[Gitter, Vertexshaderfade,pdfwidth=8cm]
 
 Das Ergebnis geht schon in die richtige Richtung, aber es gibt einen unschönen Effekt, wenn man parallel zu den Linien schaut. Die Koordinaten der Endpunkte der seitlich laufenden Linien sind sehr weit weg (in der perspektivischen Projekten), sodass beide Linienenden nahezu Hintergrundfarbe bekommen. Und da die Fragmentfarbe eine lineare Interpolation zwischen den Vertexfarben ist, verschwindet die gesamte Linie.
 
 Das Problem lässt sich nur beheben, wenn man die Ablendfunktionalität in den Fragment-Shader steckt.
 
+Der Vertex-Shader wird dadurch total einfach:
 
+.grid.vert (Vertexshader)
+[source,c]
+----
+#version 330
 
+// GLSL version 3.3
+// vertex shader
 
+layout(location = 0) in vec2 position; // input:  attribute with index '0'
+                                       //         with 2 floats (x, z coords) per vertex
+
+uniform mat4 worldToView;              // parameter: world to view transformation matrix
+
+void main() {
+  gl_Position = worldToView * vec4(position.x, 0.0, position.y, 1.0);
+}
+----
+
+Letztlich werden nur noch die Vertex-Koordinaten transformiert und an den Shader weitergereicht. Der sieht dann so aus:
+
+.grid.frag (Fragmentshader)
+[source,c]
+----
+#version 330
+
+out vec4 fColor;
+
+uniform vec3 gridColor;                // parameter: grid color as rgb triple
+uniform vec3 backColor;                // parameter: background color as rgb triple
+const float FARPLANE = 150;            // threshold
+
+void main() {
+  float distanceFromCamera = (gl_FragCoord.z / gl_FragCoord.w) / FARPLANE;
+  distanceFromCamera = max(0, min(1, distanceFromCamera)); // clip to valid value range
+  fColor = vec4( mix(gridColor, backColor, distanceFromCamera), 1.0 );
+}
+----
+
+Die Variable `gl_FragCoord` wird für jeden einzelnen Bildpunkt von OpenGL bereitgestellt und enthält die Normalized Device Coordinates (NDC). Wenn man beachtet, dass diese Koordinaten durch Division mit w berechnet werden, dann bekommt man die originale z-Koordinate durch Multiplikation mit w. Das ganze wird dann noch mit einem Begrenzungswert (`FARPLANE`) skaliert. Falls bei der Definition des View-Frustums andere Werte für Near/Farplane verwendet werden, muss man die Formel entsprechend anpassen.
+
+Damit sieht das Ergebnis dann wie gewünscht aus:
+
+.Gitterraster mit Fragment-basierter Abblendung
+image::Tutorial_05_grid_fragshaderfade.png[Gitter, Fragmentshaderfade,pdfwidth=8cm]
 
 
 

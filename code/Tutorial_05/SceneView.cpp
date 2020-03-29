@@ -27,6 +27,7 @@ SceneView::SceneView() :
 	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_D);
 	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_Q);
 	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_E);
+	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_Shift);
 
 	// *** create scene (no OpenGL calls are being issued below, just the data structures are created.
 
@@ -224,8 +225,10 @@ void SceneView::processInput() {
 	// get and reset time delta
 	double timeSinceLastCheck = 100;//m_keyboardMouseHandler.timeDelta(); // in ms
 
-	static const float transSpeed = 0.01f;
-	static const float rotatationSpeed   = 0.01f;
+	float transSpeed = 0.01f;
+	if (m_keyboardMouseHandler.keyDown(Qt::Key_Shift))
+		transSpeed = 0.001f;
+	static const float rotatationSpeed   = 0.004f;
 
 	// Handle rotations
 	// get and reset mouse delta (pass current mouse cursor position)

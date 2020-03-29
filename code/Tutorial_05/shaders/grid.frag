@@ -7,7 +7,7 @@ uniform vec3 backColor;                // parameter: background color as rgb tri
 const float FARPLANE = 150;            // threshold
 
 void main() {
-  float distanceFromCamera = 1.0 - (gl_FragCoord.z / gl_FragCoord.w) / FARPLANE;
+  float distanceFromCamera = (gl_FragCoord.z / gl_FragCoord.w) / FARPLANE;
   distanceFromCamera = max(0, min(1, distanceFromCamera)); // clip to valid value range
-  fColor = vec4( mix(backColor, gridColor, distanceFromCamera), 1.0 );
+  fColor = vec4( mix(gridColor, backColor, distanceFromCamera), 1.0 );
 }
