@@ -36,7 +36,7 @@ SceneView::SceneView() :
 	m_shaderPrograms.append( blocks );
 
 	// Shaderprogram #1 : grid (painting grid lines)
-	ShaderProgram grid(":/shaders/grid.vert",":/shaders/simple.frag");
+	ShaderProgram grid(":/shaders/grid.vert",":/shaders/grid.frag");
 	grid.m_uniformNames.append("worldToView"); // mat4
 	grid.m_uniformNames.append("gridColor"); // vec3
 	grid.m_uniformNames.append("backColor"); // vec3
@@ -111,7 +111,7 @@ void SceneView::paintGL() {
 	QVector3D backColor(0.1f, 0.15f, 0.3f);
 	glClearColor(0.1f, 0.15f, 0.3f, 1.0f);
 
-	QVector3D gridColor(0.3f, 0.3f, 0.6f);
+	QVector3D gridColor(0.5f, 0.5f, 0.7f);
 
 	// *** render box
 	SHADER(0)->bind();
@@ -224,8 +224,8 @@ void SceneView::processInput() {
 	// get and reset time delta
 	double timeSinceLastCheck = 100;//m_keyboardMouseHandler.timeDelta(); // in ms
 
-	static const float transSpeed = 0.001f;
-	static const float rotatationSpeed   = 0.001f;
+	static const float transSpeed = 0.01f;
+	static const float rotatationSpeed   = 0.01f;
 
 	// Handle rotations
 	// get and reset mouse delta (pass current mouse cursor position)
