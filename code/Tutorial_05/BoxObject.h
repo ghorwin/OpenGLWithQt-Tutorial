@@ -19,7 +19,7 @@ QT_BEGIN_NAMESPACE
 class QOpenGLShaderProgram;
 QT_END_NAMESPACE
 
-#include "RectMesh.h"
+#include "BoxMesh.h"
 
 class BoxObject {
 public:
@@ -31,9 +31,9 @@ public:
 
 	void render();
 
-	std::vector<RectMesh>		m_rectangles;
+	std::vector<BoxMesh>		m_boxes;
 
-	std::vector<float>			m_vertexBufferData;
+	std::vector<Vertex>			m_vertexBufferData;
 	std::vector<GLuint>			m_elementBufferData;
 
 	/*! Wraps an OpenGL VertexArrayObject, that references the vertex coordinates and color buffers. */

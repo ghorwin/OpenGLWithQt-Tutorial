@@ -19,7 +19,6 @@ License    : BSD License,
 #include "KeyboardMouseHandler.h"
 #include "GridObject.h"
 #include "BoxObject.h"
-#include "RectMesh.h"
 #include "Camera.h"
 
 /*! The class SceneView extends the primitive OpenGLWindow

@@ -45,9 +45,9 @@ SceneView::SceneView() :
 
 	// *** initialize camera placement and model placement in the world
 
-	// move objects a little bit to the back of the scene (negative z coordinates = further back)
-	m_transform.translate(0.0f, 0.0f, -5.0f);
-	m_camera.translate(0,5,0);
+	// move camera a little back and up
+	m_camera.translate(0,15,25);
+	// look slightly down
 	m_camera.rotate(-30, m_camera.right());
 }
 

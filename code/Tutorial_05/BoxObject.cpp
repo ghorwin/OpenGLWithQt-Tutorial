@@ -19,60 +19,29 @@ BoxObject::BoxObject() :
 	m_elementBuffer(QOpenGLBuffer::IndexBuffer)
 {
 
-	// Front Verticies
-	#define VERTEX_FTR QVector3D( 0.5f,  0.5f,  0.5f)
-	#define VERTEX_FTL QVector3D(-0.5f,  0.5f,  0.5f)
-	#define VERTEX_FBL QVector3D(-0.5f, -0.0f,  0.5f)
-	#define VERTEX_FBR QVector3D( 0.5f, -0.0f,  0.5f)
+	// create a box
+	BoxMesh b(5,2,3);
+	b.setFaceColors({Qt::blue, Qt::red, Qt::yellow, Qt::green, Qt::magenta, Qt::darkCyan});
+	m_boxes.push_back( b);
 
-	// Back Verticies
-	#define VERTEX_BTR QVector3D( 0.5f,  0.5f, -0.5f)
-	#define VERTEX_BTL QVector3D(-0.5f,  0.5f, -0.5f)
-	#define VERTEX_BBL QVector3D(-0.5f, -0.0f, -0.5f)
-	#define VERTEX_BBR QVector3D( 0.5f, -0.0f, -0.5f)
+	// n count
+	unsigned int NCubes = m_boxes.size();
 
-	// front
-	m_rectangles.push_back( RectMesh(VERTEX_FBL, VERTEX_FBR, VERTEX_FTL, Qt::red ));
-	// right
-	m_rectangles.push_back( RectMesh(VERTEX_FBR, VERTEX_BBR, VERTEX_FTR, Qt::green ));
-	// back
-	m_rectangles.push_back( RectMesh(VERTEX_BBR, VERTEX_BBL, VERTEX_BTR, Qt::blue ));
-	// left
-	m_rectangles.push_back( RectMesh(VERTEX_BBL, VERTEX_FBL, VERTEX_BTL, Qt::yellow ));
-	// top
-	m_rectangles.push_back( RectMesh(VERTEX_FTL, VERTEX_FTR, VERTEX_BTL, Qt::cyan ));
-	// bottom
-	m_rectangles.push_back( RectMesh(VERTEX_BBL, VERTEX_BBR, VERTEX_FBL, Qt::magenta ));
-
-	#undef VERTEX_BBR
-	#undef VERTEX_BBL
-	#undef VERTEX_BTL
-	#undef VERTEX_BTR
-
-	#undef VERTEX_FBR
-	#undef VERTEX_FBL
-	#undef VERTEX_FTL
-	#undef VERTEX_FTR
-
-	// face count
-	unsigned int Nrects = m_rectangles.size();
-
-	// we have 6 sides of a cube, and each side needs 4 vertexes, and each vertex requires 2 vectors3d of float
-	unsigned int sizeOfVertex = 2*3; // number of floats
-	m_vertexBufferData.resize(Nrects*4*sizeOfVertex);
+	// we have 6 sides of a cube, and each side needs 4 vertexes
+	m_vertexBufferData.resize(NCubes*BoxMesh::VertexCount);
 
 	// we have 6 sides of cube, and each side has two triangles, with 3 indexes each
-	m_elementBufferData.resize(Nrects*2*3);
+	m_elementBufferData.resize(NCubes*6*BoxMesh::IndexCount);
 
 	// update the buffers
-	float * vertexBuffer = m_vertexBufferData.data();
+	Vertex * vertexBuffer = m_vertexBufferData.data();
 	unsigned int vertexCount = 0;
 	GLuint * elementBuffer = m_elementBufferData.data();
 	unsigned int elementCount = 0;
-	for (unsigned int i=0; i<m_rectangles.size(); ++i) {
-		m_rectangles[i].copy2Buffer(vertexBuffer, vertexCount, elementBuffer, elementCount);
-		vertexCount += 4;
-		elementCount += 2;
+	for (unsigned int i=0; i<m_boxes.size(); ++i) {
+		m_boxes[i].copy2Buffer(vertexBuffer, m_vertexBufferData.size()-vertexCount, elementBuffer, m_elementBufferData.size()-elementCount, vertexCount);
+		vertexCount += BoxMesh::VertexCount;
+		elementCount += BoxMesh::IndexCount;
 	}
 }
 
@@ -89,7 +58,7 @@ void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
 	m_vertexBuffer.create();
 	m_vertexBuffer.bind();
 	m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
-	int vertexMemSize = m_vertexBufferData.size()*sizeof(float);
+	int vertexMemSize = m_vertexBufferData.size()*sizeof(Vertex);
 	m_vertexBuffer.allocate(m_vertexBufferData.data(), vertexMemSize);
 
 	m_elementBuffer.create();
@@ -106,10 +75,10 @@ void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
 
 	// index 0 = position
 	shaderProgramm->enableAttributeArray(0); // array with index/id 0
-	shaderProgramm->setAttributeBuffer(0, GL_FLOAT, 0, 3, sizeof(float)*6);
+	shaderProgramm->setAttributeBuffer(0, GL_FLOAT, 0, 3, sizeof(Vertex));
 	// index 1 = color
 	shaderProgramm->enableAttributeArray(1); // array with index/id 1
-	shaderProgramm->setAttributeBuffer(1, GL_FLOAT, sizeof(QVector3D), 3, sizeof(float)*6);
+	shaderProgramm->setAttributeBuffer(1, GL_FLOAT, offsetof(Vertex, r), 3, sizeof(Vertex));
 
 	m_vao.release();
 	// Release (unbind) all

@@ -41,11 +41,11 @@ win32 {
 }
 
 SOURCES += \
+		BoxMesh.cpp \
 		BoxObject.cpp \
 		GridObject.cpp \
 		KeyboardMouseHandler.cpp \
 		OpenGLWindow.cpp \
-		RectMesh.cpp \
 		SceneView.cpp \
 		ShaderProgram.cpp \
 		TestDialog.cpp \
@@ -53,16 +53,17 @@ SOURCES += \
 		main.cpp
 
 HEADERS += \
+	BoxMesh.h \
 	BoxObject.h \
 	Camera.h \
 	GridObject.h \
 	KeyboardMouseHandler.h \
 	OpenGLWindow.h \
-	RectMesh.h \
 	SceneView.h \
 	ShaderProgram.h \
 	TestDialog.h \
-	Transform3D.h
+	Transform3D.h \
+	Vertex.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
