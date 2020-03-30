@@ -3182,6 +3182,41 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 <div class="paragraph">
 <p>Die Multiplikation mit der Modell-Transformationsmatrix (<code>m_transform</code>) ist eigentlich nicht zwingend notwendig, dient aber der Demonstration der Animationsfähigkeit (konstantes Rotieren der Welt um die y-Achse). Dazu den <code>#if 0</code> Block in <code>paintGL()</code> nach <code>#if 1</code> ändern.</p>
 </div>
+<div class="paragraph">
+<p>Die ganze Arbeit der Konfiguration und Erstellung der Translations, Rotations, und Skalierungsmatrizen macht die Klasse <code>Transform3D</code>. In der Funktion <code>toMatrix()</code> werden diese einzelnen Matrizen zur Gesamtmatrix kombiniert (implementiert mit Lazy-Evaluation):</p>
+</div>
+<div class="listingblock">
+<div class="title">Transform3D.cpp:toMatrix()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">const</span> <span class="n">QMatrix4x4</span> <span class="o">&amp;</span><span class="n">Transform3D</span><span class="o">::</span><span class="n">toMatrix</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">m_dirty</span><span class="p">)</span> <span class="p">{</span>
+		<span class="n">m_dirty</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+		<span class="n">m_world</span><span class="p">.</span><span class="n">setToIdentity</span><span class="p">();</span>
+		<span class="n">m_world</span><span class="p">.</span><span class="n">translate</span><span class="p">(</span><span class="n">m_translation</span><span class="p">);</span>
+		<span class="n">m_world</span><span class="p">.</span><span class="n">rotate</span><span class="p">(</span><span class="n">m_rotation</span><span class="p">);</span>
+		<span class="n">m_world</span><span class="p">.</span><span class="n">scale</span><span class="p">(</span><span class="n">m_scale</span><span class="p">);</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="n">m_world</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Kamera-Klasse ist davon abgeleitet und beinhaltet letztlich nur die inverse Transformation vom Welten- zum Beobachterkoordinatensystem (siehe auch <a href="https://www.trentreed.net/blog/qt5-opengl-part-3b-camera-control" class="bare">https://www.trentreed.net/blog/qt5-opengl-part-3b-camera-control</a>). Im Prinzip hilft es sich vorzustellen, dass die Kamera ein positioniertes und ausgerichtetes Objekt selbst ist. Nun wollen wir dieses Kamera-Objekt nicht mittels einer Model2World-Transformationsmatrix in das Weltenkoordinatensystem hieven, sondern uns eher aus der Weltsicht in die lokale Sicht des Kamera-Objekts bewegen. Dies bedeuted, wir müssen alle Weltkoordinaten mittels der Inversen der Kamera-Objekt-Model2World-Matrix multiplizieren. Das macht dann die entsprechend spezialisiert <code>toMatrix()</code>-Funktion:</p>
+</div>
+<div class="listingblock">
+<div class="title">Camera.h:toMatrix()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">const</span> <span class="n">QMatrix4x4</span> <span class="o">&amp;</span> <span class="n">toMatrix</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">m_dirty</span><span class="p">)</span> <span class="p">{</span>
+		<span class="n">m_dirty</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+		<span class="n">m_world</span><span class="p">.</span><span class="n">setToIdentity</span><span class="p">();</span>
+		<span class="n">m_world</span><span class="p">.</span><span class="n">rotate</span><span class="p">(</span><span class="n">m_rotation</span><span class="p">.</span><span class="n">conjugated</span><span class="p">());</span>
+		<span class="n">m_world</span><span class="p">.</span><span class="n">translate</span><span class="p">(</span><span class="o">-</span><span class="n">m_translation</span><span class="p">);</span>
+	<span class="p">}</span>
+	<span class="k">return</span> <span class="n">m_world</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
 </div>
 </div>
 <div class="sect2">

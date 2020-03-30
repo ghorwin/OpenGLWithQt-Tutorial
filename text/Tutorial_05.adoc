@@ -458,6 +458,38 @@ void SceneView::updateWorld2ViewMatrix() {
 
 Die Multiplikation mit der Modell-Transformationsmatrix (`m_transform`) ist eigentlich nicht zwingend notwendig, dient aber der Demonstration der Animationsfähigkeit (konstantes Rotieren der Welt um die y-Achse). Dazu den `#if 0` Block in `paintGL()` nach `#if 1` ändern.
 
+Die ganze Arbeit der Konfiguration und Erstellung der Translations, Rotations, und Skalierungsmatrizen macht die Klasse `Transform3D`. In der Funktion `toMatrix()` werden diese einzelnen Matrizen zur Gesamtmatrix kombiniert (implementiert mit Lazy-Evaluation):
+
+.Transform3D.cpp:toMatrix()
+[source,c++]
+----
+const QMatrix4x4 &Transform3D::toMatrix() const {
+	if (m_dirty) {
+		m_dirty = false;
+		m_world.setToIdentity();
+		m_world.translate(m_translation);
+		m_world.rotate(m_rotation);
+		m_world.scale(m_scale);
+	}
+	return m_world;
+}
+----
+
+Die Kamera-Klasse ist davon abgeleitet und beinhaltet letztlich nur die inverse Transformation vom Welten- zum Beobachterkoordinatensystem (siehe auch https://www.trentreed.net/blog/qt5-opengl-part-3b-camera-control). Im Prinzip hilft es sich vorzustellen, dass die Kamera ein positioniertes und ausgerichtetes Objekt selbst ist. Nun wollen wir dieses Kamera-Objekt nicht mittels einer Model2World-Transformationsmatrix in das Weltenkoordinatensystem hieven, sondern uns eher aus der Weltsicht in die lokale Sicht des Kamera-Objekts bewegen. Dies bedeuted, wir müssen alle Weltkoordinaten mittels der Inversen der Kamera-Objekt-Model2World-Matrix multiplizieren. Das macht dann die entsprechend spezialisiert `toMatrix()`-Funktion:
+
+.Camera.h:toMatrix()
+[source,c++]
+----
+const QMatrix4x4 & toMatrix() const {
+	if (m_dirty) {
+		m_dirty = false;
+		m_world.setToIdentity();
+		m_world.rotate(m_rotation.conjugated());
+		m_world.translate(-m_translation);
+	}
+	return m_world;
+}
+----
 
 
 == Zeichenobjekte
