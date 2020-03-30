@@ -347,11 +347,76 @@ Zunächst müssen wir uns den Programmauflauf der Ereignisschleife und Auswertun
 
 == Shaderprogramme
 
+Die Verwaltung der Shaderprogramme macht Qt ja eigentlich schon durch die Klasse `QOpenGLShaderProgram`. Wenn man eine weitere Wrapper-Klasse außen herum packt, dann wird der Quelltext noch deutlich übersichtlicher. In der Deklaration der Wrapper-Klasse `ShaderProgram` findet man die gekapselte Qt Klasse wieder:
+
+.ShaderProgram.h
+[source,c++]
+----
+class ShaderProgram {
+public:
+	ShaderProgram();
+	ShaderProgram(const QString & vertexShaderFilePath, const QString & fragmentShaderFilePath);
+
+	void create();
+	void destroy();
+
+	QOpenGLShaderProgram * shaderProgram() { return m_program; }
+
+    // paths to shader programs, used in create()
+	QString		m_vertexShaderFilePath;
+	QString		m_fragmentShaderFilePath;
+
+	QStringList	m_uniformNames; // uniform (variable) names
+	QList<int>	m_uniformIDs;   // uniform IDs (resolved in create())
+
+private:
+	QOpenGLShaderProgram	*m_program;
+};
+----
+
+Zur Verwaltung von Shaderprogrammen gehören auch die Variablen, die man dem Vertex- und/oder Fragment-Shaderprogramm übergeben möchte (siehe Shaderprogramme in Abschnitt "Zeichenobjekte"). Die Verwendung der Klasse sieht vor, dass man erst alle Eigenschaften setzt (Resourcen-Pfade zu den Shaderprogrammen, und die uniform-Namen im Vektor `m_uniformNames`) und dann die Funktion `create()` aufruft. Die macht dann die eigentliche Initialisierung, die in den vorangegangenen Tutorials in der `initializeGL()` Funktion gemacht wurde:
+
+.ShaderProgram.cpp:create()
+[source,c++]
+----
+void ShaderProgram::create() {
+	Q_ASSERT(m_program == nullptr);
+
+	m_program = new QOpenGLShaderProgram();
+
+	if (!m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, m_vertexShaderFilePath))
+		qDebug() << "Vertex shader errors:\n" << m_program->log();
+
+	if (!m_program->addShaderFromSourceFile(QOpenGLShader::Fragment, m_fragmentShaderFilePath))
+		qDebug() << "Fragment shader errors:\n" << m_program->log();
+
+	if (!m_program->link())
+		qDebug() << "Shader linker errors:\n" << m_program->log();
+
+	m_uniformIDs.clear();
+	for (const QString & uniformName : m_uniformNames)
+		m_uniformIDs.append( m_program->uniformLocation(uniformName));
+}
+----
+Dank der netten Hilfsfunktionen `QOpenGLShaderProgram::addShaderFromSourceFile()` und `QOpenGLShaderProgram::uniformLocation()` ist das auch recht übersichtlich. Die Fehlerbehandlung könnte noch besser sein, aber das kann man ja schnell nachrüsten.
+[CAUTION]
+====
+Beim Aufruf von `QOpenGLShaderProgram::addShaderFromSourceFile()` das erste Argument beachten, welches den Typ des Shaderprogramms festlegt!
+====
+
+Die Funktion `uniformLocation()` sucht in beiden Shaderprogrammen nach `uniform` Deklarationen, also Variablen, die unabhängig von Vertex oder Fragment dem Shaderprogramm zur Verfügung stehen. Diese werden beim compilieren und linken durchnummeriert und den zu einem uniform-Variablennamen passenden Index kann man mit `uniformLocation()` ermitteln. 
+
+Bei der Verwendung des Shaders kann man dann mit https://doc.qt.io/qt-5/qopenglshaderprogram.html#setUniformValue[setUniformValue()] den entsprechenden Wert setzen (siehe auch Shaderprogramm-Beispiele im Abschnitt "Zeichenobjekte"). 
+
+Die Shaderprogramme wissen selbst nicht, für welche Objekte sie zum Zeichnen gebraucht werden. Auch werden die Variablen (uniforms), die sie zur Funktion benötigen, meist woanders gespeichert. Daher gibt es in der Klasse nicht mehr zu tun.
+
 == Transformationsmatrizen und Kamera
 
 == Zeichenobjekte
 
 In diesem Abschnitt geht es um die Verwaltung von Zeichenobjekten. Dies ist nicht wirklich ein Qt-Thema, da diese Art von Datenmanagement in der einen oder anderen Art in jeder OpenGL-Anwendung zu finden ist. Wen also nur die Qt-spezifischen Dinge interessieren, kann dieses Kapitel gerne überspringen.
+
+=== Effizientes Zeichnen großer Geometrien
 
 Es gibt eine wesentliche Grundregel in OpenGL:
 
@@ -375,7 +440,7 @@ Ein Beispiel: wenn man z.B. 2 Würfel zeichen möchte, hat man folgende Möglich
 
 Wenn man Objekte mit gemischten Flächenprimitiven hat (also z.B. Dreiecke und Rechtecke, oder Polygone), dann kann man entweder nach Flächentyp zusammenfassen und je Flächentyp ein `glDrawXXX` Aufruf ausführen, oder eben alles als Dreiecke behandeln und nur einen Zeichenaufruf verwenden. Kann man mal durch Profiling ausprobieren, was dann schneller ist. Der Speicherverbrauch spielt auch eine Rolle, da der Datentransfer zwischen CPU und GPU immer auch an der Geschwindigkeit der Speicheranbindung hängt.
 
-=== Zeichenobjekte
+=== Verwaltung von Zeichenobjekten
 
 Eine Möglichkeit, die für das Zeichnen derart gruppierter Daten benötigten Objekte, d.h. VertexArrayObject (VAO), VertexBufferObject (VBO) und ElementBufferObject (EBO), zu verwalten, ist eigene Datenhalteklassen zu verwenden. Diese sehen allgemein so aus:
 
@@ -395,9 +460,7 @@ public:
 	void render();
 
     // Data members to store state
-    
     ....
-    
 
     QOpenGLVertexArrayObject	m_vao;
 	QOpenGLBuffer				m_vbo; // Vertex buffer

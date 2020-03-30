@@ -176,9 +176,10 @@ table {
 <li><a href="#_transformationsmatrizen_und_kamera">5.6. Transformationsmatrizen und Kamera</a></li>
 <li><a href="#_zeichenobjekte">5.7. Zeichenobjekte</a>
 <ul class="sectlevel3">
-<li><a href="#_zeichenobjekte_2">5.7.1. Zeichenobjekte</a></li>
-<li><a href="#_zeichenobjekt_1_gitterraster_in_x_z_ebene">5.7.2. Zeichenobjekt #1: Gitterraster in X-Z Ebene</a></li>
-<li><a href="#_gitter_mit_abblendung_in_der_tiefe">5.7.3. Gitter mit Abblendung in der Tiefe</a></li>
+<li><a href="#_effizientes_zeichnen_großer_geometrien">5.7.1. Effizientes Zeichnen großer Geometrien</a></li>
+<li><a href="#_verwaltung_von_zeichenobjekten">5.7.2. Verwaltung von Zeichenobjekten</a></li>
+<li><a href="#_zeichenobjekt_1_gitterraster_in_x_z_ebene">5.7.3. Zeichenobjekt #1: Gitterraster in X-Z Ebene</a></li>
+<li><a href="#_gitter_mit_abblendung_in_der_tiefe">5.7.4. Gitter mit Abblendung in der Tiefe</a></li>
 </ul>
 </li>
 <li><a href="#_antialiasing">5.8. Antialiasing</a></li>
@@ -771,7 +772,7 @@ table {
 	<span class="p">}</span>
 
 	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">m_program</span><span class="o">-&gt;</span><span class="n">addShaderFromSourceFile</span><span class="p">(</span>
-	<span class="n">QOpenGLShader</span><span class="o">::</span><span class="n">Fragment</span><span class="p">,</span> <span class="s">":/shaders/uniform_color.frag"</span><span class="p">))</span>
+	    <span class="n">QOpenGLShader</span><span class="o">::</span><span class="n">Fragment</span><span class="p">,</span> <span class="s">":/shaders/uniform_color.frag"</span><span class="p">))</span>
 	<span class="p">{</span>
 		<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Fragment shader errors :</span><span class="se">\n</span><span class="s">"</span> <span class="o">&lt;&lt;</span> <span class="n">m_program</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">();</span>
 	<span class="p">}</span>
@@ -3010,7 +3011,86 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </div>
 <div class="sect2">
 <h3 id="_shaderprogramme_2">5.5. Shaderprogramme</h3>
+<div class="paragraph">
+<p>Die Verwaltung der Shaderprogramme macht Qt ja eigentlich schon durch die Klasse <code>QOpenGLShaderProgram</code>. Wenn man eine weitere Wrapper-Klasse außen herum packt, dann wird der Quelltext noch deutlich übersichtlicher. In der Deklaration der Wrapper-Klasse <code>ShaderProgram</code> findet man die gekapselte Qt Klasse wieder:</p>
+</div>
+<div class="listingblock">
+<div class="title">ShaderProgram.h</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">class</span> <span class="nc">ShaderProgram</span> <span class="p">{</span>
+<span class="nl">public:</span>
+	<span class="n">ShaderProgram</span><span class="p">();</span>
+	<span class="n">ShaderProgram</span><span class="p">(</span><span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">vertexShaderFilePath</span><span class="p">,</span> <span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">fragmentShaderFilePath</span><span class="p">);</span>
 
+	<span class="kt">void</span> <span class="n">create</span><span class="p">();</span>
+	<span class="kt">void</span> <span class="n">destroy</span><span class="p">();</span>
+
+	<span class="n">QOpenGLShaderProgram</span> <span class="o">*</span> <span class="n">shaderProgram</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_program</span><span class="p">;</span> <span class="p">}</span>
+
+    <span class="c1">// paths to shader programs, used in create()</span>
+	<span class="n">QString</span>		<span class="n">m_vertexShaderFilePath</span><span class="p">;</span>
+	<span class="n">QString</span>		<span class="n">m_fragmentShaderFilePath</span><span class="p">;</span>
+
+	<span class="n">QStringList</span>	<span class="n">m_uniformNames</span><span class="p">;</span> <span class="c1">// uniform (variable) names</span>
+	<span class="n">QList</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span>	<span class="n">m_uniformIDs</span><span class="p">;</span>   <span class="c1">// uniform IDs (resolved in create())</span>
+
+<span class="nl">private:</span>
+	<span class="n">QOpenGLShaderProgram</span>	<span class="o">*</span><span class="n">m_program</span><span class="p">;</span>
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Zur Verwaltung von Shaderprogrammen gehören auch die Variablen, die man dem Vertex- und/oder Fragment-Shaderprogramm übergeben möchte (siehe Shaderprogramme in Abschnitt "Zeichenobjekte"). Die Verwendung der Klasse sieht vor, dass man erst alle Eigenschaften setzt (Resourcen-Pfade zu den Shaderprogrammen, und die uniform-Namen im Vektor <code>m_uniformNames</code>) und dann die Funktion <code>create()</code> aufruft. Die macht dann die eigentliche Initialisierung, die in den vorangegangenen Tutorials in der <code>initializeGL()</code> Funktion gemacht wurde:</p>
+</div>
+<div class="listingblock">
+<div class="title">ShaderProgram.cpp:create()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">ShaderProgram</span><span class="o">::</span><span class="n">create</span><span class="p">()</span> <span class="p">{</span>
+	<span class="n">Q_ASSERT</span><span class="p">(</span><span class="n">m_program</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">);</span>
+
+	<span class="n">m_program</span> <span class="o">=</span> <span class="k">new</span> <span class="n">QOpenGLShaderProgram</span><span class="p">();</span>
+
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">m_program</span><span class="o">-&gt;</span><span class="n">addShaderFromSourceFile</span><span class="p">(</span><span class="n">QOpenGLShader</span><span class="o">::</span><span class="n">Vertex</span><span class="p">,</span> <span class="n">m_vertexShaderFilePath</span><span class="p">))</span>
+		<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Vertex shader errors:</span><span class="se">\n</span><span class="s">"</span> <span class="o">&lt;&lt;</span> <span class="n">m_program</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">();</span>
+
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">m_program</span><span class="o">-&gt;</span><span class="n">addShaderFromSourceFile</span><span class="p">(</span><span class="n">QOpenGLShader</span><span class="o">::</span><span class="n">Fragment</span><span class="p">,</span> <span class="n">m_fragmentShaderFilePath</span><span class="p">))</span>
+		<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Fragment shader errors:</span><span class="se">\n</span><span class="s">"</span> <span class="o">&lt;&lt;</span> <span class="n">m_program</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">();</span>
+
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">m_program</span><span class="o">-&gt;</span><span class="n">link</span><span class="p">())</span>
+		<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Shader linker errors:</span><span class="se">\n</span><span class="s">"</span> <span class="o">&lt;&lt;</span> <span class="n">m_program</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">();</span>
+
+	<span class="n">m_uniformIDs</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+	<span class="k">for</span> <span class="p">(</span><span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">uniformName</span> <span class="o">:</span> <span class="n">m_uniformNames</span><span class="p">)</span>
+		<span class="n">m_uniformIDs</span><span class="p">.</span><span class="n">append</span><span class="p">(</span> <span class="n">m_program</span><span class="o">-&gt;</span><span class="n">uniformLocation</span><span class="p">(</span><span class="n">uniformName</span><span class="p">));</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Dank der netten Hilfsfunktionen <code>QOpenGLShaderProgram::addShaderFromSourceFile()</code> und <code>QOpenGLShaderProgram::uniformLocation()</code> ist das auch recht übersichtlich. Die Fehlerbehandlung könnte noch besser sein, aber das kann man ja schnell nachrüsten.</p>
+</div>
+<div class="admonitionblock caution">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-caution" title="Caution"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Beim Aufruf von <code>QOpenGLShaderProgram::addShaderFromSourceFile()</code> das erste Argument beachten, welches den Typ des Shaderprogramms festlegt!</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Die Funktion <code>uniformLocation()</code> sucht in beiden Shaderprogrammen nach <code>uniform</code> Deklarationen, also Variablen, die unabhängig von Vertex oder Fragment dem Shaderprogramm zur Verfügung stehen. Diese werden beim compilieren und linken durchnummeriert und den zu einem uniform-Variablennamen passenden Index kann man mit <code>uniformLocation()</code> ermitteln.</p>
+</div>
+<div class="paragraph">
+<p>Bei der Verwendung des Shaders kann man dann mit <a href="https://doc.qt.io/qt-5/qopenglshaderprogram.html#setUniformValue">setUniformValue()</a> den entsprechenden Wert setzen (siehe auch Shaderprogramm-Beispiele im Abschnitt "Zeichenobjekte").</p>
+</div>
+<div class="paragraph">
+<p>Die Shaderprogramme wissen selbst nicht, für welche Objekte sie zum Zeichnen gebraucht werden. Auch werden die Variablen (uniforms), die sie zur Funktion benötigen, meist woanders gespeichert. Daher gibt es in der Klasse nicht mehr zu tun.</p>
+</div>
 </div>
 <div class="sect2">
 <h3 id="_transformationsmatrizen_und_kamera">5.6. Transformationsmatrizen und Kamera</h3>
@@ -3021,6 +3101,8 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 <div class="paragraph">
 <p>In diesem Abschnitt geht es um die Verwaltung von Zeichenobjekten. Dies ist nicht wirklich ein Qt-Thema, da diese Art von Datenmanagement in der einen oder anderen Art in jeder OpenGL-Anwendung zu finden ist. Wen also nur die Qt-spezifischen Dinge interessieren, kann dieses Kapitel gerne überspringen.</p>
 </div>
+<div class="sect3">
+<h4 id="_effizientes_zeichnen_großer_geometrien">5.7.1. Effizientes Zeichnen großer Geometrien</h4>
 <div class="paragraph">
 <p>Es gibt eine wesentliche Grundregel in OpenGL:</p>
 </div>
@@ -3090,8 +3172,9 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 <div class="paragraph">
 <p>Wenn man Objekte mit gemischten Flächenprimitiven hat (also z.B. Dreiecke und Rechtecke, oder Polygone), dann kann man entweder nach Flächentyp zusammenfassen und je Flächentyp ein <code>glDrawXXX</code> Aufruf ausführen, oder eben alles als Dreiecke behandeln und nur einen Zeichenaufruf verwenden. Kann man mal durch Profiling ausprobieren, was dann schneller ist. Der Speicherverbrauch spielt auch eine Rolle, da der Datentransfer zwischen CPU und GPU immer auch an der Geschwindigkeit der Speicheranbindung hängt.</p>
 </div>
+</div>
 <div class="sect3">
-<h4 id="_zeichenobjekte_2">5.7.1. Zeichenobjekte</h4>
+<h4 id="_verwaltung_von_zeichenobjekten">5.7.2. Verwaltung von Zeichenobjekten</h4>
 <div class="paragraph">
 <p>Eine Möglichkeit, die für das Zeichnen derart gruppierter Daten benötigten Objekte, d.h. VertexArrayObject (VAO), VertexBufferObject (VBO) und ElementBufferObject (EBO), zu verwalten, ist eigene Datenhalteklassen zu verwenden. Diese sehen allgemein so aus:</p>
 </div>
@@ -3111,9 +3194,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 	<span class="kt">void</span> <span class="n">render</span><span class="p">();</span>
 
     <span class="c1">// Data members to store state</span>
-
     <span class="p">....</span>
-
 
     <span class="n">QOpenGLVertexArrayObject</span>	<span class="n">m_vao</span><span class="p">;</span>
 	<span class="n">QOpenGLBuffer</span>				<span class="n">m_vbo</span><span class="p">;</span> <span class="c1">// Vertex buffer</span>
@@ -3147,7 +3228,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_zeichenobjekt_1_gitterraster_in_x_z_ebene">5.7.2. Zeichenobjekt #1: Gitterraster in X-Z Ebene</h4>
+<h4 id="_zeichenobjekt_1_gitterraster_in_x_z_ebene">5.7.3. Zeichenobjekt #1: Gitterraster in X-Z Ebene</h4>
 <div class="paragraph">
 <p>Beginnen wir mit einem einfachen Beispiel: Ein Gitterraster soll auf dem Bildschirm gezeichnet werden, sozusagen als "Boden". Es werden also Linien in der X-Z-Ebene (y=0) gezeichnet, wofür der Elementtyp <code>GL_LINES</code> zum Zeichnen verwendet wird.</p>
 </div>
@@ -3333,7 +3414,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_gitter_mit_abblendung_in_der_tiefe">5.7.3. Gitter mit Abblendung in der Tiefe</h4>
+<h4 id="_gitter_mit_abblendung_in_der_tiefe">5.7.4. Gitter mit Abblendung in der Tiefe</h4>
 <div class="paragraph">
 <p>Das Gitter sollte sich nun in weiter Ferne der Hintergrundfarbe annähern. Man könnte das zum Beispiel erreichen, wenn man die Farbe des Gitters an weiter entfernten Punkte einfärbt.</p>
 </div>

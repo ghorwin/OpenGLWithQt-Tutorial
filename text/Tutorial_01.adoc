@@ -333,7 +333,7 @@ Die nächsten Zeilen in der `initialize()` Funktion übersetzen die Shaderprogra
 	}
 
 	if (!m_program->addShaderFromSourceFile(
-	QOpenGLShader::Fragment, ":/shaders/uniform_color.frag"))
+	    QOpenGLShader::Fragment, ":/shaders/uniform_color.frag"))
 	{
 		qDebug() << "Fragment shader errors :\n" << m_program->log();
 	}
