@@ -12,7 +12,7 @@ License    : BSD License,
 #ifndef BOXMESH_H
 #define BOXMESH_H
 
-#include <qgl.h>
+#include <QtGui/QOpenGLFunctions>
 
 #include <QColor>
 #include <QMatrix4x4>

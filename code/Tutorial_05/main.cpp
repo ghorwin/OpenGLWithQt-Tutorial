@@ -16,6 +16,8 @@ License    : BSD License,
 int main(int argc, char **argv) {
 	QApplication app(argc, argv);
 
+	qsrand(time(NULL));
+
 	TestDialog dlg;
 	dlg.show();
 
