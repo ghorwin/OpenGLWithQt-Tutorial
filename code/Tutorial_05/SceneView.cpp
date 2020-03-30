@@ -212,11 +212,8 @@ void SceneView::processInput() {
 	m_inputEventReceived = false;
 //	qDebug() << "SceneView::processInput()";
 
-	QPoint currentPos = QCursor::pos();
-
 	// Handle translations
 	QVector3D translation;
-
 	if (m_keyboardMouseHandler.keyDown(Qt::Key_W)) 		translation += m_camera.forward();
 	if (m_keyboardMouseHandler.keyDown(Qt::Key_S)) 		translation -= m_camera.forward();
 	if (m_keyboardMouseHandler.keyDown(Qt::Key_A)) 		translation -= m_camera.right();
@@ -224,22 +221,18 @@ void SceneView::processInput() {
 	if (m_keyboardMouseHandler.keyDown(Qt::Key_Q)) 		translation -= m_camera.up();
 	if (m_keyboardMouseHandler.keyDown(Qt::Key_E)) 		translation += m_camera.up();
 
-	// get and reset time delta
-	double timeSinceLastCheck = 100;//m_keyboardMouseHandler.timeDelta(); // in ms
-
-	float transSpeed = 0.01f;
+	float transSpeed = 0.8f;
 	if (m_keyboardMouseHandler.keyDown(Qt::Key_Shift))
-		transSpeed = 0.001f;
-	static const float rotatationSpeed   = 0.004f;
+		transSpeed = 0.1f;
+	m_camera.translate(transSpeed * translation);
 
 	// Handle rotations
 	// get and reset mouse delta (pass current mouse cursor position)
-	QPoint mouseDelta = m_keyboardMouseHandler.mouseDelta(currentPos); // resets the internal position
+	QPoint mouseDelta = m_keyboardMouseHandler.mouseDelta(QCursor::pos()); // resets the internal position
+	static const float rotatationSpeed  = 0.4f;
 	const QVector3D LocalUp(0.0f, 1.0f, 0.0f); // same as in Camera::up()
-	m_camera.rotate(-rotatationSpeed * timeSinceLastCheck * mouseDelta.x(), LocalUp);
-	m_camera.rotate(-rotatationSpeed * timeSinceLastCheck * mouseDelta.y(), m_camera.right());
-
-	m_camera.translate(transSpeed * timeSinceLastCheck * translation);
+	m_camera.rotate(-rotatationSpeed * mouseDelta.x(), LocalUp);
+	m_camera.rotate(-rotatationSpeed * mouseDelta.y(), m_camera.right());
 
 	// finally, reset "WasPressed" key states
 	m_keyboardMouseHandler.clearWasPressedKeyStates();

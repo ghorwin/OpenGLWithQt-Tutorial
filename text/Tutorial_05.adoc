@@ -341,9 +341,93 @@ Letzterer ist eigentlich nur dann wichtig, wenn auf einzelne Tastendrücke reagi
 
 Zunächst müssen wir uns den Programmauflauf der Ereignisschleife und Auswertung der Tasteneingabe genauer anschauen.
 
+=== Die Ereignisschleife und Tastatur-/Mausevents
+Zwischen zwei Frames läuft das Programm in der Ereignisschleife. Sobald eine Taste gedrückt oder losgelassen wird, ruft Qt die entsprechende Ereignisbehandlungsfunktion auf, d.h. `keyPressEvent()` bzw. `keyReleaseEvent()`.
 
-TODO
+Wenn die betreffende Taste bekannt ist, wird der aktuelle Zustand entsprechend geändert. Nun wird noch geprüft, ob die Taste eine Szenenveränderung (bspw. Kamerabewegung) bewirkt. In diesem Fall wird durch Aufruf von `renderLater()` ein Zeichenaufruf in die Event-Schleife eingereiht (kommt beim nächsten VSync). Dann geht die Kontrolle wieder zurück an die Ereignisschleife. 
 
+[NOTE]
+====
+Es sollte wirklich nur neu gezeichnet werden, wenn dies durch Tastendruck- oder Mausbewegung notwendig wird. Dadurch, dass das `UpdateRequest` nur bei Bedarf gesendet wird, kann man wild auf der Tastatur herumhämmern, ohne dass auch nur ein OpenGL-Befehl aufgerufen wird.
+====
+
+Es ist nun möglich, dass ein weiteres Tastaturereignis eintrifft, _bevor_ das UpdateRequest-Ereignis eintritt. Bspw. könnte dies das `QEvent::KeyRelease`-Ereignis eines gerade zuvor eingetroffenen `QEvent::KeyPress`-Ereignisses der selben Taste sein. Deshalb wird der Zustand einer Taste beim `keyReleaseEvent()` auf "Wurde gedrückt" geändert, und nicht einfach wieder zurück auf "Nicht gedrückt". Sonst hätte man im Zustandsmanager keine Information mehr darüber, dass die Taste in diesem Frame kurz gedrückt wurde. Das ist aber bei hohen Bildwiederholfrequenzen hinreichend unwahrscheinlich, kann aber bei sehr komplexen Szenen (bzw. schwacher Hardware) hilfreich sein.
+
+Die Funktion, welche prüft, ob die eine Navigationstaste gedrückt wurde, könnte wie im Tutorial 05-Beispiel so aussehen:
+
+.SceneView.cpp:checkInput()
+[source,]
+----
+void SceneView::checkInput() {
+	// this function is called whenever _any_ key/mouse event was issued
+
+	// trigger key held?
+	if (m_keyboardMouseHandler.buttonDown(Qt::RightButton)) {
+		// any of the interesting keys held?
+		if (m_keyboardMouseHandler.keyDown(Qt::Key_W) ||
+			m_keyboardMouseHandler.keyDown(Qt::Key_A) ||
+			m_keyboardMouseHandler.keyDown(Qt::Key_S) ||
+			m_keyboardMouseHandler.keyDown(Qt::Key_D) ||
+			m_keyboardMouseHandler.keyDown(Qt::Key_Q) ||
+			m_keyboardMouseHandler.keyDown(Qt::Key_E))
+		{
+			m_inputEventReceived = true;
+			renderLater();
+			return;
+		}
+
+		// has the mouse been moved?
+		if (m_keyboardMouseHandler.mouseDownPos() != QCursor::pos()) {
+			m_inputEventReceived = true;
+			renderLater();
+			return;
+		}
+	}
+}
+----
+
+Die eigentliche Auswertung der Tastenzustände und Bewegung der Kamera erfolgt am Anfang der `paintGL()`-Funktion (siehe Quelltext oben). Damit der Tastaturhandler nicht immer ausgewertet werden muss, gibt es noch ein Flag `m_inputEventReceived`, welches signalisiert, dass Tastatur-/Mauseingaben getätigt wurden. Die Funktion `processInput()` wird nur dann aufgerufen, wenn dieses Flag gesetzt ist.
+
+=== Auswertung der Tastatur- und Maustasten/Mausbewegung
+
+Die Auswertung des Tastatur- und Mauszustandes erfolgt in der Funktion `processInput()`:
+
+.SceneView:processInput()
+[source,c++]
+----
+void SceneView::processInput() {
+	m_inputEventReceived = false;
+
+	// Handle translations
+	QVector3D translation;
+	if (m_keyboardMouseHandler.keyDown(Qt::Key_W)) 		translation += m_camera.forward();
+	if (m_keyboardMouseHandler.keyDown(Qt::Key_S)) 		translation -= m_camera.forward();
+	if (m_keyboardMouseHandler.keyDown(Qt::Key_A)) 		translation -= m_camera.right();
+	if (m_keyboardMouseHandler.keyDown(Qt::Key_D)) 		translation += m_camera.right();
+	if (m_keyboardMouseHandler.keyDown(Qt::Key_Q)) 		translation -= m_camera.up();
+	if (m_keyboardMouseHandler.keyDown(Qt::Key_E)) 		translation += m_camera.up();
+
+	float transSpeed = 0.8f;
+	if (m_keyboardMouseHandler.keyDown(Qt::Key_Shift))
+		transSpeed = 0.1f;
+	m_camera.translate(transSpeed * translation);
+
+	// Handle rotations
+	// get and reset mouse delta (pass current mouse cursor position)
+	QPoint mouseDelta = m_keyboardMouseHandler.mouseDelta(QCursor::pos()); // resets the internal position
+	static const float rotatationSpeed  = 0.4f;
+	const QVector3D LocalUp(0.0f, 1.0f, 0.0f); // same as in Camera::up()
+	m_camera.rotate(-rotatationSpeed * mouseDelta.x(), LocalUp);
+	m_camera.rotate(-rotatationSpeed * mouseDelta.y(), m_camera.right());
+
+	// finally, reset "WasPressed" key states
+	m_keyboardMouseHandler.clearWasPressedKeyStates();
+	// update transformation matrix
+	updateWorld2ViewMatrix();
+}
+----
+
+TODO 
 
 == Shaderprogramme
 
