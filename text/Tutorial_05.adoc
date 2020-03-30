@@ -11,7 +11,7 @@ image::Tutorial_05_linux.png[Tutorial_05,pdfwidth=8cm]
 Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_05[Tutorial_05]
 ====
 
-In diesem Tutorial gibt es viele neue Dinge verwendet:
+In diesem Tutorial werden viele neue Dinge verwendet:
 
 - zwei Modelle (eins für die Boxen und eins für das Gitter), nebst dazugehörigen, unterschiedlichen Shaderprogrammen (das vom Gitter verwendet in die Tiefe abgeblendete Farben)
 - Tiefenpuffer, sodass Gitterlinien/Boxen korrekt vor/hintereinander gezeichnet werden
@@ -342,7 +342,7 @@ Letzterer ist eigentlich nur dann wichtig, wenn auf einzelne Tastendrücke reagi
 Zunächst müssen wir uns den Programmauflauf der Ereignisschleife und Auswertung der Tasteneingabe genauer anschauen.
 
 
-
+TODO
 
 
 == Shaderprogramme
@@ -411,6 +411,54 @@ Bei der Verwendung des Shaders kann man dann mit https://doc.qt.io/qt-5/qopengls
 Die Shaderprogramme wissen selbst nicht, für welche Objekte sie zum Zeichnen gebraucht werden. Auch werden die Variablen (uniforms), die sie zur Funktion benötigen, meist woanders gespeichert. Daher gibt es in der Klasse nicht mehr zu tun.
 
 == Transformationsmatrizen und Kamera
+
+=== Transformationen
+
+Das Thema _Transformationsmatrizen_ ist in den in der Einleitung zitierten Webtutorials/Anleitungen ausreichend beschrieben. Die Format zur Transformation eines Punktes/Vektors `pModel` in den Modellkoordinaten zu den View-Koordinaten `pView` benötigt 3 Transformationsmatrizen:
+
+    pView = M_projection * M_World2Camera * M_Model2World * pModel
+    
+Dies entspricht den Schritten:
+
+1. Transformation des Punktes von Modellkoordinaten in das Weltenkoordinatensystem. Dies ist bei bewegten/animierten Objekten sinnvoll, d.h. eine Objekteigenschaft. Manchmal möchte man auch die gesamte Welt transformieren, auch dafür nimmt man die Model-zu-Welt-Transformationsmatrix.
+2. Transformation von Welt- zu Beobachterkoordinatensystem (Kamera). Ist eigentlich das Gleiche, jedoch ist die Kamera, deren Ausrichtung und Position modellunabhängig.
+3. Projektionstransformation (othogonal, perspektivisch, ...), kann z.B. durch near/far-plane und Angle-of-View definiert werden.
+
+Da die Objekte in Modell bzw. Weltkoordinaten definiert und verwaltet werden, sollte besser OpenGL die Transformationen durchführen (dafür ist es ja gemacht). Je nach Anzahl der zu transformierenden Objekte kann nun den objektspezifischen ersten Transformationsschritt in das Weltenkoordinatensystem auf der CPU durchführen (idealerweise parallelisiert). Die Transformation von Weltkoordinaten in die projezierte Darstellung macht dann OpenGL. Da diese Matrix für _alle_ Objekte gleich ist, kann man diese auch bequem den Shaderprogrammen übergeben. D.h. die Matrix:
+
+    M_World2View = M_Projection * M_World2Camera * M_Model2World
+    
+wird als uniform-Variable an die Shaderprogramme übergeben. Die Transformieren dann damit hocheffizient auf der Grafikkarte alle Vertex-Koordinaten.
+
+=== Aktualisierung der World2View Matrix
+
+Die Projektionsmatrix ändert sich bei jeder Viewport-Änderung, da sich damit zumeist das Breite/Höhe-Verhältnis ändert. Sonst ändert sich diese Matrix eigentlich nie, außer vielleicht in den Benutzereinstellungen (wenn z.B. Linseneigenschaften wie Öffnungswinkel oder Zoom verändert werden).
+
+Die Model2World-Matrix bleibt wie oben geschrieben außen vor, da objektabhängig.
+
+Die Kameramatrix (World2Camera) ändert sich jedoch ständig während der Navigation durch die Szene. Da die Navigation am Anfang der Neuzeichenroutine ausgewertet wird, erfolgt die Neuberechnung der Matrix (falls notwendig) auch direkt vorm Neuzeichnen.
+
+[NOTE]
+====
+Es ist denkbar, dass ein MouseMove-Event mehrfach während eines Frames ausgelöst wird. Wenn man nun die Neuberechnung der Matrix daran koppelt, führt das mitunter zu unnützer Rechenarbeit. Daher ist es sinnvoller, die Berechnung erst zu Beginn des Zeichenzyklus durchzuführen.
+====
+
+Die eigentliche Berechnung erfolgt in der Funktion `updateWorld2ViewMatrix`. Dank der Funktionalität der Matrixklasse `QMatrix4x4` eine sehr kompakte Funktion.
+
+[source,c++]
+----
+void SceneView::updateWorld2ViewMatrix() {
+	// transformation steps:
+	//   model space -> transform -> world space
+	//   world space -> camera/eye -> camera view
+	//   camera view -> projection -> normalized device coordinates (NDC)
+	m_worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();
+}
+----
+
+Die Multiplikation mit der Modell-Transformationsmatrix (`m_transform`) ist eigentlich nicht zwingend notwendig, dient aber der Demonstration der Animationsfähigkeit (konstantes Rotieren der Welt um die y-Achse). Dazu den `#if 0` Block in `paintGL()` nach `#if 1` ändern.
+
+
 
 == Zeichenobjekte
 

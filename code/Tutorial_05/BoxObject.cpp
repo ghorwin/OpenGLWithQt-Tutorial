@@ -83,12 +83,14 @@ void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
 	m_vertexBuffer.bind();
 	m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
 	int vertexMemSize = m_vertexBufferData.size()*sizeof(Vertex);
+	qDebug() << "BoxObject - VertexBuffer size =" << vertexMemSize/1024.0 << "kByte";
 	m_vertexBuffer.allocate(m_vertexBufferData.data(), vertexMemSize);
 
 	m_elementBuffer.create();
 	m_elementBuffer.bind();
 	m_elementBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
 	int elementMemSize = m_elementBufferData.size()*sizeof(GLuint);
+	qDebug() << "BoxObject - ElementBuffer size =" << elementMemSize/1024.0 << "kByte";
 	m_elementBuffer.allocate(m_elementBufferData.data(), elementMemSize);
 
 	// Create Shader (Do not release until VAO is created)
