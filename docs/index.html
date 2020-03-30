@@ -166,10 +166,22 @@ table {
 <ul class="sectlevel3">
 <li><a href="#_klassendeklaration">5.3.1. Klassendeklaration</a></li>
 <li><a href="#_das_aktualisierungskonzept">5.3.2. Das Aktualisierungskonzept</a></li>
-<li><a href="#_implementierung_der_klasse_sceneview">5.3.3. Implementierung der Klasse <code>SceneView</code></a></li>
+<li><a href="#_verwendung_der_klasse_sceneview">5.3.3. Verwendung der Klasse <em>SceneView</em></a></li>
+<li><a href="#_implementierung_der_klasse_sceneview">5.3.4. Implementierung der Klasse <em>SceneView</em></a></li>
+<li><a href="#_opengl_initialisierung">5.3.5. OpenGL-Initialisierung</a></li>
 </ul>
 </li>
-<li><a href="#_antialiasing">5.4. Antialiasing</a></li>
+<li><a href="#_tastatur_und_mauseingabe">5.4. Tastatur- und Mauseingabe</a></li>
+<li><a href="#_shaderprogramme_2">5.5. Shaderprogramme</a></li>
+<li><a href="#_transformationsmatrizen_und_kamera">5.6. Transformationsmatrizen und Kamera</a></li>
+<li><a href="#_zeichenobjekte">5.7. Zeichenobjekte</a>
+<ul class="sectlevel3">
+<li><a href="#_zeichenobjekte_2">5.7.1. Zeichenobjekte</a></li>
+<li><a href="#_zeichenobjekt_1_gitterraster_in_x_z_ebene">5.7.2. Zeichenobjekt #1: Gitterraster in X-Z Ebene</a></li>
+<li><a href="#_gitter_mit_abblendung_in_der_tiefe">5.7.3. Gitter mit Abblendung in der Tiefe</a></li>
+</ul>
+</li>
+<li><a href="#_antialiasing">5.8. Antialiasing</a></li>
 </ul>
 </li>
 </ul>
@@ -183,7 +195,7 @@ table {
 <p>Dieses Tutorial ist <strong><em>kein</em></strong> OpenGL Tutorial. Man sollte also OpenGL selbst schon ganz gut kennen. Natürlich kann man die hier vorgestellten Beispiele als Vorlage nehmen, aber es geht hier wirklich darum, die Qt-Klassen und vorbereitete Funktionalität zu verstehen und sinnvoll zu nutzen.</p>
 </div>
 <div class="paragraph">
-<p>Diese Anleitung soll auch <strong><em>nicht</em></strong> zeigen, wie man mit Qt ein Spiel- oder eine Spieleengine schreibt. Es geht eher um technische Anwendungen, in denen <em>Animationen keine Rolle spielen</em>. Fokus liegt eher darauf, resourcenschonend (und damit Laptop-Akku-schonend) 3D Grafik zu verwenden.</p>
+<p>Diese Anleitung soll auch <strong><em>nicht</em></strong> zeigen, wie man mit Qt ein Spiel- oder eine Spieleengine schreibt. Es geht eher um technische Anwendungen, in denen <em>Animationen keine Rolle spielen</em>. Fokus liegt eher darauf, effizient und resourcenschonend (und damit Laptop-Akku-schonend) 3D Grafik zu verwenden.</p>
 </div>
 <div class="paragraph">
 <p>Es gibt eine PDF-Version des Tutorials:</p>
@@ -262,7 +274,7 @@ table {
 <div class="ulist">
 <ul>
 <li>
-<p><a href="https://learnopengl.com" class="bare">https://learnopengl.com</a> : ein gutes und aktuelles Tutorial mit guten Abbildungen und guter Mischung aus C++ und C, mein Tutorial orientiert sich inhaltlich an den hier dargestellten Themen</p>
+<p><a href="https://learnopengl.com" class="bare">https://learnopengl.com</a> : ein gutes und aktuelles Tutorial mit guten Abbildungen und guter Mischung aus C++ und C, eine Lektüre der ersten paar Kapitel dieses Tutorials sollte eigentlich ausreichen, um alle in meinem Tutorial verwendeten OpenGL-Befehle und Techniken zu verstehen.</p>
 </li>
 <li>
 <p><a href="http://antongerdelan.net/opengl" class="bare">http://antongerdelan.net/opengl</a> : englisch, gute Illustrationen und Erklärungen zu einzelnen Themen</p>
@@ -278,7 +290,7 @@ table {
 <div class="ulist">
 <ul>
 <li>
-<p><a href="https://www.trentreed.net/blog/qt5-opengl-part-0-creating-a-window" class="bare">https://www.trentreed.net/blog/qt5-opengl-part-0-creating-a-window</a> : in diesem Tutorial und den Forumkommentaren gibt es einige Anregungen, allerdings ist dies eher eine Dokumentation eigener Versuche grafisch optimale Effekte zu erziehlen. Es gibt aber interessante Anregungen. Manche Quelltextumsetzung sind nicht ganz optimal, daher mit Vorsicht als Vorlage für eigene Programme verwenden. (Diese Kleinigkeiten, über die ich selber auch gestolpert bin, sind u.A. der Grund für dieses Tutorial.)</p>
+<p><a href="https://www.trentreed.net/blog/qt5-opengl-part-0-creating-a-window" class="bare">https://www.trentreed.net/blog/qt5-opengl-part-0-creating-a-window</a> : in diesem Tutorial und den Forumkommentaren gibt es einige Anregungen, allerdings ist dies eher eine Dokumentation eigener Versuche grafisch optimale Effekte zu erziehlen. Es gibt durchaus interessante Anregungen. Manche Quelltextumsetzung sind nicht ganz optimal, daher mit Vorsicht als Vorlage für eigene Programme verwenden (Diese Kleinigkeiten, über die ich selber auch gestolpert bin, sind u.A. der Grund für dieses Tutorial).</p>
 </li>
 </ul>
 </div>
@@ -2495,13 +2507,13 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <h2 id="_tutorial_05_maus_und_tastatureingaben">5. Tutorial 05: Maus- und Tastatureingaben</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>In diesem Tutorial geht es primär um Maus- und Tastatureingaben. Und damit das irgendwie Sinn macht, brauchen wir ein 3D Modell, und deshalb ist dieses Tutorial auch <em>sehr sehr lang</em>.</p>
+<p>In diesem Tutorial geht es primär um Maus- und Tastatureingaben. Und damit das irgendwie Sinn macht, brauchen wir ein (schön großes) 3D Modell, und deshalb ist dieses Tutorial auch <em>sehr sehr lang</em>.</p>
 </div>
 <div class="imageblock">
 <div class="content">
-<img src="./images/Tutorial_05_mac.png" alt="Tutorial_05">
+<img src="./images/Tutorial_05_linux.png" alt="Tutorial_05">
 </div>
-<div class="title">Figure 5. Tutorial_05 (Mac Screenshot)</div>
+<div class="title">Figure 5. Tutorial_05 (Linux Screenshot), "Die Welt aus 10000 und einer Box"</div>
 </div>
 <div class="admonitionblock note">
 <table>
@@ -2523,10 +2535,10 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <div class="ulist">
 <ul>
 <li>
-<p>zwei Modelle (eins für die Häuser und eins für das Gitter), nebst dazugehörigen, unterschiedlichen Shaderprogrammen (das vom Gitter verwendet in die Tiefe abgeblendete Farben)</p>
+<p>zwei Modelle (eins für die Boxen und eins für das Gitter), nebst dazugehörigen, unterschiedlichen Shaderprogrammen (das vom Gitter verwendet in die Tiefe abgeblendete Farben)</p>
 </li>
 <li>
-<p>Tiefenpuffer, sodass Gitterlinien/Häuser korrekt vor/hintereinander gezeichnet werden</p>
+<p>Tiefenpuffer, sodass Gitterlinien/Boxen korrekt vor/hintereinander gezeichnet werden</p>
 </li>
 <li>
 <p>Model2World und World2View-Matrizen (mit perspektivischer Projektion)</p>
@@ -2535,10 +2547,10 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <p>Shaderprogramme und Renderobjekte (bzw. Objektgruppen) sind in Klassen zusammengefasst, wodurch der Quelltext deutlich übersichtlicher wird</p>
 </li>
 <li>
-<p>eine Maus+Tastatursteuerung (WASDQE + Mauslook) ist integriert (mit einem nicht ganz einfachen Event-Timing)</p>
+<p>eine Maus+Tastatursteuerung (WASDQE + Mauslook, incl. Shift-Langssam-Bewege-Modus) ist integriert</p>
 </li>
 <li>
-<p>und das ganze wieder mit dem Schwerpunkt: Rendern nur wenn notwendig!</p>
+<p>und das Ganze wieder mit dem Schwerpunkt: Rendern nur wenn notwendig (Akku sparen!)</p>
 </li>
 </ul>
 </div>
@@ -2639,7 +2651,7 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <p>Zwecks Überblick, die Klassendeklaration in Teilen. Zunächst die üblichen Verdächtigen:</p>
 </div>
 <div class="listingblock">
-<div class="title">SceneView.h</div>
+<div class="title">SceneView.h, Deklaration der Klasse SceneView</div>
 <div class="content">
 <pre class="rouge highlight"><code data-lang="c++"><span class="k">class</span> <span class="nc">SceneView</span> <span class="o">:</span> <span class="k">public</span> <span class="n">OpenGLWindow</span> <span class="p">{</span>
 <span class="nl">public:</span>
@@ -2656,7 +2668,7 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <p>Dann kommen die Ereignisbehandlungsroutinen für die Tastatur- und Mauseingaben. Dazu gehören auch die Hilfsfunktionen <code>checkInput()</code> und <code>processInput()</code>, die im Abschnitt zur Tastatur- und Mauseingabe erklärt sind. Die Member-Variablen <code>m_keyboardMouseHandler</code> und <code>m_inputEventReceived</code> gehören auch dazu.</p>
 </div>
 <div class="listingblock">
-<div class="title">SceneView.h, Deklaration der Klasse SceneView</div>
+<div class="title">SceneView.h, Deklaration der Klasse SceneView, fortgesetzt</div>
 <div class="content">
 <pre class="rouge highlight"><code data-lang="c++">	<span class="kt">void</span> <span class="n">keyPressEvent</span><span class="p">(</span><span class="n">QKeyEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">)</span> <span class="k">override</span><span class="p">;</span>
 	<span class="kt">void</span> <span class="n">keyReleaseEvent</span><span class="p">(</span><span class="n">QKeyEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">)</span> <span class="k">override</span><span class="p">;</span>
@@ -2707,7 +2719,7 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <div class="sect3">
 <h4 id="_das_aktualisierungskonzept">5.3.2. Das Aktualisierungskonzept</h4>
 <div class="paragraph">
-<p>Die zuletzt gezeigten Member-Variablen gehören zum Aktualisierungskonzept der Klasse. Erklärtes Ziel ist es, nur dann zu renddern, wenn es wirklich notwendig ist, also:</p>
+<p>Erklärtes Ziel dieser OpenGL-Implementierung ist, nur dann zu rendern, wenn es wirklich notwendig ist. Also:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -2726,7 +2738,7 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 </ul>
 </div>
 <div class="paragraph">
-<p>Wenn man jetzt bei jedem Eintreffen eines solchen Ereignisses jedesmal neu zeichnen würde, wäre das mit ziemlichem Overhead verbunden. Besser ist es, beim Eintreffen eines solchen Ereignisses einfach nur ein neuzeichnen anzufordern. Da die <code>UpdateRequest</code>-Ereignisse normalerweise mit der Bildschirmfrequenz synchronisiert sind, kann es natürlich sein, dass mehrfach hintereinander <code>UpdateRequest</code>-Events an die Eventloop angehängt werden. Dabei werden diese aber zusammengefasst und nur ein Event ausgeschickt. Es muss ja auch nur einmal je angezeigtem Frame gezeichnet werden.</p>
+<p>Wenn man jetzt bei jedem Eintreffen eines solchen Ereignisses jedesmal neu zeichnen würde, wäre das mit ziemlichem Overhead verbunden. Besser ist es, beim Eintreffen eines solchen Ereignisses einfach nur ein Neuzeichnen anzufordern. Da die <code>UpdateRequest</code>-Ereignisse normalerweise mit der Bildschirmfrequenz synchronisiert sind, kann es natürlich sein, dass mehrfach hintereinander <code>UpdateRequest</code>-Events an die Eventloop angehängt werden. Dabei werden diese aber zusammengefasst und nur ein Event ausgeschickt. Es muss ja auch nur einmal je angezeigtem Frame gezeichnet werden.</p>
 </div>
 <div class="paragraph">
 <p>Grundsätzlich muss man also nur die Funktion <a href="https://doc.qt.io/qt-5/qwindow.html#requestUpdate">QWindow::requestUpdate()</a> (oder unsere Bequemlichkeitsfunktion <code>renderLater()</code>) aufrufen, damit beim nächsten VSync wieder neu gezeichnet wird.</p>
@@ -2783,14 +2795,668 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_implementierung_der_klasse_sceneview">5.3.3. Implementierung der Klasse <code>SceneView</code></h4>
+<h4 id="_verwendung_der_klasse_sceneview">5.3.3. Verwendung der Klasse <em>SceneView</em></h4>
 <div class="paragraph">
 <p>Die Klasse <code>SceneView</code> wird als QWindow-basierte Klasse selbst via Widget-Container in den Testdialog eingebettet (siehe <em>Tutorial 03</em>).</p>
+</div>
+<div class="paragraph">
+<p>Bei der Analyse des Tutorialquelltextes kann man sich von außen nach innen "arbeiten":</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>main.cpp</code> - Instanziert <code>TestDialog</code></p>
+</li>
+<li>
+<p><code>TestDialog.cpp</code> - Instanziert <code>SceneView</code> und bettet das Objekt via Window-Container ein.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Es gibt im Quelltext von <code>TestDialog.cpp</code> nur ein neues Feature: Antialiasing (siehe Diskussion dazu im letzten Kapitel dieses Tutorials).</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_implementierung_der_klasse_sceneview">5.3.4. Implementierung der Klasse <em>SceneView</em></h4>
+<div class="paragraph">
+<p>Und da wären wir auch schon bei der Implementierung des Klasse <code>SceneView</code>.</p>
+</div>
+<div class="paragraph">
+<p>Im Konstruktor werden letztlich 3 Dinge gemacht:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>dem Tastatur/Maus-Eingabemanager werden die für uns interessanten Tasten mitgeteilt, siehe  Abschnitt "Tastatur- und Mauseingabe"</p>
+</li>
+<li>
+<p>die beiden ShaderProgramm-Container Objekte werden erstellt und konfiguriert, siehe Abschnitt "Shaderprogramme"</p>
+</li>
+<li>
+<p>die Kamera- und Welttransformationsmatrizen werden auf ein paar Standardwerte eingestellt, siehe Abschnitt "Transformationsmatrizen"</p>
+</li>
+</ul>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp, Konstruktor</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">SceneView</span><span class="o">::</span><span class="n">SceneView</span><span class="p">()</span> <span class="o">:</span>
+	<span class="n">m_inputEventReceived</span><span class="p">(</span><span class="nb">false</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="c1">// tell keyboard handler to monitor certain keys</span>
+	<span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">addRecognizedKey</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_W</span><span class="p">);</span>
+	<span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">addRecognizedKey</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_A</span><span class="p">);</span>
+	<span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">addRecognizedKey</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_S</span><span class="p">);</span>
+	<span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">addRecognizedKey</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_D</span><span class="p">);</span>
+	<span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">addRecognizedKey</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_Q</span><span class="p">);</span>
+	<span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">addRecognizedKey</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_E</span><span class="p">);</span>
+	<span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">addRecognizedKey</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_Shift</span><span class="p">);</span>
+
+	<span class="c1">// *** create scene (no OpenGL calls are being issued below, just the data structures are created.</span>
+
+	<span class="c1">// Shaderprogram #0 : regular geometry (painting triangles via element index)</span>
+	<span class="n">ShaderProgram</span> <span class="n">blocks</span><span class="p">(</span><span class="s">":/shaders/withWorldAndCamera.vert"</span><span class="p">,</span><span class="s">":/shaders/simple.frag"</span><span class="p">);</span>
+	<span class="n">blocks</span><span class="p">.</span><span class="n">m_uniformNames</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="s">"worldToView"</span><span class="p">);</span>
+	<span class="n">m_shaderPrograms</span><span class="p">.</span><span class="n">append</span><span class="p">(</span> <span class="n">blocks</span> <span class="p">);</span>
+
+	<span class="c1">// Shaderprogram #1 : grid (painting grid lines)</span>
+	<span class="n">ShaderProgram</span> <span class="n">grid</span><span class="p">(</span><span class="s">":/shaders/grid.vert"</span><span class="p">,</span><span class="s">":/shaders/simple.frag"</span><span class="p">);</span>
+	<span class="n">grid</span><span class="p">.</span><span class="n">m_uniformNames</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="s">"worldToView"</span><span class="p">);</span> <span class="c1">// mat4</span>
+	<span class="n">grid</span><span class="p">.</span><span class="n">m_uniformNames</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="s">"gridColor"</span><span class="p">);</span> <span class="c1">// vec3</span>
+	<span class="n">grid</span><span class="p">.</span><span class="n">m_uniformNames</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="s">"backColor"</span><span class="p">);</span> <span class="c1">// vec3</span>
+	<span class="n">m_shaderPrograms</span><span class="p">.</span><span class="n">append</span><span class="p">(</span> <span class="n">grid</span> <span class="p">);</span>
+
+	<span class="c1">// *** initialize camera placement and model placement in the world</span>
+
+	<span class="c1">// move objects a little bit to the back of the scene (negative z coordinates = further back)</span>
+	<span class="n">m_transform</span><span class="p">.</span><span class="n">translate</span><span class="p">(</span><span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mf">5.0</span><span class="n">f</span><span class="p">);</span>
+	<span class="n">m_camera</span><span class="p">.</span><span class="n">translate</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+	<span class="n">m_camera</span><span class="p">.</span><span class="n">rotate</span><span class="p">(</span><span class="o">-</span><span class="mi">30</span><span class="p">,</span> <span class="n">m_camera</span><span class="p">.</span><span class="n">right</span><span class="p">());</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Im Konstruktor werden nur Eigenschaften für die Shaderprogramme festgelegt, die eigentliche Initialisierung (OpenGL-Aufrufe) findet in <code>initializeGL()</code> statt.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Im Destruktor der Klasse werden die OpenGL-Objekte wieder freigegeben:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp, Destruktor</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">SceneView</span><span class="o">::~</span><span class="n">SceneView</span><span class="p">()</span> <span class="p">{</span>
+	<span class="n">m_context</span><span class="o">-&gt;</span><span class="n">makeCurrent</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+
+	<span class="k">for</span> <span class="p">(</span><span class="n">ShaderProgram</span> <span class="o">&amp;</span> <span class="n">p</span> <span class="o">:</span> <span class="n">m_shaderPrograms</span><span class="p">)</span>
+		<span class="n">p</span><span class="p">.</span><span class="n">destroy</span><span class="p">();</span>
+
+	<span class="n">m_boxObject</span><span class="p">.</span><span class="n">destroy</span><span class="p">();</span>
+	<span class="n">m_gridObject</span><span class="p">.</span><span class="n">destroy</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Wichtig ist hier, dass der OpenGL-Context für das aktuelle Fenster aktuell gesetzt wird (<code>m_context-&gt;makeCurrent(this)</code>). Damit können dann die OpenGL-Objekte freigegeben werden. Dies erfolgt in den <code>destroy()</code> Funktionen der Shaderprogramm-Wrapper-Klasse und DrawObjekt-Wrapper-Klassen.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_opengl_initialisierung">5.3.5. OpenGL-Initialisierung</h4>
+<div class="paragraph">
+<p>Die eigentlich Initialisierung der OpenGL-Objekte (Shaderprogramme und Pufferobjekte) erfolgt in <code>initializeGL()</code>:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp:initializeGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="cp">#define SHADER(x) m_shaderPrograms[x].shaderProgram()
+</span>
+<span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">initializeGL</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// initialize shader programs</span>
+	<span class="k">for</span> <span class="p">(</span><span class="n">ShaderProgram</span> <span class="o">&amp;</span> <span class="n">p</span> <span class="o">:</span> <span class="n">m_shaderPrograms</span><span class="p">)</span>
+		<span class="n">p</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>
+
+	<span class="c1">// tell OpenGL to show only faces whose normal vector points towards us</span>
+	<span class="n">glEnable</span><span class="p">(</span><span class="n">GL_CULL_FACE</span><span class="p">);</span>
+	<span class="c1">// enable depth testing, important for the grid and for the drawing order of several objects</span>
+	<span class="n">glEnable</span><span class="p">(</span><span class="n">GL_DEPTH_TEST</span><span class="p">);</span>
+
+	<span class="c1">// initialize drawable objects</span>
+	<span class="n">m_boxObject</span><span class="p">.</span><span class="n">create</span><span class="p">(</span><span class="n">SHADER</span><span class="p">(</span><span class="mi">0</span><span class="p">));</span>
+	<span class="n">m_gridObject</span><span class="p">.</span><span class="n">create</span><span class="p">(</span><span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">));</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Dank der Kapselung der Shaderprogramm-Initialisierung in der Klasse <code>ShaderProgram</code>, und der Kapselung der Zeichenobjekt-spezifischen Initialisierung in den Objekten, ist diese Funktion sehr viel übersichtlicher als in den bisherigen Tutorials.</p>
+</div>
+<div class="paragraph">
+<p>Das Makro <code>SHADER(x)</code> wird verwendet, um bequem auf das <code>QOpenGLShaderProgram</code> Objekt in der Wrapper-Klasse zuzugreifen.</p>
+</div>
+<div class="paragraph">
+<p>Die beiden <code>glXXX</code> Befehle in der Mitte der Funktion schalten zwei für 3D Szenen wichtige Funktionen ein:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>GL_CULL_FACE</code> - Zeichne Flächen nicht, welche mit dem "Rücken" zu uns stehen</p>
+</li>
+<li>
+<p><code>GL_DEPTH_TEST</code> - Führe beim Zeichnen der Fragmente einen Tiefentest durch, und verwerfe weiter hintenliegende Fragmente. Das ist wichtig dafür, dass die gezeichneten Boxen das dahinterliegende Gitter überdecken. Der dafür benötigte Tiefenpuffer wird über <code>QSurfaceFormat</code> konfiguriert (<a href="https://doc.qt.io/qt-5/qsurfaceformat.html#setDepthBufferSize">QSurfaceFormat::setDepthBufferSize()</a>).</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Die Funktion <code>glDepthFunc(GL_LESS)</code> muss nicht aufgerufen werden, da das bei OpenGL der Standard ist.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Man kann testweise mal das Flag <code>GL_DEPTH_TEST</code> nicht setzen - die etwas verwirrende Darstellung ist, nun ja, verwirrend.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_antialiasing">5.4. Antialiasing</h3>
+<h3 id="_tastatur_und_mauseingabe">5.4. Tastatur- und Mauseingabe</h3>
+<div class="paragraph">
+<p>Qt stellt in <code>QWindow</code> und <code>QWidget</code> Ereignisbehandlungsroutinen für Tastatur- und Mauseingaben zur Verfügung. Die Deklaration dieser Funktion sind oben in der <code>SceneView</code> Klassendeklaration zu sehen.</p>
+</div>
+<div class="paragraph">
+<p>Wenn man eine Taste auf der Tastatur drückt, wird z.B. ein <code>QEvent::KeyPress</code> ausgelöst und die Memberfunktion <code>keyPressEvent(QKeyEvent *event)</code> aufgerufen. Das passiert auch, wenn man die Taste <em>gedrückt</em> hält. Unterscheiden kann man dieses durch Prüfen der Eigenschaft <code>AutoRepeat</code> (<code>QKeyEvent::isAutoRepeat()</code>).</p>
+</div>
+<div class="paragraph">
+<p>Für die Navigation in einer 3D Umgebung hält man die Tasten (z.B. WASD oder ähnliche) längere Zeit gedrückt (d.h. über mehrere Frames hinweg). Man benötigt also einen Zustandsmanager, der sich den aktuellen Zustand der Tasten merkt.</p>
+</div>
+<div class="paragraph">
+<p>Ein solcher "Inputmanager" hält intern also für jede (berücksichtigte) Taste einen Zustand:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Nicht gedrückt</p>
+</li>
+<li>
+<p>Gerade gedrückt</p>
+</li>
+<li>
+<p>Wurde gedrückt</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Letzterer ist eigentlich nur dann wichtig, wenn auf einzelne Tastendrücke reagiert werden soll, während eventuell eine aufwändige Neuzeichenroutine läuft.</p>
+</div>
+<div class="paragraph">
+<p>Zunächst müssen wir uns den Programmauflauf der Ereignisschleife und Auswertung der Tasteneingabe genauer anschauen.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_shaderprogramme_2">5.5. Shaderprogramme</h3>
+
+</div>
+<div class="sect2">
+<h3 id="_transformationsmatrizen_und_kamera">5.6. Transformationsmatrizen und Kamera</h3>
+
+</div>
+<div class="sect2">
+<h3 id="_zeichenobjekte">5.7. Zeichenobjekte</h3>
+<div class="paragraph">
+<p>In diesem Abschnitt geht es um die Verwaltung von Zeichenobjekten. Dies ist nicht wirklich ein Qt-Thema, da diese Art von Datenmanagement in der einen oder anderen Art in jeder OpenGL-Anwendung zu finden ist. Wen also nur die Qt-spezifischen Dinge interessieren, kann dieses Kapitel gerne überspringen.</p>
+</div>
+<div class="paragraph">
+<p>Es gibt eine wesentliche Grundregel in OpenGL:</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Wenn man effizient große Geometrien zeichnen möchte, dann muss man die Anzahl der <code>glDrawXXX</code> Aufrufe so klein wie möglich halten.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Ein Beispiel: wenn man z.B. 2 Würfel zeichen möchte, hat man folgende Möglichkeiten:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>alle 12 Seiten einzeln Zeichen (12 <code>glDrawXXX</code> Aufrufe), z.B. als:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>GL_TRIANGLES</code> (6 Vertices)</p>
+</li>
+<li>
+<p><code>GL_TRIANGLE_STRIP</code> (4 Vertices)</p>
+</li>
+<li>
+<p><code>GL_QUADS</code> (4 Vertices)</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>jeden Würfel einzeln zeichnen (2 <code>glDrawXXX</code> Aufrufe), dabei alle Seiten des Würfels zusammen zeichnen via:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>GL_TRIANGLES</code> (8 Vertices, 6*6 Elementindices)</p>
+</li>
+<li>
+<p><code>GL_QUADS</code> (8 Vertices, 6*4 Elementindices)</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>beide Würfel zusammen zeichnen (1 <code>glDrawXXX</code> Aufruf), dabei alle Seiten beider Würfels zusammen zeichnen via:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><code>GL_TRIANGLES</code> (2*8 Vertices, 2*6*6 Elementindices)</p>
+</li>
+<li>
+<p><code>GL_QUADS</code> (2*8 Vertices, 2*6*4 Elementindices)</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Wenn man Objekte mit gemischten Flächenprimitiven hat (also z.B. Dreiecke und Rechtecke, oder Polygone), dann kann man entweder nach Flächentyp zusammenfassen und je Flächentyp ein <code>glDrawXXX</code> Aufruf ausführen, oder eben alles als Dreiecke behandeln und nur einen Zeichenaufruf verwenden. Kann man mal durch Profiling ausprobieren, was dann schneller ist. Der Speicherverbrauch spielt auch eine Rolle, da der Datentransfer zwischen CPU und GPU immer auch an der Geschwindigkeit der Speicheranbindung hängt.</p>
+</div>
+<div class="sect3">
+<h4 id="_zeichenobjekte_2">5.7.1. Zeichenobjekte</h4>
+<div class="paragraph">
+<p>Eine Möglichkeit, die für das Zeichnen derart gruppierter Daten benötigten Objekte, d.h. VertexArrayObject (VAO), VertexBufferObject (VBO) und ElementBufferObject (EBO), zu verwalten, ist eigene Datenhalteklassen zu verwenden. Diese sehen allgemein so aus:</p>
+</div>
+<div class="listingblock">
+<div class="title">Deklaration einer Zeichenobjektklasse</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">class</span> <span class="nc">DrawObject</span> <span class="p">{</span>
+<span class="nl">public:</span>
+	<span class="n">DrawObject</span><span class="p">();</span>
+
+    <span class="c1">// create native OpenGL objects</span>
+    <span class="kt">void</span> <span class="n">create</span><span class="p">(</span><span class="n">QOpenGLShaderProgram</span> <span class="o">*</span> <span class="n">shaderProgramm</span><span class="p">);</span>
+    <span class="c1">// release native OpenGL objects</span>
+	<span class="kt">void</span> <span class="n">destroy</span><span class="p">();</span>
+
+    <span class="c1">// actual render objects</span>
+	<span class="kt">void</span> <span class="n">render</span><span class="p">();</span>
+
+    <span class="c1">// Data members to store state</span>
+
+    <span class="p">....</span>
+
+
+    <span class="n">QOpenGLVertexArrayObject</span>	<span class="n">m_vao</span><span class="p">;</span>
+	<span class="n">QOpenGLBuffer</span>				<span class="n">m_vbo</span><span class="p">;</span> <span class="c1">// Vertex buffer</span>
+	<span class="n">QOpenGLBuffer</span>				<span class="n">m_ebo</span><span class="p">;</span> <span class="c1">// Element/index buffer</span>
+
+	<span class="c1">// other buffer objects</span>
+
+	<span class="p">....</span>
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die drei wichtigen Lebenszyklusphasen der Objekte sind durch die Funktionen <code>create()</code>, <code>destroy()</code> und <code>render()</code> abgebildet.</p>
+</div>
+<div class="admonitionblock caution">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-caution" title="Caution"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Speichermanagement bei OpenGL Objekten sollte explizit erfolgen, und nicht im Destruktor von Klassen. Es ist beim Aufräumen im Destruktor durch die automatisiert generierte Aufrufreihenfolge der einzelnen Destruktoren schwierig sicherzustellen, dass der dazugehörige OpenGL-Kontext aktiv ist. Daher empfiehlt es sich, stets eine explizite <code>destroy()</code> Funktion zu verwenden.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Am Besten wird das Datenmanagement in einer Beispielimplementierung sichtbar.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_zeichenobjekt_1_gitterraster_in_x_z_ebene">5.7.2. Zeichenobjekt #1: Gitterraster in X-Z Ebene</h4>
+<div class="paragraph">
+<p>Beginnen wir mit einem einfachen Beispiel: Ein Gitterraster soll auf dem Bildschirm gezeichnet werden, sozusagen als "Boden". Es werden also Linien in der X-Z-Ebene (y=0) gezeichnet, wofür der Elementtyp <code>GL_LINES</code> zum Zeichnen verwendet wird.</p>
+</div>
+<div class="paragraph">
+<p>Für jede Linie sind Start- und Endkoordinaten anzugeben, wobei die y-Koordinate eingespart werden kann.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Man muss nicht immer alle Koordinaten (x,y,z) an den Vertexshader übergeben, wenn es nicht notwendig ist.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Wir stellen also den Vertexpuffer mit folgendem Schema zusammen:</p>
+</div>
+<div class="paragraph">
+<p><code>x1sz1sx1ez1ex2sz2sx2ez2e...</code> also jeweils x und z Koordinatentuple für je Start- (s) und Endpunkt (e) einer Linie nacheinander.</p>
+</div>
+<div class="paragraph">
+<p>Diese Geometrieinformation wird in der Klasse <code>GridObject</code> zusammengestellt:</p>
+</div>
+<div class="listingblock">
+<div class="title">GridObject.h, Klassendeklaration</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">class</span> <span class="nc">GridObject</span> <span class="p">{</span>
+<span class="nl">public:</span>
+	<span class="kt">void</span> <span class="n">create</span><span class="p">(</span><span class="n">QOpenGLShaderProgram</span> <span class="o">*</span> <span class="n">shaderProgramm</span><span class="p">);</span>
+	<span class="kt">void</span> <span class="n">destroy</span><span class="p">();</span>
+
+	<span class="kt">void</span> <span class="n">render</span><span class="p">();</span>
+
+	<span class="kt">unsigned</span> <span class="kt">int</span>				<span class="n">m_bufferSize</span><span class="p">;</span>
+	<span class="n">QOpenGLVertexArrayObject</span>	<span class="n">m_vao</span><span class="p">;</span>
+	<span class="n">QOpenGLBuffer</span>				<span class="n">m_vbo</span><span class="p">;</span>
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Implementierung der <code>create()</code> Funktion ist das eigentlich Interessante:</p>
+</div>
+<div class="listingblock">
+<div class="title">GridObject.cpp:create()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">GridObject</span><span class="o">::</span><span class="n">create</span><span class="p">(</span><span class="n">QOpenGLShaderProgram</span> <span class="o">*</span> <span class="n">shaderProgramm</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">const</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">N</span> <span class="o">=</span> <span class="mi">100</span><span class="p">;</span> <span class="c1">// number of lines to draw in x and z direction</span>
+	<span class="c1">// width is in "space units", whatever that means for you (meters, km, nanometers...)</span>
+	<span class="kt">float</span> <span class="n">width</span> <span class="o">=</span> <span class="mi">500</span><span class="p">;</span>
+	<span class="c1">// grid is centered around origin, and expands to width/2 in -x, +x, -z and +z direction</span>
+
+	<span class="c1">// create a temporary buffer that will contain the x-z coordinates of all grid lines</span>
+	<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">float</span><span class="o">&gt;</span>			<span class="n">gridVertexBufferData</span><span class="p">;</span>
+	<span class="c1">// we have 2*N lines, each line requires two vertexes, with two floats (x and z coordinates) each.</span>
+	<span class="n">m_bufferSize</span> <span class="o">=</span> <span class="mi">2</span><span class="o">*</span><span class="n">N</span><span class="o">*</span><span class="mi">2</span><span class="p">;</span>
+	<span class="n">gridVertexBufferData</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">m_bufferSize</span><span class="p">);</span>
+	<span class="kt">float</span> <span class="o">*</span> <span class="n">gridVertexBufferPtr</span> <span class="o">=</span> <span class="n">gridVertexBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">();</span>
+	<span class="c1">// compute grid lines with z = const</span>
+	<span class="kt">float</span> <span class="n">x1</span> <span class="o">=</span> <span class="o">-</span><span class="n">width</span><span class="o">*</span><span class="mf">0.5</span><span class="p">;</span>
+	<span class="kt">float</span> <span class="n">x2</span> <span class="o">=</span> <span class="n">width</span><span class="o">*</span><span class="mf">0.5</span><span class="p">;</span>
+	<span class="k">for</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">N</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">,</span> <span class="n">gridVertexBufferPtr</span> <span class="o">+=</span> <span class="mi">4</span><span class="p">)</span> <span class="p">{</span>
+		<span class="kt">float</span> <span class="n">z</span> <span class="o">=</span> <span class="n">width</span><span class="o">/</span><span class="p">(</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">i</span><span class="o">-</span><span class="n">width</span><span class="o">*</span><span class="mf">0.5</span><span class="p">;</span>
+		<span class="n">gridVertexBufferPtr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">x1</span><span class="p">;</span>
+		<span class="n">gridVertexBufferPtr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">z</span><span class="p">;</span>
+		<span class="n">gridVertexBufferPtr</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">x2</span><span class="p">;</span>
+		<span class="n">gridVertexBufferPtr</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">z</span><span class="p">;</span>
+	<span class="p">}</span>
+	<span class="c1">// compute grid lines with x = const</span>
+	<span class="kt">float</span> <span class="n">z1</span> <span class="o">=</span> <span class="o">-</span><span class="n">width</span><span class="o">*</span><span class="mf">0.5</span><span class="p">;</span>
+	<span class="kt">float</span> <span class="n">z2</span> <span class="o">=</span> <span class="n">width</span><span class="o">*</span><span class="mf">0.5</span><span class="p">;</span>
+	<span class="k">for</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">N</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">,</span> <span class="n">gridVertexBufferPtr</span> <span class="o">+=</span> <span class="mi">4</span><span class="p">)</span> <span class="p">{</span>
+		<span class="kt">float</span> <span class="n">x</span> <span class="o">=</span> <span class="n">width</span><span class="o">/</span><span class="p">(</span><span class="n">N</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="n">i</span><span class="o">-</span><span class="n">width</span><span class="o">*</span><span class="mf">0.5</span><span class="p">;</span>
+		<span class="n">gridVertexBufferPtr</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="p">;</span>
+		<span class="n">gridVertexBufferPtr</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">z1</span><span class="p">;</span>
+		<span class="n">gridVertexBufferPtr</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span><span class="p">;</span>
+		<span class="n">gridVertexBufferPtr</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">z2</span><span class="p">;</span>
+	<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Im ersten Teil wird ein linearer Speicherbereich (bereitgestellt in einem <code>std::vector</code>) mit den Liniendaten gefüllt. Das Raster besteht aus Linien in X und Z Richtung (2), jeweils N Linien, und jede Linie hat einen Start- und einen Endpunkt (2) und jeder Punkt besteht aus 2 Koordinaten. Dies macht 2*N*2*2 floats (=NVertices).</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Es ist ok an dieser Stelle den Speicherbereich in einem temporären Vektor anzulegen, da beim Erzeugen des OpenGL-Vertexpuffers die Daten kopiert werden und der Vektor danach nicht mehr benötigt wird. Dies ist im Falle von veränderlichen Daten (siehe BoxObjekte unten) anders.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Im zweiten Teil der Funktion werden dann wie gehabt die OpenGL-Pufferobjekte erstellt:</p>
+</div>
+<div class="listingblock">
+<div class="title">GridObject.cpp:create(), fortgesetzt</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++">	<span class="c1">// Create Vertex Array Object</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>		<span class="c1">// create Vertex Array Object</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>		<span class="c1">// and bind it</span>
+
+	<span class="c1">// Create Vertex Buffer Object</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">setUsagePattern</span><span class="p">(</span><span class="n">QOpenGLBuffer</span><span class="o">::</span><span class="n">StaticDraw</span><span class="p">);</span>
+	<span class="kt">int</span> <span class="n">vertexMemSize</span> <span class="o">=</span> <span class="n">m_bufferSize</span><span class="o">*</span><span class="nf">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">);</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">gridVertexBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span> <span class="n">vertexMemSize</span><span class="p">);</span>
+
+	<span class="c1">// layout(location = 0) = vec2 position</span>
+	<span class="n">shaderProgramm</span><span class="o">-&gt;</span><span class="n">enableAttributeArray</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span> <span class="c1">// array with index/id 0</span>
+	<span class="n">shaderProgramm</span><span class="o">-&gt;</span><span class="n">setAttributeBuffer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">GL_FLOAT</span><span class="p">,</span>
+								  <span class="mi">0</span> <span class="cm">/* position/vertex offset */</span><span class="p">,</span>
+								  <span class="mi">2</span> <span class="cm">/* two floats per position = vec2 */</span><span class="p">,</span>
+								  <span class="mi">0</span> <span class="cm">/* vertex after vertex, no interleaving */</span><span class="p">);</span>
+
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+<span class="err">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Aufrufe von <code>shaderProgramm-&gt;enableAttributeArray</code> und <code>shaderProgramm-&gt;setAttributeBuffer</code> definieren, wie der Vertexshader auf diesen Speicherbereich zugreifen soll. Deshalb muss die Funktion <code>create()</code> auch das dazugehörige Shaderprogramm als Funktionsargument erhalten.</p>
+</div>
+<div class="paragraph">
+<p>Nachdem nun die Puffer erstellt und konfiguriert wurden, ist der Rest der Klassenimplementierung recht übersichtlich:</p>
+</div>
+<div class="listingblock">
+<div class="title">GridObject.cpp:destroy() und render()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">GridObject</span><span class="o">::</span><span class="n">destroy</span><span class="p">()</span> <span class="p">{</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">destroy</span><span class="p">();</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">destroy</span><span class="p">();</span>
+<span class="p">}</span>
+
+
+<span class="kt">void</span> <span class="n">GridObject</span><span class="o">::</span><span class="n">render</span><span class="p">()</span> <span class="p">{</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+	<span class="c1">// draw the grid lines, m_bufferSize = number of floats in buffer</span>
+	<span class="n">glDrawArrays</span><span class="p">(</span><span class="n">GL_LINES</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">m_bufferSize</span><span class="p">);</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Funktion <code>destroy()</code> ist sicher selbsterklärend. Und die Render-Funktion ebenso.</p>
+</div>
+<div class="admonitionblock caution">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-caution" title="Caution"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Beachte, dass die Funktion <code>glDrawArrays()</code> als drittes Argument die Länge des Puffers als Anzahl der Elemente vom Typ des Puffers (hier GL_FLOAT) erwartet, und <em>nicht</em> die Länge in Bytes.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Das Ergebnis dieses Zeichnens (mit uniformer Gitterfarbe) ist zunächst ganz nett:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/Tutorial_05_gridplain.png" alt="Raster">
+</div>
+<div class="title">Figure 6. Einfaches Gitterraster (einfarbig) mit sichtbarer endlicher Ausdehnung</div>
+</div>
+<div class="paragraph">
+<p>Aber schöne wäre es, wenn das Gitter mit zunehmender Tiefe verblasst.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_gitter_mit_abblendung_in_der_tiefe">5.7.3. Gitter mit Abblendung in der Tiefe</h4>
+<div class="paragraph">
+<p>Das Gitter sollte sich nun in weiter Ferne der Hintergrundfarbe annähern. Man könnte das zum Beispiel erreichen, wenn man die Farbe des Gitters an weiter entfernten Punkte einfärbt.</p>
+</div>
+<div class="paragraph">
+<p>Den Vertexshader könnte man wie folgt erweitern:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="cp">#version 330
+</span>
+<span class="c1">// GLSL version 3.3</span>
+<span class="c1">// vertex shader</span>
+
+<span class="n">layout</span><span class="p">(</span><span class="n">location</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="n">in</span> <span class="n">vec2</span> <span class="n">position</span><span class="p">;</span> <span class="c1">// input:  attribute with index '0'</span>
+                                       <span class="c1">//         with 2 floats (x, z coords) per vertex</span>
+<span class="n">out</span> <span class="n">vec4</span> <span class="n">fragColor</span><span class="p">;</span>                    <span class="c1">// output: computed vertex color for shader</span>
+
+<span class="k">const</span> <span class="kt">float</span> <span class="n">FARPLANE</span> <span class="o">=</span> <span class="mi">50</span><span class="p">;</span>             <span class="c1">// threshold</span>
+<span class="kt">float</span> <span class="n">fragDepth</span><span class="p">;</span>                       <span class="c1">// normalized depth value</span>
+
+<span class="n">uniform</span> <span class="n">mat4</span> <span class="n">worldToView</span><span class="p">;</span>              <span class="c1">// parameter: the view transformation matrix</span>
+<span class="n">uniform</span> <span class="n">vec3</span> <span class="n">gridColor</span><span class="p">;</span>                <span class="c1">// parameter: grid color as rgb triple</span>
+<span class="n">uniform</span> <span class="n">vec3</span> <span class="n">backColor</span><span class="p">;</span>                <span class="c1">// parameter: background color as rgb triple</span>
+
+<span class="kt">void</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">gl_Position</span> <span class="o">=</span> <span class="n">worldToView</span> <span class="o">*</span> <span class="n">vec4</span><span class="p">(</span><span class="n">position</span><span class="p">.</span><span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">,</span> <span class="n">position</span><span class="p">.</span><span class="n">y</span><span class="p">,</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+  <span class="n">fragDepth</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">min</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">gl_Position</span><span class="p">.</span><span class="n">z</span> <span class="o">/</span> <span class="n">FARPLANE</span><span class="p">));</span>
+  <span class="n">fragColor</span> <span class="o">=</span> <span class="n">vec4</span><span class="p">(</span> <span class="n">mix</span><span class="p">(</span><span class="n">gridColor</span><span class="p">,</span> <span class="n">backColor</span><span class="p">,</span> <span class="n">fragDepth</span><span class="p">),</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Es gibt 3 Parameter, die dem Shaderprogramm gegeben werden müssen:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>worldToView</code> - Transformationsmatrix (von Weltkoordinaten zur perspektivischen Ansicht)</p>
+</li>
+<li>
+<p><code>gridColor</code> - Farbe des Gitters</p>
+</li>
+<li>
+<p><code>backColor</code> - Hintergrundfarbe</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Die Variable <code>gl_Position</code> enthält nach der Transformation die normalisierten Koordinaten. In der Berechnung wird die zweite Komponente des Vertex-Vektors (angesprochen über <code>.y</code>) als z-Koordinate verwendet.</p>
+</div>
+<div class="paragraph">
+<p>Für die Abblendefunktionalität ist die Entfernung des Linienstart- bzw. -endpunktes  interessant. Nun sind die z-Koordinaten dieser normalisierten Position alle sehr dicht an 1 dran. Deshalb werden sie noch skaliert (entsprechend der perspektivischen Transformationsregeln etwas wie eine Farplane). Nun kann man diese Tiefe, gespeichert in der Variable <code>fragDepth</code> nutzen, um zwischen Gitterfarbe und Hintergrundfarbe linear mit der GLSL-Funktion <code>mix()</code> zu interpolieren.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/Tutorial_05_grid_vertexshaderfade.png" alt="Gitter" width="Vertexshaderfade">
+</div>
+<div class="title">Figure 7. Gitterraster mit Vertex-basierter Abblendung</div>
+</div>
+<div class="paragraph">
+<p>Das Ergebnis geht schon in die richtige Richtung, aber es gibt einen unschönen Effekt, wenn man parallel zu den Linien schaut. Die Koordinaten der Endpunkte der seitlich laufenden Linien sind sehr weit weg (in der perspektivischen Projekten), sodass beide Linienenden nahezu Hintergrundfarbe bekommen. Und da die Fragmentfarbe eine lineare Interpolation zwischen den Vertexfarben ist, verschwindet die gesamte Linie.</p>
+</div>
+<div class="paragraph">
+<p>Das Problem lässt sich nur beheben, wenn man die Ablendfunktionalität in den Fragment-Shader steckt.</p>
+</div>
+<div class="paragraph">
+<p>Der Vertex-Shader wird dadurch total einfach:</p>
+</div>
+<div class="listingblock">
+<div class="title">grid.vert (Vertexshader)</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="cp">#version 330
+</span>
+<span class="c1">// GLSL version 3.3</span>
+<span class="c1">// vertex shader</span>
+
+<span class="n">layout</span><span class="p">(</span><span class="n">location</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="n">in</span> <span class="n">vec2</span> <span class="n">position</span><span class="p">;</span> <span class="c1">// input:  attribute with index '0'</span>
+                                       <span class="c1">//         with 2 floats (x, z coords) per vertex</span>
+
+<span class="n">uniform</span> <span class="n">mat4</span> <span class="n">worldToView</span><span class="p">;</span>              <span class="c1">// parameter: world to view transformation matrix</span>
+
+<span class="kt">void</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">gl_Position</span> <span class="o">=</span> <span class="n">worldToView</span> <span class="o">*</span> <span class="n">vec4</span><span class="p">(</span><span class="n">position</span><span class="p">.</span><span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">,</span> <span class="n">position</span><span class="p">.</span><span class="n">y</span><span class="p">,</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Letztlich werden nur noch die Vertex-Koordinaten transformiert und an den Shader weitergereicht. Der sieht dann so aus:</p>
+</div>
+<div class="listingblock">
+<div class="title">grid.frag (Fragmentshader)</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="cp">#version 330
+</span>
+<span class="n">out</span> <span class="n">vec4</span> <span class="n">fColor</span><span class="p">;</span>
+
+<span class="n">uniform</span> <span class="n">vec3</span> <span class="n">gridColor</span><span class="p">;</span>                <span class="c1">// parameter: grid color as rgb triple</span>
+<span class="n">uniform</span> <span class="n">vec3</span> <span class="n">backColor</span><span class="p">;</span>                <span class="c1">// parameter: background color as rgb triple</span>
+<span class="k">const</span> <span class="kt">float</span> <span class="n">FARPLANE</span> <span class="o">=</span> <span class="mi">150</span><span class="p">;</span>            <span class="c1">// threshold</span>
+
+<span class="kt">void</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">float</span> <span class="n">distanceFromCamera</span> <span class="o">=</span> <span class="p">(</span><span class="n">gl_FragCoord</span><span class="p">.</span><span class="n">z</span> <span class="o">/</span> <span class="n">gl_FragCoord</span><span class="p">.</span><span class="n">w</span><span class="p">)</span> <span class="o">/</span> <span class="n">FARPLANE</span><span class="p">;</span>
+  <span class="n">distanceFromCamera</span> <span class="o">=</span> <span class="n">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">min</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">distanceFromCamera</span><span class="p">));</span> <span class="c1">// clip to valid value range</span>
+  <span class="n">fColor</span> <span class="o">=</span> <span class="n">vec4</span><span class="p">(</span> <span class="n">mix</span><span class="p">(</span><span class="n">gridColor</span><span class="p">,</span> <span class="n">backColor</span><span class="p">,</span> <span class="n">distanceFromCamera</span><span class="p">),</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span> <span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Variable <code>gl_FragCoord</code> wird für jeden einzelnen Bildpunkt von OpenGL bereitgestellt und enthält die Normalized Device Coordinates (NDC). Wenn man beachtet, dass diese Koordinaten durch Division mit w berechnet werden, dann bekommt man die originale z-Koordinate durch Multiplikation mit w. Das ganze wird dann noch mit einem Begrenzungswert (<code>FARPLANE</code>) skaliert. Falls bei der Definition des View-Frustums andere Werte für Near/Farplane verwendet werden, muss man die Formel entsprechend anpassen.</p>
+</div>
+<div class="paragraph">
+<p>Damit sieht das Ergebnis dann wie gewünscht aus:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/Tutorial_05_grid_fragshaderfade.png" alt="Gitter" width="Fragmentshaderfade">
+</div>
+<div class="title">Figure 8. Gitterraster mit Fragment-basierter Abblendung</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_antialiasing">5.8. Antialiasing</h3>
 <div class="paragraph">
 <p>Es gibt hier verschiedene Möglichkeiten, die wohl einfachste aus Sicht der Programmierung ist das Einschalten von Multisampling (MSAA) (siehe Erläuterung auf <a href="https://www.khronos.org/opengl/wiki/Multisampling" class="bare">https://www.khronos.org/opengl/wiki/Multisampling</a>).</p>
 </div>

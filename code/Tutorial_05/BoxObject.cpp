@@ -19,10 +19,36 @@ BoxObject::BoxObject() :
 	m_elementBuffer(QOpenGLBuffer::IndexBuffer)
 {
 
-	// create a box
-	BoxMesh b(5,2,3);
+	// create center box
+	BoxMesh b(4,2,3);
 	b.setFaceColors({Qt::blue, Qt::red, Qt::yellow, Qt::green, Qt::magenta, Qt::darkCyan});
+	Transform3D trans;
+	trans.setTranslation(0,1,0);
+	b.transform(trans.toMatrix());
 	m_boxes.push_back( b);
+
+	const int BoxGenCount = 2000;
+	const int GridDim = 40; // must be an int, or use cast below
+
+	// initialize grid (block count)
+	int boxPerCells[GridDim][GridDim];
+	for (unsigned int i=0; i<GridDim; ++i)
+		for (unsigned int j=0; j<GridDim; ++j)
+			boxPerCells[i][j] = 0;
+	for (unsigned int i=0; i<BoxGenCount; ++i) {
+		// create other boxes in randomize grid, x and z dimensions fixed, height varies discretely
+		// x and z translation in a grid that has 500 units width/depths with 5 m grid line spacing
+		int xGrid = qrand()*double(GridDim)/RAND_MAX;
+		int zGrid = qrand()*double(GridDim)/RAND_MAX;
+		int boxCount = boxPerCells[xGrid][zGrid]++;
+		float boxHeight = 4.5;
+		BoxMesh b(4,boxHeight,3);
+		b.setFaceColors({Qt::blue, Qt::red, Qt::yellow, Qt::green, Qt::magenta, Qt::darkCyan});
+		trans.setTranslation((-GridDim/2+xGrid)*5, boxCount*5 + 0.5*boxHeight, (-GridDim/2 + zGrid)*5);
+		b.transform(trans.toMatrix());
+		m_boxes.push_back(b);
+	}
+
 
 	// n count
 	unsigned int NCubes = m_boxes.size();
@@ -37,11 +63,9 @@ BoxObject::BoxObject() :
 	Vertex * vertexBuffer = m_vertexBufferData.data();
 	unsigned int vertexCount = 0;
 	GLuint * elementBuffer = m_elementBufferData.data();
-	unsigned int elementCount = 0;
 	for (unsigned int i=0; i<m_boxes.size(); ++i) {
-		m_boxes[i].copy2Buffer(vertexBuffer, m_vertexBufferData.size()-vertexCount, elementBuffer, m_elementBufferData.size()-elementCount, vertexCount);
+		m_boxes[i].copy2Buffer(vertexBuffer, elementBuffer, vertexCount);
 		vertexCount += BoxMesh::VertexCount;
-		elementCount += BoxMesh::IndexCount;
 	}
 }
 

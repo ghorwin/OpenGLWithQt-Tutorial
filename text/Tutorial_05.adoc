@@ -1,10 +1,10 @@
 :imagesdir: ./images
 = Tutorial 05: Maus- und Tastatureingaben
 
-In diesem Tutorial geht es primär um Maus- und Tastatureingaben. Und damit das irgendwie Sinn macht, brauchen wir ein 3D Modell, und deshalb ist dieses Tutorial auch _sehr sehr lang_.
+In diesem Tutorial geht es primär um Maus- und Tastatureingaben. Und damit das irgendwie Sinn macht, brauchen wir ein (schön großes) 3D Modell, und deshalb ist dieses Tutorial auch _sehr sehr lang_.
 
-.Tutorial_05 (Mac Screenshot)
-image::Tutorial_05_mac.png[Tutorial_05,pdfwidth=8cm]
+.Tutorial_05 (Linux Screenshot), "Die Welt aus 10000 und einer Box"
+image::Tutorial_05_linux.png[Tutorial_05,pdfwidth=8cm]
 
 [NOTE]
 ====
@@ -13,12 +13,12 @@ Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin
 
 In diesem Tutorial gibt es viele neue Dinge verwendet:
 
-- zwei Modelle (eins für die Häuser und eins für das Gitter), nebst dazugehörigen, unterschiedlichen Shaderprogrammen (das vom Gitter verwendet in die Tiefe abgeblendete Farben)
-- Tiefenpuffer, sodass Gitterlinien/Häuser korrekt vor/hintereinander gezeichnet werden
+- zwei Modelle (eins für die Boxen und eins für das Gitter), nebst dazugehörigen, unterschiedlichen Shaderprogrammen (das vom Gitter verwendet in die Tiefe abgeblendete Farben)
+- Tiefenpuffer, sodass Gitterlinien/Boxen korrekt vor/hintereinander gezeichnet werden
 - Model2World und World2View-Matrizen (mit perspektivischer Projektion)
 - Shaderprogramme und Renderobjekte (bzw. Objektgruppen) sind in Klassen zusammengefasst, wodurch der Quelltext deutlich übersichtlicher wird
-- eine Maus+Tastatursteuerung (WASDQE + Mauslook) ist integriert (mit einem nicht ganz einfachen Event-Timing)
-- und das ganze wieder mit dem Schwerpunkt: Rendern nur wenn notwendig!
+- eine Maus+Tastatursteuerung (WASDQE + Mauslook, incl. Shift-Langssam-Bewege-Modus) ist integriert
+- und das Ganze wieder mit dem Schwerpunkt: Rendern nur wenn notwendig (Akku sparen!)
 
 == Überblick
 
@@ -91,7 +91,7 @@ Unabhängig von dieser Initializierungsfunktion muss man natürlich die Funktion
 
 Zwecks Überblick, die Klassendeklaration in Teilen. Zunächst die üblichen Verdächtigen:
 
-.SceneView.h
+.SceneView.h, Deklaration der Klasse SceneView
 [source,c++]
 ----
 class SceneView : public OpenGLWindow {
@@ -107,7 +107,7 @@ protected:
 
 Dann kommen die Ereignisbehandlungsroutinen für die Tastatur- und Mauseingaben. Dazu gehören auch die Hilfsfunktionen `checkInput()` und `processInput()`, die im Abschnitt zur Tastatur- und Mauseingabe erklärt sind. Die Member-Variablen `m_keyboardMouseHandler` und `m_inputEventReceived` gehören auch dazu.
 
-.SceneView.h, Deklaration der Klasse SceneView
+.SceneView.h, Deklaration der Klasse SceneView, fortgesetzt
 [source,c++]
 ----
 	void keyPressEvent(QKeyEvent *event) override;
@@ -148,20 +148,21 @@ Zuletzt kommen Member-Variablen, die die Shader-Programme und Zeichenobjekte kap
 	BoxObject					m_boxObject;
 	GridObject					m_gridObject;
 };
+
 ----
 
 Und das war's auch schon - recht kompakt, oder?
 
 === Das Aktualisierungskonzept
 
-Die zuletzt gezeigten Member-Variablen gehören zum Aktualisierungskonzept der Klasse. Erklärtes Ziel ist es, nur dann zu renddern, wenn es wirklich notwendig ist, also:
+Erklärtes Ziel dieser OpenGL-Implementierung ist, nur dann zu rendern, wenn es wirklich notwendig ist. Also:
 
 - wenn die Fenstergröße (Viewport) verändert wurde,
 - wenn das Fenster angezeigt/sichtbar wird (exposed),
 - wenn durch Nutzerinteraktion die Kameraposition verändert wird
 - wenn die Szene selbst transformiert wird (z.B. programmgesteuerte Animation...)
 
-Wenn man jetzt bei jedem Eintreffen eines solchen Ereignisses jedesmal neu zeichnen würde, wäre das mit ziemlichem Overhead verbunden. Besser ist es, beim Eintreffen eines solchen Ereignisses einfach nur ein neuzeichnen anzufordern. Da die `UpdateRequest`-Ereignisse normalerweise mit der Bildschirmfrequenz synchronisiert sind, kann es natürlich sein, dass mehrfach hintereinander `UpdateRequest`-Events an die Eventloop angehängt werden. Dabei werden diese aber zusammengefasst und nur ein Event ausgeschickt. Es muss ja auch nur einmal je angezeigtem Frame gezeichnet werden.
+Wenn man jetzt bei jedem Eintreffen eines solchen Ereignisses jedesmal neu zeichnen würde, wäre das mit ziemlichem Overhead verbunden. Besser ist es, beim Eintreffen eines solchen Ereignisses einfach nur ein Neuzeichnen anzufordern. Da die `UpdateRequest`-Ereignisse normalerweise mit der Bildschirmfrequenz synchronisiert sind, kann es natürlich sein, dass mehrfach hintereinander `UpdateRequest`-Events an die Eventloop angehängt werden. Dabei werden diese aber zusammengefasst und nur ein Event ausgeschickt. Es muss ja auch nur einmal je angezeigtem Frame gezeichnet werden.
 
 Grundsätzlich muss man also nur die Funktion https://doc.qt.io/qt-5/qwindow.html#requestUpdate[QWindow::requestUpdate()] (oder unsere Bequemlichkeitsfunktion `renderLater()`) aufrufen, damit beim nächsten VSync wieder neu gezeichnet wird.
 
@@ -210,7 +211,7 @@ Bei der Analyse des Tutorialquelltextes kann man sich von außen nach innen "arb
 
 Es gibt im Quelltext von `TestDialog.cpp` nur ein neues Feature: Antialiasing (siehe Diskussion dazu im letzten Kapitel dieses Tutorials).
 
-=== Implementierung der Klasse `SceneView`
+=== Implementierung der Klasse 'SceneView'
 
 Und da wären wir auch schon bei der Implementierung des Klasse `SceneView`.
 
@@ -233,6 +234,7 @@ SceneView::SceneView() :
 	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_D);
 	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_Q);
 	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_E);
+	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_Shift);
 
 	// *** create scene (no OpenGL calls are being issued below, just the data structures are created.
 
@@ -278,11 +280,11 @@ SceneView::~SceneView() {
 }
 ----
 
-Wichtig ist hier, dass der OpenGL-Context für das aktuelle Fenster aktuell gesetzt wird (`m_context->makeCurrent(this)`). Damit können dann die OpenGL-Objekte freigegeben werden. Das erfolgt in den `destroy()` Funktionen der Shaderprogramm-Wrapper-Klasse und DrawObjekt-Wrapper-Klassen.
+Wichtig ist hier, dass der OpenGL-Context für das aktuelle Fenster aktuell gesetzt wird (`m_context->makeCurrent(this)`). Damit können dann die OpenGL-Objekte freigegeben werden. Dies erfolgt in den `destroy()` Funktionen der Shaderprogramm-Wrapper-Klasse und DrawObjekt-Wrapper-Klassen.
 
 === OpenGL-Initialisierung
 
-Die eigentlich Initialisierung der OpenGL Objekte (Shaderprogramme und Pufferobjekte) erfolgt in `initializeGL()`:
+Die eigentlich Initialisierung der OpenGL-Objekte (Shaderprogramme und Pufferobjekte) erfolgt in `initializeGL()`:
 
 .SceneView.cpp:initializeGL()
 [source,c++]
@@ -321,6 +323,31 @@ Die Funktion `glDepthFunc(GL_LESS)` muss nicht aufgerufen werden, da das bei Ope
 Man kann testweise mal das Flag `GL_DEPTH_TEST` nicht setzen - die etwas verwirrende Darstellung ist, nun ja, verwirrend.
 ====
 
+== Tastatur- und Mauseingabe
+
+Qt stellt in `QWindow` und `QWidget` Ereignisbehandlungsroutinen für Tastatur- und Mauseingaben zur Verfügung. Die Deklaration dieser Funktion sind oben in der `SceneView` Klassendeklaration zu sehen.
+
+Wenn man eine Taste auf der Tastatur drückt, wird z.B. ein `QEvent::KeyPress` ausgelöst und die Memberfunktion `keyPressEvent(QKeyEvent *event)` aufgerufen. Das passiert auch, wenn man die Taste _gedrückt_ hält. Unterscheiden kann man dieses durch Prüfen der Eigenschaft `AutoRepeat` (`QKeyEvent::isAutoRepeat()`).
+
+Für die Navigation in einer 3D Umgebung hält man die Tasten (z.B. WASD oder ähnliche) längere Zeit gedrückt (d.h. über mehrere Frames hinweg). Man benötigt also einen Zustandsmanager, der sich den aktuellen Zustand der Tasten merkt.
+
+Ein solcher "Inputmanager" hält intern also für jede (berücksichtigte) Taste einen Zustand:
+
+- Nicht gedrückt
+- Gerade gedrückt
+- Wurde gedrückt
+
+Letzterer ist eigentlich nur dann wichtig, wenn auf einzelne Tastendrücke reagiert werden soll, während eventuell eine aufwändige Neuzeichenroutine läuft. 
+
+Zunächst müssen wir uns den Programmauflauf der Ereignisschleife und Auswertung der Tasteneingabe genauer anschauen.
+
+
+
+
+
+== Shaderprogramme
+
+== Transformationsmatrizen und Kamera
 
 == Zeichenobjekte
 

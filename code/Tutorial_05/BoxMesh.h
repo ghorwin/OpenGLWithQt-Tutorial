@@ -49,16 +49,15 @@ public:
 	/*! Fills in vertex data in a buffer, provided by the caller.
 		The vertex data is stored interleaved, "coordinates(vec3)-color(vec3)-coordinates(vec3)-...".
 
-		\param vertexBuffer Pointer to vertex memory array to write into.
-		\param elementBuffer Pointer to element memory array to write into.
-
-		vertexBufferSize is the size of the vertex buffer in Vertex (for checking purposes)
-		elementBufferSize is the size of the element buffer in GLuint (for checking purposes)
+		\param vertexBuffer Pointer to vertex memory array to write into. Will be moved forward to point to the next
+			position after the inserted vertices.
+		\param elementBuffer Pointer to element memory array to write into. Will be moved forward to point to the next
+			index position after the inserted vertices.
 
 		elementStartIndex is the start index, that we should start indexing our newly added vertexes with.
 	*/
-	void copy2Buffer(Vertex * vertexBuffer, unsigned int vertexBufferSize,
-					GLuint * elementBuffer, unsigned int elementBufferSize,
+	void copy2Buffer(Vertex * & vertexBuffer,
+					GLuint * & elementBuffer,
 					 unsigned int elementStartIndex);
 
 	static const unsigned int VertexCount = 6*4;  // 6 faces, 4 vertexes each (because each may have different number of colors)

@@ -37,8 +37,7 @@ void BoxMesh::transform(const QMatrix4x4 & transform) {
 }
 
 
-void BoxMesh::copy2Buffer(Vertex * vertexBuffer, unsigned int vertexBufferSize,
-				GLuint * elementBuffer, unsigned int elementBufferSize, unsigned int elementStartIndex)
+void BoxMesh::copy2Buffer(Vertex *& vertexBuffer, GLuint *& elementBuffer, unsigned int elementStartIndex)
 {
 	std::vector<QColor> cols;
 	Q_ASSERT(!m_colors.empty());
@@ -124,12 +123,14 @@ void copyPlane2Buffer(Vertex * & vertexBuffer, GLuint * & elementBuffer, unsigne
 	vertexBuffer[3] = d;
 
 	// tweak the colors of the bottom left and bottom right nodes
-	vertexBuffer[0].r *= 0.5;
-	vertexBuffer[1].r *= 0.5;
-	vertexBuffer[0].g *= 0.5;
-	vertexBuffer[1].g *= 0.5;
-	vertexBuffer[0].b *= 0.5;
-	vertexBuffer[1].b *= 0.5;
+	if (a.y < c.y) {
+		vertexBuffer[0].r *= 0.5;
+		vertexBuffer[1].r *= 0.5;
+		vertexBuffer[0].g *= 0.5;
+		vertexBuffer[1].g *= 0.5;
+		vertexBuffer[0].b *= 0.5;
+		vertexBuffer[1].b *= 0.5;
+	}
 
 	// advance vertexBuffer
 	vertexBuffer += 4;
