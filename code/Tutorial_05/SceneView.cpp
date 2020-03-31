@@ -203,6 +203,7 @@ void SceneView::checkInput() {
 			return;
 		}
 	}
+	// scroll-wheel turned?
 	if (m_keyboardMouseHandler.wheelDelta() != 0) {
 		m_inputEventReceived = true;
 		renderLater();

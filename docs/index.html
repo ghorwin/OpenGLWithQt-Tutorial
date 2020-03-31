@@ -171,7 +171,13 @@ table {
 <li><a href="#_opengl_initialisierung">5.3.5. OpenGL-Initialisierung</a></li>
 </ul>
 </li>
-<li><a href="#_tastatur_und_mauseingabe">5.4. Tastatur- und Mauseingabe</a></li>
+<li><a href="#_tastatur_und_mauseingabe">5.4. Tastatur- und Mauseingabe</a>
+<ul class="sectlevel3">
+<li><a href="#_der_tastatur_und_maus_zustandsmanager">5.4.1. Der Tastatur- und Maus-Zustandsmanager</a></li>
+<li><a href="#_die_ereignisschleife_und_tastatur_mausevents">5.4.2. Die Ereignisschleife und Tastatur-/Mausevents</a></li>
+<li><a href="#_auswertung_der_eingabe_und_anpassung_der_kameraposition_und_ausrichtung">5.4.3. Auswertung der Eingabe und Anpassung der Kameraposition- und Ausrichtung</a></li>
+</ul>
+</li>
 <li><a href="#_shaderprogramme_2">5.5. Shaderprogramme</a></li>
 <li><a href="#_transformationsmatrizen_und_kamera">5.6. Transformationsmatrizen und Kamera</a>
 <ul class="sectlevel3">
@@ -2553,7 +2559,7 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <p>Shaderprogramme und Renderobjekte (bzw. Objektgruppen) sind in Klassen zusammengefasst, wodurch der Quelltext deutlich übersichtlicher wird</p>
 </li>
 <li>
-<p>eine Maus+Tastatursteuerung (WASDQE + Mauslook, incl. Shift-Langssam-Bewege-Modus) ist integriert</p>
+<p>eine Maus+Tastatursteuerung mit WASDQE + Mauslook, incl. Shift-Langsam-Bewege-Modus</p>
 </li>
 <li>
 <p>und das Ganze wieder mit dem Schwerpunkt: Rendern nur wenn notwendig (Akku sparen!)</p>
@@ -2580,13 +2586,16 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <p>Transformationsmatrizen: Model &#8594; World &#8594; Kamera &#8594; Projektion (Klassen <code>Transform3D</code> und <code>Camera</code>)</p>
 </li>
 <li>
-<p>Kapselung der Shaderprogramme und Initialisierung und Verwendung derselben</p>
+<p>Tastatur- und Mauseingabebehandlung (Klasse <code>KeyboardMouseHandler</code>)</p>
 </li>
 <li>
-<p>Kapselung der Zeichenroutinen für das Gitterraster, Abblendeffekt am Horizont im Shader</p>
+<p>Kapselung der Shaderprogramme und Initialisierung und Verwendung derselben (Klasse <code>ShaderProgram</code>)</p>
 </li>
 <li>
-<p>Kapselung der Zeichenroutinen für die Boxen</p>
+<p>Kapselung der Zeichenroutinen für das Gitterraster, Abblendeffekt am Horizont im Shader (Klasse <code>GridObject</code> und Shader <code>grid.vert</code> und <code>grid.frag</code>)</p>
+</li>
+<li>
+<p>Kapselung der Zeichenroutinen für die Boxen (Klassen <code>BoxObject</code> und <code>BoxMesh</code>, und Shader <code>withWorldAndCamera.vert</code> und <code>simple.frag</code>)</p>
 </li>
 </ul>
 </div>
@@ -2594,7 +2603,7 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <div class="sect2">
 <h3 id="_fenster_basisklasse_openglwindow">5.2. Fenster-Basisklasse OpenGLWindow</h3>
 <div class="paragraph">
-<p>Als Grundlage für die Implementierung wird die Klasse <code>OpenGLWindow</code> aus <em>Tutorial 01</em> verwendet, allerdings etwas abgewandelt. Letztlich wird die Schnittstelle angepasst, um ungefähr der des <code>QOpenGLWidget</code> zu entsprechend:</p>
+<p>Als Grundlage für die Implementierung wird die Klasse <code>OpenGLWindow</code> aus <em>Tutorial 01</em> verwendet, allerdings etwas abgewandelt. Letztlich wird die Schnittstelle angepasst, um ungefähr der des <code>QOpenGLWidget</code> zu entsprechen:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -2654,7 +2663,7 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <div class="sect3">
 <h4 id="_klassendeklaration">5.3.1. Klassendeklaration</h4>
 <div class="paragraph">
-<p>Zwecks Überblick, die Klassendeklaration in Teilen. Zunächst die üblichen Verdächtigen:</p>
+<p>Zwecks Überblick ist hier zunächst die Klassendeklaration in Teilen. Zuerst die üblichen Verdächtigen:</p>
 </div>
 <div class="listingblock">
 <div class="title">SceneView.h, Deklaration der Klasse SceneView</div>
@@ -2725,7 +2734,7 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <div class="sect3">
 <h4 id="_das_aktualisierungskonzept">5.3.2. Das Aktualisierungskonzept</h4>
 <div class="paragraph">
-<p>Erklärtes Ziel dieser OpenGL-Implementierung ist, nur dann zu rendern, wenn es wirklich notwendig ist. Also:</p>
+<p>Erklärtes Ziel dieser OpenGL-Implementierung ist nur dann zu rendern, wenn es wirklich notwendig ist. Also:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -2736,10 +2745,10 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <p>wenn das Fenster angezeigt/sichtbar wird (exposed),</p>
 </li>
 <li>
-<p>wenn durch Nutzerinteraktion die Kameraposition verändert wird</p>
+<p>wenn durch Nutzerinteraktion die Kameraposition verändert wird, und</p>
 </li>
 <li>
-<p>wenn die Szene selbst transformiert wird (z.B. programmgesteuerte Animation&#8230;&#8203;)</p>
+<p>wenn die Szene selbst transformiert/verändert wird (z.B. programmgesteuerte Animation&#8230;&#8203;)</p>
 </li>
 </ul>
 </div>
@@ -2750,13 +2759,21 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <p>Grundsätzlich muss man also nur die Funktion <a href="https://doc.qt.io/qt-5/qwindow.html#requestUpdate">QWindow::requestUpdate()</a> (oder unsere Bequemlichkeitsfunktion <code>renderLater()</code>) aufrufen, damit beim nächsten VSync wieder neu gezeichnet wird.</p>
 </div>
 <div class="paragraph">
-<p>Leider funktionier das Verfahren im Fall des <code>ExposeEvent</code> nicht perfekt. Gerade unter Windows führt das beim Vergrößern des Fensters zu unschönen Artefakten am rechten und unteren Bildschirmrand. Daher muss man in diesem Fall tatsächlich gleich in der Ereignisbehandlungsroutine neu zeichnen und dabei den OpenGL Viewport bereits an die neue Fenstergröße anpassen (das geschieht aber bereits in <code>OpenGLWindow::exposeEvent()</code>).</p>
+<p>Leider funktionier das Verfahren im Fall des <code>ExposeEvent</code> bzw. <code>ResizeEvent</code> nicht perfekt. Gerade unter Windows führt das beim Vergrößern des Fensters zu unschönen Artefakten am rechten und unteren Bildschirmrand. Daher muss man in diesem Fall tatsächlich sofort in der Ereignisbehandlungsroutine neu zeichnen und dabei den OpenGL Viewport bereits an die neue Fenstergröße anpassen. Das Neuzeichnen wird direkt im ExposeEvent-Handler von <code>OpenGLWindow</code> ausgelöst:</p>
+</div>
+<div class="listingblock">
+<div class="title">OpenGLWindow.cpp:exposeEvent()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">OpenGLWindow</span><span class="o">::</span><span class="n">exposeEvent</span><span class="p">(</span><span class="n">QExposeEvent</span> <span class="o">*</span> <span class="cm">/*event*/</span><span class="p">)</span> <span class="p">{</span>
+	<span class="n">renderNow</span><span class="p">();</span> <span class="c1">// update right now</span>
+<span class="p">}</span></code></pre>
+</div>
 </div>
 <div class="paragraph">
-<p>Beim <code>ResizeEvent</code> ist zu beachten, dass beim Vergrößern des Fensters allerdings <em>nur</em>, wenn der Aufruf nicht zusammen mit einem <code>ExposeEvent</code> stattfindet. Daher sollte man in der Funktion <code>SceneView::resizeEvent()</code> <em>nicht</em> <code>renderLater()</code> aufrufen!</p>
+<p>Bei Größenveränderung des Fensters sendet Qt immer zuerst ein <code>ResizeEvent</code> gefolgt von einem <code>ExposeEvent</code> aus. Daher sollte man in der Funktion <code>SceneView::resizeEvent()</code> <em>nicht</em> <code>renderLater()</code> aufrufen!</p>
 </div>
 <div class="paragraph">
-<p>Ohne eine Aufruf von <code>renderLater()</code> im ResizeEvent-Handler, erhält man folgende Aufrufreihenfolge bei der Fenstervergrößerung:</p>
+<p>Ohne eine Aufruf von <code>renderLater()</code> im ResizeEvent-Handler erhält man folgende Aufrufreihenfolge bei der Fenstervergrößerung:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -2795,7 +2812,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 <p>beim Größenändern eines Fensters ebenfalls immer ein <code>ResizeEvent</code>, gefolgt von einem <code>ExposeEvent</code> geschickt wird</p>
 </li>
 <li>
-<p>beim Minimieren und Maximieren eines Fensters nur je ein (oder auf dem Mac mehrere) <code>ExposeEvent</code> geschickt werden. Dies kann man nutzen, um eine Animation zu stoppen und beim erneuten Anzeigen (<code>isExposed() == true</code>) wieder zu starten. Dies ist aber nicht der Fokus in diesem Tutorial. Daher könnte man auch das <code>ExposeEvent</code> komplett ignorieren und <code>renderNow()</code> direkt am Ende von  <code>OpenGLWindow::resizeEvent()</code> aufrufen. So wie es aktuell implementiert ist, wird beim Minimieren und Maximieren mehrfach <code>ExposeEvent</code> mit <code>isExposed() == true</code> aufgerufen und damit wird mehrfach trotz unverändertem Viewport und unveränderte Szene gezeichnet. Das ist aber nicht weiter bemerkbar.</p>
+<p>beim Minimieren und Maximieren eines Fensters nur je ein (oder auf dem Mac mehrere) <code>ExposeEvent</code> geschickt werden. Dies kann man nutzen, um eine Animation zu stoppen und beim erneuten Anzeigen (<code>isExposed() == true</code>) wieder zu starten. Dies ist aber nicht der Fokus in diesem Tutorial. Daher könnte man auch das <code>ExposeEvent</code> komplett ignorieren und <code>renderNow()</code> direkt am Ende von  <code>OpenGLWindow::resizeEvent()</code> aufrufen. So wie es aktuell implementiert ist, wird beim Minimieren und Maximieren mehrfach <code>ExposeEvent</code> mit <code>isExposed() == true</code> aufgerufen und damit wird mehrfach gezeichnet, trotz unverändertem Viewport und unveränderte Szene. Das ist aber nicht weiter bemerkbar und verschmerzbar.</p>
 </li>
 </ul>
 </div>
@@ -2803,7 +2820,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 <div class="sect3">
 <h4 id="_verwendung_der_klasse_sceneview">5.3.3. Verwendung der Klasse <em>SceneView</em></h4>
 <div class="paragraph">
-<p>Die Klasse <code>SceneView</code> wird als QWindow-basierte Klasse selbst via Widget-Container in den Testdialog eingebettet (siehe <em>Tutorial 03</em>).</p>
+<p>Die Klasse <code>SceneView</code> wird als <code>QWindow</code>-basierte Klasse selbst via Widget-Container in den Testdialog eingebettet (siehe <em>Tutorial 03</em>).</p>
 </div>
 <div class="paragraph">
 <p>Bei der Analyse des Tutorialquelltextes kann man sich von außen nach innen "arbeiten":</p>
@@ -2819,7 +2836,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </ul>
 </div>
 <div class="paragraph">
-<p>Es gibt im Quelltext von <code>TestDialog.cpp</code> nur ein neues Feature: Antialiasing (siehe Diskussion dazu im letzten Kapitel dieses Tutorials).</p>
+<p>Es gibt im Quelltext von <code>TestDialog.cpp</code> nur ein neues Feature: Antialiasing (siehe letzter Abschnitt "Antialiasing" dieses Tutorials).</p>
 </div>
 </div>
 <div class="sect3">
@@ -2913,7 +2930,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Wichtig ist hier, dass der OpenGL-Context für das aktuelle Fenster aktuell gesetzt wird (<code>m_context-&gt;makeCurrent(this)</code>). Damit können dann die OpenGL-Objekte freigegeben werden. Dies erfolgt in den <code>destroy()</code> Funktionen der Shaderprogramm-Wrapper-Klasse und DrawObjekt-Wrapper-Klassen.</p>
+<p>Wichtig ist hier, dass der OpenGL-Context für das aktuelle Fenster aktuell gesetzt wird (<code>m_context-&gt;makeCurrent(this)</code>). Damit können dann die OpenGL-Objekte freigegeben werden. Dies erfolgt in den <code>destroy()</code> Funktionen der Shaderprogramm-Wrapper-Klasse und Zeichen-Objekt-Wrapper-Klassen.</p>
 </div>
 </div>
 <div class="sect3">
@@ -2943,7 +2960,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Dank der Kapselung der Shaderprogramm-Initialisierung in der Klasse <code>ShaderProgram</code>, und der Kapselung der Zeichenobjekt-spezifischen Initialisierung in den Objekten, ist diese Funktion sehr viel übersichtlicher als in den bisherigen Tutorials.</p>
+<p>Dank der Kapselung der Shaderprogramm-Initialisierung in der Klasse <code>ShaderProgram</code> und der Kapselung der Zeichenobjekt-spezifischen Initialisierung in den Objekten ist diese Funktion sehr viel übersichtlicher als in den bisherigen Tutorials.</p>
 </div>
 <div class="paragraph">
 <p>Das Makro <code>SHADER(x)</code> wird verwendet, um bequem auf das <code>QOpenGLShaderProgram</code> Objekt in der Wrapper-Klasse zuzugreifen.</p>
@@ -2986,7 +3003,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 <p>Qt stellt in <code>QWindow</code> und <code>QWidget</code> Ereignisbehandlungsroutinen für Tastatur- und Mauseingaben zur Verfügung. Die Deklaration dieser Funktion sind oben in der <code>SceneView</code> Klassendeklaration zu sehen.</p>
 </div>
 <div class="paragraph">
-<p>Wenn man eine Taste auf der Tastatur drückt, wird z.B. ein <code>QEvent::KeyPress</code> ausgelöst und die Memberfunktion <code>keyPressEvent(QKeyEvent *event)</code> aufgerufen. Das passiert auch, wenn man die Taste <em>gedrückt</em> hält. Unterscheiden kann man dieses durch Prüfen der Eigenschaft <code>AutoRepeat</code> (<code>QKeyEvent::isAutoRepeat()</code>).</p>
+<p>Wenn man eine Taste auf der Tastatur drückt wird ein <code>QEvent::KeyPress</code> ausgelöst und die Memberfunktion <code>keyPressEvent(QKeyEvent *event)</code> aufgerufen. Das passiert auch, wenn man die Taste <em>gedrückt</em> hält. Unterscheiden kann man dieses durch Prüfen der Eigenschaft <code>AutoRepeat</code> (<code>QKeyEvent::isAutoRepeat()</code>).</p>
 </div>
 <div class="paragraph">
 <p>Für die Navigation in einer 3D Umgebung hält man die Tasten (z.B. WASD oder ähnliche) längere Zeit gedrückt (d.h. über mehrere Frames hinweg). Man benötigt also einen Zustandsmanager, der sich den aktuellen Zustand der Tasten merkt.</p>
@@ -3010,11 +3027,291 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 <div class="paragraph">
 <p>Letzterer ist eigentlich nur dann wichtig, wenn auf einzelne Tastendrücke reagiert werden soll, während eventuell eine aufwändige Neuzeichenroutine läuft.</p>
 </div>
+<div class="sect3">
+<h4 id="_der_tastatur_und_maus_zustandsmanager">5.4.1. Der Tastatur- und Maus-Zustandsmanager</h4>
 <div class="paragraph">
-<p>Zunächst müssen wir uns den Programmauflauf der Ereignisschleife und Auswertung der Tasteneingabe genauer anschauen.</p>
+<p>Man könnte die gesamte Tastatur- und Mausbehandlung natürlich auch direkt in der Klasse <code>SceneView</code> implementieren, in der auch die Ereignisbehandlungsfunktionen aufgerufen werden. Es ist aber übersichtlicher, diese in der Klasse <code>KeyboardMouseHandler</code> zu kapseln.</p>
 </div>
 <div class="paragraph">
-<p>TODO</p>
+<p>Die Aufgabe dieser Klasse ist letztlich sich zu merken, welche Taste/Mausknopf gerade gedrückt ist. Die Implementierung der Klasse ist für das Tutorial eigentlich nicht so wichtig, vielleicht lohnt aber ein Blick auf die Klassendeklaration:</p>
+</div>
+<div class="listingblock">
+<div class="title">KeyboardMouseHandler.h</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">class</span> <span class="nc">KeyboardMouseHandler</span> <span class="p">{</span>
+<span class="nl">public:</span>
+	<span class="n">KeyboardMouseHandler</span><span class="p">();</span>
+	<span class="k">virtual</span> <span class="o">~</span><span class="n">KeyboardMouseHandler</span><span class="p">();</span>
+
+	<span class="c1">// functions to manage known keys</span>
+	<span class="kt">void</span> <span class="n">addRecognizedKey</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key</span> <span class="n">k</span><span class="p">);</span>
+	<span class="kt">void</span> <span class="n">clearRecognizedKeys</span><span class="p">();</span>
+
+    <span class="c1">// event handler helpers</span>
+	<span class="kt">void</span> <span class="n">keyPressEvent</span><span class="p">(</span><span class="n">QKeyEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">);</span>
+	<span class="kt">void</span> <span class="n">keyReleaseEvent</span><span class="p">(</span><span class="n">QKeyEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">);</span>
+	<span class="kt">void</span> <span class="n">mousePressEvent</span><span class="p">(</span><span class="n">QMouseEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">);</span>
+	<span class="kt">void</span> <span class="n">mouseReleaseEvent</span><span class="p">(</span><span class="n">QMouseEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">);</span>
+	<span class="kt">void</span> <span class="n">wheelEvent</span><span class="p">(</span><span class="n">QWheelEvent</span> <span class="o">*</span><span class="n">event</span><span class="p">);</span>
+
+    <span class="c1">// state changing helper functions</span>
+	<span class="kt">bool</span> <span class="n">pressKey</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key</span> <span class="n">k</span><span class="p">);</span>
+	<span class="kt">bool</span> <span class="n">releaseKey</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key</span> <span class="n">k</span><span class="p">);</span>
+	<span class="kt">bool</span> <span class="n">pressButton</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">MouseButton</span> <span class="n">btn</span><span class="p">,</span> <span class="n">QPoint</span> <span class="n">currentPos</span><span class="p">);</span>
+	<span class="kt">bool</span> <span class="n">releaseButton</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">MouseButton</span> <span class="n">btn</span><span class="p">);</span>
+
+    <span class="c1">// query functions</span>
+	<span class="kt">bool</span> <span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key</span> <span class="n">k</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>
+	<span class="kt">bool</span> <span class="n">buttonDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">MouseButton</span> <span class="n">btn</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>
+	<span class="n">QPoint</span> <span class="n">mouseDownPos</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span> <span class="k">return</span> <span class="n">m_mouseDownPos</span><span class="p">;</span> <span class="p">}</span>
+	<span class="kt">int</span> <span class="n">wheelDelta</span><span class="p">()</span> <span class="k">const</span><span class="p">;</span>
+
+    <span class="c1">// state reset functions</span>
+	<span class="n">QPoint</span> <span class="n">resetMouseDelta</span><span class="p">(</span><span class="k">const</span> <span class="n">QPoint</span> <span class="n">currentPos</span><span class="p">);</span>
+	<span class="kt">int</span> <span class="n">resetWheelDelta</span><span class="p">();</span>
+	<span class="kt">void</span> <span class="n">clearWasPressedKeyStates</span><span class="p">();</span>
+
+<span class="nl">private:</span>
+	<span class="k">enum</span> <span class="n">KeyStates</span> <span class="p">{</span>
+		<span class="n">StateNotPressed</span><span class="p">,</span>
+		<span class="n">StateHeld</span><span class="p">,</span>
+		<span class="n">StateWasPressed</span>
+	<span class="p">};</span>
+
+	<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key</span><span class="o">&gt;</span>	<span class="n">m_keys</span><span class="p">;</span>
+	<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">KeyStates</span><span class="o">&gt;</span>	<span class="n">m_keyStates</span><span class="p">;</span>
+
+	<span class="n">KeyStates</span>				<span class="n">m_leftButtonDown</span><span class="p">;</span>
+	<span class="n">KeyStates</span>				<span class="n">m_middleButtonDown</span><span class="p">;</span>
+	<span class="n">KeyStates</span>				<span class="n">m_rightButtonDown</span><span class="p">;</span>
+
+	<span class="n">QPoint</span>					<span class="n">m_mouseDownPos</span><span class="p">;</span>
+
+	<span class="kt">int</span>						<span class="n">m_wheelDelta</span><span class="p">;</span>
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Eine <code>KeyboardMouseHandler</code>-Klasse wird nach der Erstellung durch Aufrufe von <code>addRecognizedKey()</code> konfiguriert (siehe Konstruktor der Klasse <code>SceneView</code>).</p>
+</div>
+<div class="paragraph">
+<p>Für die Tastatur- und Maus-Ereignisbehandlungsroutinen gibt es passende Hilfsfunktionen, sodass man von den Event-Funktionen der eigenen View-Klasse einfach diese Hilfsfunktionen aufrufen kann. Die Zustandsänderungslogik (auch das Prüfen auf AutoRepeat) wird in diesen Funktionen gemacht. Bei bekannten Tasten wird der <code>QKeyEvent</code> oder <code>QMouseEvent</code> akzeptiert, sonst ignoriert.</p>
+</div>
+<div class="paragraph">
+<p>Den Zustand einzelner Tasten kann man auch programmgesteuert durch die <code>pressXXX</code> und <code>releaseXXX</code> Funktionen ändern.</p>
+</div>
+<div class="paragraph">
+<p>Danach kommen die Funktionen zum Abfragen des Zustands. Bei Tasten ist die Abfrage mit <code>keyDown()</code> oder <code>buttonDown()</code> recht klar (sowohl der Zustand "gerade gedrückt", als auch "gedrückt und wieder losgelassen" liefern hier <code>true</code> zurück).</p>
+</div>
+<div class="paragraph">
+<p>Bei der Mausbewegung und Scroll-Rad muss immer die <em>Veränderung</em> zwischen zwei Abfragezeitpunkten angeschaut werden. Bei Verwendung einer Free-Mouse-Look-Taste (hier rechte Maustaste), wird beim Drücken dieser Taste die globale Cursorpostion abgelegt, welche über <code>mouseDownPos()</code> abgefragt werden kann. Bei Mouse-Wheel-Ereignissen werden die Drehstufen (Winkel/Ticks) addiert.</p>
+</div>
+<div class="paragraph">
+<p>Wenn man diese Änderungen nun in eine Bewegung umwandelt, muss man diese nach dem Auslesen wieder zurücksetzen. Dies erfolgt mit den Funktionen <code>resetMouseDelta()</code> und <code>resetWheelDelta()</code>, welche beide die bislang erfassten Differenzen zurückliefern. Die const-Abfragefunktionen <code>mouseDownPos()</code> und <code>wheelDelta()</code> können also verwendet werden, um zu Testen, ob es eine Maus-/Scrollradbewegung gab. Und beim Anwender der Änderungen ruf man die <code>resetXXX()</code> Funktionen auf.</p>
+</div>
+<div class="paragraph">
+<p>Zuletzt muss man die Funktion <code>clearWasPressedKeyStates()</code> nach Abfrage der Tasten aufrufen, um die "wurde gedrückt" Zustände wieder in den "Nicht gedrückt" Zustand zurückzusetzen.</p>
+</div>
+<div class="paragraph">
+<p>Die Implementierung der Klasse ist recht einfach und selbsterklärend und muss hier nicht näher ausgeführt werden. Interessant ist die Verwendung der Klasse. Dazu müssen wir uns zunächst den Programmauflauf der Ereignisschleife und Auswertung der Tasteneingabe genauer anschauen.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_die_ereignisschleife_und_tastatur_mausevents">5.4.2. Die Ereignisschleife und Tastatur-/Mausevents</h4>
+<div class="paragraph">
+<p>Zwischen zwei Frames (also Aufrufen von <code>paintGL()</code>) läuft das Programm in der Ereignisschleife. Sobald eine Taste gedrückt oder losgelassen wird, ruft Qt die entsprechende Ereignisbehandlungsfunktion auf, d.h. <code>keyPressEvent()</code> bzw. <code>keyReleaseEvent()</code>. Ebenso werden bei Mausaktionen die entsprechenden Aktionen ausgelöst.</p>
+</div>
+<div class="paragraph">
+<p>Die Aufrufe werden an die gleichnamigen Funktionen in Zustandsmanager (<code>KeyboardMouseHandler</code>) weitergereicht. Wenn die betreffende Taste dem Zustandsmanager bekannt ist, wird der aktuelle Zustand im Zustandsmanager entsprechend geändert.</p>
+</div>
+<div class="paragraph">
+<p>Nun wird noch geprüft, ob die Taste eine Szenenveränderung (bspw. Kamerabewegung) bewirkt. Dies erfolgt in der Funktion <code>SceneView::checkInput()</code>.</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp:checkInput()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">checkInput</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// trigger key held?</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">buttonDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">RightButton</span><span class="p">))</span> <span class="p">{</span>
+		<span class="c1">// any of the interesting keys held?</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_W</span><span class="p">)</span> <span class="o">||</span>
+			<span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_A</span><span class="p">)</span> <span class="o">||</span>
+			<span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_S</span><span class="p">)</span> <span class="o">||</span>
+			<span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_D</span><span class="p">)</span> <span class="o">||</span>
+			<span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_Q</span><span class="p">)</span> <span class="o">||</span>
+			<span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_E</span><span class="p">))</span>
+		<span class="p">{</span>
+			<span class="n">m_inputEventReceived</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+			<span class="n">renderLater</span><span class="p">();</span>
+			<span class="k">return</span><span class="p">;</span>
+		<span class="p">}</span>
+
+		<span class="c1">// has the mouse been moved?</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">mouseDownPos</span><span class="p">()</span> <span class="o">!=</span> <span class="n">QCursor</span><span class="o">::</span><span class="n">pos</span><span class="p">())</span> <span class="p">{</span>
+			<span class="n">m_inputEventReceived</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+			<span class="n">renderLater</span><span class="p">();</span>
+			<span class="k">return</span><span class="p">;</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+	<span class="c1">// scroll-wheel turned?</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">wheelDelta</span><span class="p">()</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+		<span class="n">m_inputEventReceived</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+		<span class="n">renderLater</span><span class="p">();</span>
+		<span class="k">return</span><span class="p">;</span>
+	<span class="p">}</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In dieser Funktion werden nun die Abfragefunktionen verwendet, d.h. der Zustand des Tastatur-/Maus-Zustandsmanagers wird nicht verändert. Auch ist zu beachten, dass die Abfrage nach dem Mausrad separat erfolgt.</p>
+</div>
+<div class="paragraph">
+<p>Wird eine relevante Taste oder Mausbewegung erkannt, wird durch Aufruf von <code>renderLater()</code> ein Zeichenaufruf in die Event-Schleife eingereiht (kommt beim nächsten VSync) und das Flag <code>m_inputEventReceived</code> wird gesetzt dann geht die Kontrolle wieder zurück an die Ereignisschleife.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Es sollte wirklich nur neu gezeichnet werden, wenn dies durch Tastendruck- oder Mausbewegung notwendig wird. Dadurch, dass das <code>UpdateRequest</code> nur bei Bedarf gesendet wird, kann man ansonsten wild auf der Tastatur herumhämmern, ohne dass auch nur ein OpenGL-Befehl aufgerufen wird.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Es ist nun möglich, dass ein weiteres Tastaturereignis eintrifft, <em>bevor</em> das <code>UpdateRequest</code>-Ereignis eintritt. Bspw. könnte dies das <code>QEvent::KeyRelease</code>-Ereignis eines gerade zuvor eingetroffenen <code>QEvent::KeyPress</code>-Ereignisses derselben Taste sein. Deshalb wird der Zustand einer Taste beim <code>keyReleaseEvent()</code> auf "Wurde gedrückt" geändert, und nicht einfach wieder zurück auf "Nicht gedrückt". Sonst hätte man im Zustandsmanager keine Information mehr darüber, dass die Taste in diesem Frame kurz gedrückt wurde. Das ist zwar bei hohen Bildwiederholfrequenzen hinreichend unwahrscheinlich, kann aber bei sehr komplexen Szenen (bzw. schwacher Hardware) hilfreich sein.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_auswertung_der_eingabe_und_anpassung_der_kameraposition_und_ausrichtung">5.4.3. Auswertung der Eingabe und Anpassung der Kameraposition- und Ausrichtung</h4>
+<div class="paragraph">
+<p>Die eigentliche Auswertung der Tastenzustände und Bewegung der Kamera erfolgt am Anfang der <code>SceneView::paintGL()</code>-Funktion:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp:paintGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">paintGL</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// process input, i.e. check if any keys have been pressed</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">m_inputEventReceived</span><span class="p">)</span>
+		<span class="n">processInput</span><span class="p">();</span>
+
+    <span class="p">...</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Da die Zeichenfunktion aus einer Vielzahl von Gründen aufgerufen werden kann, dient das Flag <code>m_inputEventReceived</code> dazu, nur dann die Eingaben auszuwerten, wenn es tatsächlich welche gab.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Der Zeitaufwand für die Auswertung der Eingaben ist nicht wirklich groß. Da aber einige Matrizenoperationen involviert sind, kann man sich die Arbeit auch sparen, daher das "dirty" Flag <code>m_inputEventReceived</code>.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Die Auswertung des Tastatur- und Mauszustandes erfolgt in der Funktion <code>SceneView::processInput()</code>:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView:processInput()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">processInput</span><span class="p">()</span> <span class="p">{</span>
+	<span class="n">m_inputEventReceived</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+
+	<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">buttonDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">RightButton</span><span class="p">))</span> <span class="p">{</span>
+
+		<span class="c1">// Handle translations</span>
+		<span class="n">QVector3D</span> <span class="n">translation</span><span class="p">;</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_W</span><span class="p">))</span> 		<span class="n">translation</span> <span class="o">+=</span> <span class="n">m_camera</span><span class="p">.</span><span class="n">forward</span><span class="p">();</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_S</span><span class="p">))</span> 		<span class="n">translation</span> <span class="o">-=</span> <span class="n">m_camera</span><span class="p">.</span><span class="n">forward</span><span class="p">();</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_A</span><span class="p">))</span> 		<span class="n">translation</span> <span class="o">-=</span> <span class="n">m_camera</span><span class="p">.</span><span class="n">right</span><span class="p">();</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_D</span><span class="p">))</span> 		<span class="n">translation</span> <span class="o">+=</span> <span class="n">m_camera</span><span class="p">.</span><span class="n">right</span><span class="p">();</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_Q</span><span class="p">))</span> 		<span class="n">translation</span> <span class="o">-=</span> <span class="n">m_camera</span><span class="p">.</span><span class="n">up</span><span class="p">();</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_E</span><span class="p">))</span> 		<span class="n">translation</span> <span class="o">+=</span> <span class="n">m_camera</span><span class="p">.</span><span class="n">up</span><span class="p">();</span>
+
+		<span class="kt">float</span> <span class="n">transSpeed</span> <span class="o">=</span> <span class="mf">0.8</span><span class="n">f</span><span class="p">;</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_Shift</span><span class="p">))</span>
+			<span class="n">transSpeed</span> <span class="o">=</span> <span class="mf">0.1</span><span class="n">f</span><span class="p">;</span>
+		<span class="n">m_camera</span><span class="p">.</span><span class="n">translate</span><span class="p">(</span><span class="n">transSpeed</span> <span class="o">*</span> <span class="n">translation</span><span class="p">);</span>
+
+		<span class="c1">// Handle rotations</span>
+		<span class="c1">// get and reset mouse delta (pass current mouse cursor position)</span>
+		<span class="n">QPoint</span> <span class="n">mouseDelta</span> <span class="o">=</span> <span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">resetMouseDelta</span><span class="p">(</span><span class="n">QCursor</span><span class="o">::</span><span class="n">pos</span><span class="p">());</span>
+		<span class="k">static</span> <span class="k">const</span> <span class="kt">float</span> <span class="n">rotatationSpeed</span>  <span class="o">=</span> <span class="mf">0.4</span><span class="n">f</span><span class="p">;</span>
+		<span class="k">const</span> <span class="n">QVector3D</span> <span class="n">LocalUp</span><span class="p">(</span><span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">);</span> <span class="c1">// same as in Camera::up()</span>
+		<span class="n">m_camera</span><span class="p">.</span><span class="n">rotate</span><span class="p">(</span><span class="o">-</span><span class="n">rotatationSpeed</span> <span class="o">*</span> <span class="n">mouseDelta</span><span class="p">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">LocalUp</span><span class="p">);</span>
+		<span class="n">m_camera</span><span class="p">.</span><span class="n">rotate</span><span class="p">(</span><span class="o">-</span><span class="n">rotatationSpeed</span> <span class="o">*</span> <span class="n">mouseDelta</span><span class="p">.</span><span class="n">y</span><span class="p">(),</span> <span class="n">m_camera</span><span class="p">.</span><span class="n">right</span><span class="p">());</span>
+
+		<span class="c1">// finally, reset "WasPressed" key states</span>
+		<span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">clearWasPressedKeyStates</span><span class="p">();</span>
+	<span class="p">}</span>
+	<span class="kt">int</span> <span class="n">wheelDelta</span> <span class="o">=</span> <span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">resetWheelDelta</span><span class="p">();</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">wheelDelta</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+		<span class="kt">float</span> <span class="n">transSpeed</span> <span class="o">=</span> <span class="mf">8.</span><span class="n">f</span><span class="p">;</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">keyDown</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">Key_Shift</span><span class="p">))</span>
+			<span class="n">transSpeed</span> <span class="o">=</span> <span class="mf">0.8</span><span class="n">f</span><span class="p">;</span>
+		<span class="n">m_camera</span><span class="p">.</span><span class="n">translate</span><span class="p">(</span><span class="n">wheelDelta</span> <span class="o">*</span> <span class="n">transSpeed</span> <span class="o">*</span> <span class="n">m_camera</span><span class="p">.</span><span class="n">forward</span><span class="p">());</span>
+	<span class="p">}</span>
+
+	<span class="n">updateWorld2ViewMatrix</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Auch in dieser Funktion werden Bewegungen der Kamera durch Tastendrücke und Schwenker durch Mausbewegung unabhängig vom Scrollrad-Zoom behandelt. Am Ende der Funktion werden die Welt-zu-Perspektive-Transformationsmatrizen angepasst. Die relevanten Matrizen und auch das Kamera-Objekt (Klasse <code>Camera</code>) sind im Abschnitt "Transformationsmatrizen und Kamera" weiter unten beschrieben.</p>
+</div>
+<div class="paragraph">
+<p>Die Bewegung der Kamera ist recht einfach nachvollziehbar - je nach gedrückter Taste wird eine Verschieberichtung auf den Vektor <code>translation</code> addiert. Der tatsächliche Verschiebevektor wird durch Multiplikation mit einer Geschwindigkeit <code>transSpeed</code> berechnet. Hier ist auch die "Verlangsamung-bei-Shift-Tastendruck"-eingebaut.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Die Geschwindigkeit ist hier als "Bewegung je Frame" zu verstehen, was bei stark veränderlichen Frameraten (z.B. bei komplexer Geometrie) zu einer variablen Fortbewegungsgeschwindigkeit führen kann. Hier kann man alternativ eine Zeitmessung einbauen und den Zeitabstand zwischen Abfragen des Eingabezustands in die Berechnung der Verschiebung einfließen lassen.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Die Drehung der Kamera hängt von der Mausbewegung ab. Hier wird die Funktion <code>resetMouseDelta()</code> aufgerufen, welche zwei Funktionen hat:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>die Bewegung der Maus seit dem Druck auf die rechte Maustaste bzw. seit letztem Aufruf von <code>resetMouseDelta()</code> wird zurückgeliefert, und</p>
+</li>
+<li>
+<p><code>mouseDownPos</code> wird auf die aktuelle Maus-Cursorposition gesetzt (sodass beim nächsten Aufruf</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Bei der Bewegung erfolgt die Neigung der Kamera um die x-Achse des lokalen Kamerakoordinatensystems (wird zurückgeliefert durch die Funktion <code>m_camera.right()</code>. Analog könnte man die Kamera auch um die lokale y-Achse der Kamera schwenken (wie in einem Flugsimulator üblich), dies führt aber zu recht beliebigen Ausrichtungen. Möchte man die Kamera eher parallel zum "Fußboden" halten, dann dreht man die Kamera um die y-Achse des Weltenkoordinatensystems (Vektor 0,1,0).</p>
+</div>
+<div class="paragraph">
+<p>Am Ende des Tastaturabfrageteils werden noch die "wurde gedrückt"-Zustände zurückgesetzt.</p>
+</div>
+<div class="paragraph">
+<p>Das Scrollrad soll in diesem Beispiel ein deutlich schnelleres Vorwärts- oder Rückwärtsbewegen durch die Szene ermöglichen. Deshalb werden die Mausradbewegungen mit größerer Verschiebegeschwindigkeit skaliert. Wie auch bei der Abfrage der Mausbewegung wird in der Funktion <code>resetWheelDelta()</code> der aktuell akkumulierte Scrollweg zurückgeliefert und intern im Zustandsmanager wieder auf 0 gesetzt.</p>
+</div>
+<div class="paragraph">
+<p>Damit wäre die Tastatur- und Mauseingabe auch schon komplett.</p>
+</div>
 </div>
 </div>
 <div class="sect2">
@@ -3048,7 +3345,34 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Zur Verwaltung von Shaderprogrammen gehören auch die Variablen, die man dem Vertex- und/oder Fragment-Shaderprogramm übergeben möchte (siehe Shaderprogramme in Abschnitt "Zeichenobjekte"). Die Verwendung der Klasse sieht vor, dass man erst alle Eigenschaften setzt (Resourcen-Pfade zu den Shaderprogrammen, und die uniform-Namen im Vektor <code>m_uniformNames</code>) und dann die Funktion <code>create()</code> aufruft. Die macht dann die eigentliche Initialisierung, die in den vorangegangenen Tutorials in der <code>initializeGL()</code> Funktion gemacht wurde:</p>
+<p>Zur Verwaltung von Shaderprogrammen gehören auch die Variablen, die man dem Vertex- und/oder Fragment-Shaderprogramm übergeben möchte (siehe Shaderprogramme in Abschnitt "Zeichenobjekte"). Die Verwendung der Klasse sieht vor, dass man erst alle Eigenschaften setzt (Resourcen-Pfade zu den Shaderprogrammen, und die uniform-Namen im Vektor <code>m_uniformNames</code>). Dies wird im Konstruktor der <code>SceneView</code>-Klasse gemacht:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp:SceneView()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">SceneView</span><span class="o">::</span><span class="n">SceneView</span><span class="p">()</span> <span class="o">:</span>
+	<span class="n">m_inputEventReceived</span><span class="p">(</span><span class="nb">false</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="p">...</span>
+
+	<span class="c1">// Shaderprogram #0 : regular geometry (painting triangles via element index)</span>
+	<span class="n">ShaderProgram</span> <span class="n">blocks</span><span class="p">(</span><span class="s">":/shaders/withWorldAndCamera.vert"</span><span class="p">,</span><span class="s">":/shaders/simple.frag"</span><span class="p">);</span>
+	<span class="n">blocks</span><span class="p">.</span><span class="n">m_uniformNames</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="s">"worldToView"</span><span class="p">);</span>
+	<span class="n">m_shaderPrograms</span><span class="p">.</span><span class="n">append</span><span class="p">(</span> <span class="n">blocks</span> <span class="p">);</span>
+
+	<span class="c1">// Shaderprogram #1 : grid (painting grid lines)</span>
+	<span class="n">ShaderProgram</span> <span class="n">grid</span><span class="p">(</span><span class="s">":/shaders/grid.vert"</span><span class="p">,</span><span class="s">":/shaders/grid.frag"</span><span class="p">);</span>
+	<span class="n">grid</span><span class="p">.</span><span class="n">m_uniformNames</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="s">"worldToView"</span><span class="p">);</span> <span class="c1">// mat4</span>
+	<span class="n">grid</span><span class="p">.</span><span class="n">m_uniformNames</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="s">"gridColor"</span><span class="p">);</span> <span class="c1">// vec3</span>
+	<span class="n">grid</span><span class="p">.</span><span class="n">m_uniformNames</span><span class="p">.</span><span class="n">append</span><span class="p">(</span><span class="s">"backColor"</span><span class="p">);</span> <span class="c1">// vec3</span>
+	<span class="n">m_shaderPrograms</span><span class="p">.</span><span class="n">append</span><span class="p">(</span> <span class="n">grid</span> <span class="p">);</span>
+
+    <span class="p">...</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Konfiguration aller Shaderprogramme kann vor der eigentlichen OpenGL-Initialisierung erfolgen. Diese erfolgt für jedes Shaderprogramm beim Aufruf der Funktion <code>ShaderProgram::create()</code>. Die macht dann die eigentliche Initialisierung, die in den vorangegangenen Tutorials in der <code>initializeGL()</code> Funktion gemacht wurde:</p>
 </div>
 <div class="listingblock">
 <div class="title">ShaderProgram.cpp:create()</div>
@@ -3084,7 +3408,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Beim Aufruf von <code>QOpenGLShaderProgram::addShaderFromSourceFile()</code> das erste Argument beachten, welches den Typ des Shaderprogramms festlegt!</p>
+<p>Beim Aufruf von <code>QOpenGLShaderProgram::addShaderFromSourceFile()</code> ist das erste Argument zu beachten, welches den Typ des Shaderprogramms festlegt!</p>
 </div>
 </td>
 </tr>
@@ -3216,6 +3540,34 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 	<span class="k">return</span> <span class="n">m_world</span><span class="p">;</span>
 <span class="p">}</span></code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>Daneben bietet die Kameraklasse noch 3 interessante Abfragefunktionen, welche die Koordinatenrichtungen des lokalen Kamera-Koordinatensystems im Weltenkoordinatensystem zurückliefern:</p>
+</div>
+<div class="listingblock">
+<div class="title">Camera.h</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="c1">// negative Kamera-z-Achse</span>
+<span class="n">QVector3D</span> <span class="nf">forward</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span>
+	<span class="k">const</span> <span class="n">QVector3D</span> <span class="n">LocalForward</span><span class="p">(</span><span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">m_rotation</span><span class="p">.</span><span class="n">rotatedVector</span><span class="p">(</span><span class="n">LocalForward</span><span class="p">);</span>
+<span class="err">}</span>
+
+<span class="c1">// Kamera-y-Achse</span>
+<span class="n">QVector3D</span> <span class="nf">up</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span>
+	<span class="k">const</span> <span class="n">QVector3D</span> <span class="n">LocalUp</span><span class="p">(</span><span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">m_rotation</span><span class="p">.</span><span class="n">rotatedVector</span><span class="p">(</span><span class="n">LocalUp</span><span class="p">);</span>
+<span class="err">}</span>
+
+<span class="c1">// Kamera-x-Achse</span>
+<span class="n">QVector3D</span> <span class="nf">right</span><span class="p">()</span> <span class="k">const</span> <span class="p">{</span>
+	<span class="k">const</span> <span class="n">QVector3D</span> <span class="n">LocalRight</span><span class="p">(</span><span class="mf">1.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">m_rotation</span><span class="p">.</span><span class="n">rotatedVector</span><span class="p">(</span><span class="n">LocalRight</span><span class="p">);</span>
+<span class="err">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die eigentliche Arbeit macht hier die Klasse <code>QQuaternion</code>, welche man dankenswerterweise nicht selbst implementieren muss.</p>
 </div>
 </div>
 </div>
