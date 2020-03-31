@@ -13,7 +13,6 @@ License    : BSD License,
 #define KeyboardMouseHandlerH
 
 #include <QPoint>
-#include <QElapsedTimer>
 #include <vector>
 
 class QKeyEvent;
@@ -70,6 +69,11 @@ public:
 	KeyboardMouseHandler();
 	virtual ~KeyboardMouseHandler();
 
+	/*! Call this function for each key we are listening to. */
+	void addRecognizedKey(Qt::Key k);
+	/*! Clears list of recognized keys. */
+	void clearRecognizedKeys();
+
 	// Functions to handle key press and mouse press events
 	// These function return true, if a recognized key/mouse button was pressed and
 	// the scene may need to be updated.
@@ -78,20 +82,6 @@ public:
 	void mousePressEvent(QMouseEvent *event);
 	void mouseReleaseEvent(QMouseEvent *event);
 	void wheelEvent(QWheelEvent *event);
-
-	enum KeyStates {
-		StateNotPressed,
-		StateHeld,
-		StateWasPressed
-	};
-
-	/*! Call this function for each key we are listening to. */
-	void addRecognizedKey(Qt::Key k);
-	/*! Clears list of recognized keys. */
-	void clearRecognizedKeys();
-
-	/*! This resets all key states currently marked as "WasPressed". */
-	void clearWasPressedKeyStates();
 
 	/*! Called when a key was pressed. */
 	bool pressKey(Qt::Key k);
@@ -102,25 +92,42 @@ public:
 	/*! Called when a mousebutton was released. */
 	bool releaseButton(Qt::MouseButton btn);
 
-	/*! Returns the position (global pos) that was recorded, when a mouse button was pressed. */
-	QPoint mouseDownPos() const { return m_mouseDownPos; }
-
-	/*! Returns, whether the key is pressed. */
+	/*! Returns, whether the key is pressed or was pressed in last query interval. */
 	bool keyDown(Qt::Key k) const;
-	/*! Returns, whether the mouse button is pressed. */
+	/*! Returns, whether the mouse button is pressed or was pressed in last query interval. */
 	bool buttonDown(Qt::MouseButton btn) const;
+
+	/*! Returns the position (global pos) that was recorded, when a mouse button was pressed.
+		Use this function to determine whether the mouse has been moved (by comparing it to the QCursor::pos()).
+	*/
+	QPoint mouseDownPos() const { return m_mouseDownPos; }
 
 	/*! Returns the difference between last and current mouse position and *updates*
 		last mouse position to currentPos.
 		The retrieved point (x and y distances) should be used to modify state based transformations.
 	*/
-	QPoint mouseDelta(const QPoint currentPos);
+	QPoint resetMouseDelta(const QPoint currentPos);
 
-	/*! Returns time since last call and resets counter. */
-//	double timeDelta();
+	/*! Retrieves the wheel distance (angle in degree) that was added up so far.
+		Use this function to query, if the mouse wheel had been turned.
+	*/
+	int wheelDelta() const;
 
+	/*! Retrieves the wheel distance (angle in degree) that was added up in the last query interval
+		and resets it to zero.
+	*/
+	int resetWheelDelta();
+
+	/*! This resets all key states currently marked as "WasPressed". */
+	void clearWasPressedKeyStates();
 
 private:
+	enum KeyStates {
+		StateNotPressed,
+		StateHeld,
+		StateWasPressed
+	};
+
 	std::vector<Qt::Key>	m_keys;
 	std::vector<KeyStates>	m_keyStates;
 
@@ -130,7 +137,7 @@ private:
 
 	QPoint					m_mouseDownPos;
 
-	QElapsedTimer			m_updateTimer;
+	int						m_wheelDelta;
 };
 
 #endif // KeyboardMouseHandlerH

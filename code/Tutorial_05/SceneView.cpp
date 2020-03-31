@@ -46,7 +46,7 @@ SceneView::SceneView() :
 	// *** initialize camera placement and model placement in the world
 
 	// move camera a little back and up
-	m_camera.translate(0,50,75);
+	m_camera.translate(0,75,100);
 	// look slightly down
 	m_camera.rotate(-30, m_camera.right());
 	// look slightly right
@@ -203,6 +203,11 @@ void SceneView::checkInput() {
 			return;
 		}
 	}
+	if (m_keyboardMouseHandler.wheelDelta() != 0) {
+		m_inputEventReceived = true;
+		renderLater();
+		return;
+	}
 }
 
 
@@ -212,30 +217,42 @@ void SceneView::processInput() {
 	m_inputEventReceived = false;
 //	qDebug() << "SceneView::processInput()";
 
-	// Handle translations
-	QVector3D translation;
-	if (m_keyboardMouseHandler.keyDown(Qt::Key_W)) 		translation += m_camera.forward();
-	if (m_keyboardMouseHandler.keyDown(Qt::Key_S)) 		translation -= m_camera.forward();
-	if (m_keyboardMouseHandler.keyDown(Qt::Key_A)) 		translation -= m_camera.right();
-	if (m_keyboardMouseHandler.keyDown(Qt::Key_D)) 		translation += m_camera.right();
-	if (m_keyboardMouseHandler.keyDown(Qt::Key_Q)) 		translation -= m_camera.up();
-	if (m_keyboardMouseHandler.keyDown(Qt::Key_E)) 		translation += m_camera.up();
+	// check for trigger key
+	if (m_keyboardMouseHandler.buttonDown(Qt::RightButton)) {
 
-	float transSpeed = 0.8f;
-	if (m_keyboardMouseHandler.keyDown(Qt::Key_Shift))
-		transSpeed = 0.1f;
-	m_camera.translate(transSpeed * translation);
+		// Handle translations
+		QVector3D translation;
+		if (m_keyboardMouseHandler.keyDown(Qt::Key_W)) 		translation += m_camera.forward();
+		if (m_keyboardMouseHandler.keyDown(Qt::Key_S)) 		translation -= m_camera.forward();
+		if (m_keyboardMouseHandler.keyDown(Qt::Key_A)) 		translation -= m_camera.right();
+		if (m_keyboardMouseHandler.keyDown(Qt::Key_D)) 		translation += m_camera.right();
+		if (m_keyboardMouseHandler.keyDown(Qt::Key_Q)) 		translation -= m_camera.up();
+		if (m_keyboardMouseHandler.keyDown(Qt::Key_E)) 		translation += m_camera.up();
 
-	// Handle rotations
-	// get and reset mouse delta (pass current mouse cursor position)
-	QPoint mouseDelta = m_keyboardMouseHandler.mouseDelta(QCursor::pos()); // resets the internal position
-	static const float rotatationSpeed  = 0.4f;
-	const QVector3D LocalUp(0.0f, 1.0f, 0.0f); // same as in Camera::up()
-	m_camera.rotate(-rotatationSpeed * mouseDelta.x(), LocalUp);
-	m_camera.rotate(-rotatationSpeed * mouseDelta.y(), m_camera.right());
+		float transSpeed = 0.8f;
+		if (m_keyboardMouseHandler.keyDown(Qt::Key_Shift))
+			transSpeed = 0.1f;
+		m_camera.translate(transSpeed * translation);
 
-	// finally, reset "WasPressed" key states
-	m_keyboardMouseHandler.clearWasPressedKeyStates();
+		// Handle rotations
+		// get and reset mouse delta (pass current mouse cursor position)
+		QPoint mouseDelta = m_keyboardMouseHandler.resetMouseDelta(QCursor::pos()); // resets the internal position
+		static const float rotatationSpeed  = 0.4f;
+		const QVector3D LocalUp(0.0f, 1.0f, 0.0f); // same as in Camera::up()
+		m_camera.rotate(-rotatationSpeed * mouseDelta.x(), LocalUp);
+		m_camera.rotate(-rotatationSpeed * mouseDelta.y(), m_camera.right());
+
+		// finally, reset "WasPressed" key states
+		m_keyboardMouseHandler.clearWasPressedKeyStates();
+	}
+	int wheelDelta = m_keyboardMouseHandler.resetWheelDelta();
+	if (wheelDelta != 0) {
+		float transSpeed = 8.f;
+		if (m_keyboardMouseHandler.keyDown(Qt::Key_Shift))
+			transSpeed = 0.8f;
+		m_camera.translate(wheelDelta * transSpeed * m_camera.forward());
+	}
+
 	updateWorld2ViewMatrix();
 	// not need to request update here, since we are called from paint anyway
 }

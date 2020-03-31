@@ -27,8 +27,8 @@ BoxObject::BoxObject() :
 	b.transform(trans.toMatrix());
 	m_boxes.push_back( b);
 
-	const int BoxGenCount = 2000;
-	const int GridDim = 40; // must be an int, or use cast below
+	const int BoxGenCount = 10000;
+	const int GridDim = 50; // must be an int, or use cast below
 
 	// initialize grid (block count)
 	int boxPerCells[GridDim][GridDim];

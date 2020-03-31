@@ -19,7 +19,8 @@ License    : BSD License,
 KeyboardMouseHandler::KeyboardMouseHandler() :
 	m_leftButtonDown(StateNotPressed),
 	m_middleButtonDown(StateNotPressed),
-	m_rightButtonDown(StateNotPressed)
+	m_rightButtonDown(StateNotPressed),
+	m_wheelDelta(0)
 {
 }
 
@@ -60,6 +61,17 @@ void KeyboardMouseHandler::mouseReleaseEvent(QMouseEvent *event) {
 
 
 void KeyboardMouseHandler::wheelEvent(QWheelEvent *event) {
+	QPoint numPixels = event->pixelDelta();
+	QPoint numDegrees = event->angleDelta() / 8;
+
+	if (!numPixels.isNull()) {
+		m_wheelDelta += numPixels.y();
+	} else if (!numDegrees.isNull()) {
+		QPoint numSteps = numDegrees / 15;
+		m_wheelDelta += numSteps.y();
+	}
+
+	event->accept();
 }
 
 
@@ -134,10 +146,22 @@ bool KeyboardMouseHandler::releaseButton(Qt::MouseButton btn) {
 }
 
 
-QPoint KeyboardMouseHandler::mouseDelta(const QPoint currentPos) {
+QPoint KeyboardMouseHandler::resetMouseDelta(const QPoint currentPos) {
 	QPoint dist = currentPos - m_mouseDownPos;
 	m_mouseDownPos = currentPos;
 	return dist;
+}
+
+
+int KeyboardMouseHandler::wheelDelta() const {
+	m_wheelDelta;
+	return m_wheelDelta;
+}
+
+int KeyboardMouseHandler::resetWheelDelta() {
+	int wd = m_wheelDelta;
+	m_wheelDelta = 0;
+	return wd;
 }
 
 

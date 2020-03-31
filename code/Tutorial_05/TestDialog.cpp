@@ -14,6 +14,7 @@ License    : BSD License,
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QLabel>
 
 #include "SceneView.h"
 
@@ -54,11 +55,17 @@ TestDialog::TestDialog() :
 	QHBoxLayout * hlay = new QHBoxLayout;
 	hlay->setMargin(0);
 
+	QLabel * navigationInfo = new QLabel(this);
+	navigationInfo->setWordWrap(true);
+	navigationInfo->setText("Hold right mouse button for free mouse look and to navigate "
+							"with keys WASDQE. Hold shift to slow down. Use scroll-wheel to move quickly forward and backward.");
+	hlay->addWidget(navigationInfo);
+
 	QPushButton * closeBtn = new QPushButton(tr("Close"), this);
 	connect(closeBtn, &QPushButton::clicked, this, &QDialog::accept);
 
-	hlay->addStretch();
 	hlay->addWidget(closeBtn);
+	hlay->setStretch(0,1);
 
 	vlay->addLayout(hlay);
 
@@ -68,4 +75,3 @@ TestDialog::TestDialog() :
 
 	container->setFocus();
 }
-

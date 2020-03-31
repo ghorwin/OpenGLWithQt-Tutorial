@@ -211,14 +211,14 @@ Wie man sieht, wird jedes Mal doppelt gezeichnet, was eine deutlich spürbare Ve
 
 === Verwendung der Klasse 'SceneView'
 
-Die Klasse `SceneView` wird als QWindow-basierte Klasse selbst via Widget-Container in den Testdialog eingebettet (siehe __Tutorial 03__).
+Die Klasse `SceneView` wird als `QWindow`-basierte Klasse selbst via Widget-Container in den Testdialog eingebettet (siehe __Tutorial 03__).
 
 Bei der Analyse des Tutorialquelltextes kann man sich von außen nach innen "arbeiten":
 
 - `main.cpp` - Instanziert `TestDialog`
 - `TestDialog.cpp` - Instanziert `SceneView` und bettet das Objekt via Window-Container ein.
 
-Es gibt im Quelltext von `TestDialog.cpp` nur ein neues Feature: Antialiasing (siehe Diskussion dazu im letzten Kapitel dieses Tutorials).
+Es gibt im Quelltext von `TestDialog.cpp` nur ein neues Feature: Antialiasing (siehe letzter Abschnitt "Antialiasing" dieses Tutorials).
 
 === Implementierung der Klasse 'SceneView'
 
@@ -289,7 +289,7 @@ SceneView::~SceneView() {
 }
 ----
 
-Wichtig ist hier, dass der OpenGL-Context für das aktuelle Fenster aktuell gesetzt wird (`m_context->makeCurrent(this)`). Damit können dann die OpenGL-Objekte freigegeben werden. Dies erfolgt in den `destroy()` Funktionen der Shaderprogramm-Wrapper-Klasse und DrawObjekt-Wrapper-Klassen.
+Wichtig ist hier, dass der OpenGL-Context für das aktuelle Fenster aktuell gesetzt wird (`m_context->makeCurrent(this)`). Damit können dann die OpenGL-Objekte freigegeben werden. Dies erfolgt in den `destroy()` Funktionen der Shaderprogramm-Wrapper-Klasse und Zeichen-Objekt-Wrapper-Klassen.
 
 === OpenGL-Initialisierung
 
@@ -316,7 +316,7 @@ void SceneView::initializeGL() {
 }
 ----
 
-Dank der Kapselung der Shaderprogramm-Initialisierung in der Klasse `ShaderProgram`, und der Kapselung der Zeichenobjekt-spezifischen Initialisierung in den Objekten, ist diese Funktion sehr viel übersichtlicher als in den bisherigen Tutorials.
+Dank der Kapselung der Shaderprogramm-Initialisierung in der Klasse `ShaderProgram` und der Kapselung der Zeichenobjekt-spezifischen Initialisierung in den Objekten ist diese Funktion sehr viel übersichtlicher als in den bisherigen Tutorials.
 
 Das Makro `SHADER(x)` wird verwendet, um bequem auf das `QOpenGLShaderProgram` Objekt in der Wrapper-Klasse zuzugreifen.
 
@@ -348,12 +348,21 @@ Ein solcher "Inputmanager" hält intern also für jede (berücksichtigte) Taste 
 
 Letzterer ist eigentlich nur dann wichtig, wenn auf einzelne Tastendrücke reagiert werden soll, während eventuell eine aufwändige Neuzeichenroutine läuft. 
 
+=== Der Tastatur- und Maus-Zustandsmanager
+
+Man könnte die gesamte Tastatur- und Mausbehandlung natürlich auch direkt in der Klasse `SceneView` implementieren, in der auch die Ereignisbehandlungsfunktionen aufgerufen werden. Es ist aber übersichtlicher, diese in der Klasse `KeyboardMouseHandler` zu kapseln.
+
+Die Aufgabe dieser Klasse ist letztlich sich zu merken, welche Taste/Mausknopf gerade gedrückt ist.
+
+Die Klassendeklaration zeigt, dass es für die Ereignisbehandlungsfunktionen passende Funktionen gibt - man kann 
+
+
 Zunächst müssen wir uns den Programmauflauf der Ereignisschleife und Auswertung der Tasteneingabe genauer anschauen.
 
 === Die Ereignisschleife und Tastatur-/Mausevents
 Zwischen zwei Frames (also Aufrufen von `paintGL()`) läuft das Programm in der Ereignisschleife. Sobald eine Taste gedrückt oder losgelassen wird, ruft Qt die entsprechende Ereignisbehandlungsfunktion auf, d.h. `keyPressEvent()` bzw. `keyReleaseEvent()`.
 
-Wenn die betreffende Taste bekannt ist, wird der aktuelle Zustand im Zustandsmanager entsprechend geändert. Nun wird noch geprüft, ob die Taste eine Szenenveränderung (bspw. Kamerabewegung) bewirkt. In diesem Fall wird durch Aufruf von `renderLater()` ein Zeichenaufruf in die Event-Schleife eingereiht (kommt beim nächsten VSync). Dann geht die Kontrolle wieder zurück an die Ereignisschleife. 
+Wenn die betreffende Taste dem Zustandsmanager bekannt ist, wird der aktuelle Zustand im Zustandsmanager entsprechend geändert. Nun wird noch geprüft, ob die Taste eine Szenenveränderung (bspw. Kamerabewegung) bewirkt. In diesem Fall wird durch Aufruf von `renderLater()` ein Zeichenaufruf in die Event-Schleife eingereiht (kommt beim nächsten VSync). Dann geht die Kontrolle wieder zurück an die Ereignisschleife. 
 
 [NOTE]
 ====
@@ -395,7 +404,7 @@ void SceneView::checkInput() {
 }
 ----
 
-Die eigentliche Auswertung der Tastenzustände und Bewegung der Kamera erfolgt am Anfang der `paintGL()`-Funktion (siehe Quelltext oben). Damit der Tastaturhandler nicht immer ausgewertet werden muss, gibt es noch ein Flag `m_inputEventReceived`, welches signalisiert, dass Tastatur-/Mauseingaben getätigt wurden. Die Funktion `processInput()` wird nur dann aufgerufen, wenn dieses Flag gesetzt ist.
+Die eigentliche Auswertung der Tastenzustände und Bewegung der Kamera erfolgt am Anfang der `paintGL()`-Funktion (siehe Quelltext oben). Damit der Zustandsmanager nicht immer ausgewertet werden muss, gibt es noch ein Flag `m_inputEventReceived`, welches signalisiert, dass Tastatur-/Mauseingaben getätigt wurden. Die Funktion `processInput()` wird nur dann aufgerufen, wenn dieses Flag gesetzt ist.
 
 === Auswertung der Tastatur- und Maustasten/Mausbewegung
 
