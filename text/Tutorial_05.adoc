@@ -17,7 +17,7 @@ In diesem Tutorial werden viele neue Dinge verwendet:
 - Tiefenpuffer, sodass Gitterlinien/Boxen korrekt vor/hintereinander gezeichnet werden
 - Model2World und World2View-Matrizen (mit perspektivischer Projektion)
 - Shaderprogramme und Renderobjekte (bzw. Objektgruppen) sind in Klassen zusammengefasst, wodurch der Quelltext deutlich übersichtlicher wird
-- eine Maus+Tastatursteuerung (WASDQE + Mauslook, incl. Shift-Langssam-Bewege-Modus) ist integriert
+- eine Maus+Tastatursteuerung mit WASDQE + Mauslook, incl. Shift-Langsam-Bewege-Modus
 - und das Ganze wieder mit dem Schwerpunkt: Rendern nur wenn notwendig (Akku sparen!)
 
 == Überblick
@@ -29,14 +29,15 @@ Folgende Implementierungsschritte werden besprochen:
 - Anpassung der Klasse `OpenGLWindow` an die in `QOpenGLWidget` bzw. `QOpenGLWindow` verwendeten Funktionsnamen
 - Vorstellung der Klasse `SceneView`, die das bisherige `TriangleWindow` oder `RectangleWindow` ersetzt
 - Transformationsmatrizen: Model -> World -> Kamera -> Projektion (Klassen `Transform3D` und `Camera`)
-- Kapselung der Shaderprogramme und Initialisierung und Verwendung derselben
-- Kapselung der Zeichenroutinen für das Gitterraster, Abblendeffekt am Horizont im Shader
-- Kapselung der Zeichenroutinen für die Boxen
+- Tastatur- und Mauseingabebehandlung (Klasse `KeyboardMouseHandler`)
+- Kapselung der Shaderprogramme und Initialisierung und Verwendung derselben (Klasse `ShaderProgram`)
+- Kapselung der Zeichenroutinen für das Gitterraster, Abblendeffekt am Horizont im Shader (Klasse `GridObject` und Shader `grid.vert` und `grid.frag`)
+- Kapselung der Zeichenroutinen für die Boxen (Klassen `BoxObject` und `BoxMesh`, und Shader `withWorldAndCamera.vert` und `simple.frag`)
 
 
 == Fenster-Basisklasse OpenGLWindow
 
-Als Grundlage für die Implementierung wird die Klasse `OpenGLWindow` aus _Tutorial 01_ verwendet, allerdings etwas abgewandelt. Letztlich wird die Schnittstelle angepasst, um ungefähr der des `QOpenGLWidget` zu entsprechend:
+Als Grundlage für die Implementierung wird die Klasse `OpenGLWindow` aus _Tutorial 01_ verwendet, allerdings etwas abgewandelt. Letztlich wird die Schnittstelle angepasst, um ungefähr der des `QOpenGLWidget` zu entsprechen:
 [source,c++]
 ----
 class OpenGLWindow : public QWindow, protected QOpenGLFunctions {
@@ -89,7 +90,7 @@ Unabhängig von dieser Initializierungsfunktion muss man natürlich die Funktion
 
 === Klassendeklaration
 
-Zwecks Überblick, die Klassendeklaration in Teilen. Zunächst die üblichen Verdächtigen:
+Zwecks Überblick ist hier zunächst die Klassendeklaration in Teilen. Zuerst die üblichen Verdächtigen:
 
 .SceneView.h, Deklaration der Klasse SceneView
 [source,c++]
@@ -155,22 +156,30 @@ Und das war's auch schon - recht kompakt, oder?
 
 === Das Aktualisierungskonzept
 
-Erklärtes Ziel dieser OpenGL-Implementierung ist, nur dann zu rendern, wenn es wirklich notwendig ist. Also:
+Erklärtes Ziel dieser OpenGL-Implementierung ist nur dann zu rendern, wenn es wirklich notwendig ist. Also:
 
 - wenn die Fenstergröße (Viewport) verändert wurde,
 - wenn das Fenster angezeigt/sichtbar wird (exposed),
-- wenn durch Nutzerinteraktion die Kameraposition verändert wird
-- wenn die Szene selbst transformiert wird (z.B. programmgesteuerte Animation...)
+- wenn durch Nutzerinteraktion die Kameraposition verändert wird, und
+- wenn die Szene selbst transformiert/verändert wird (z.B. programmgesteuerte Animation...)
 
 Wenn man jetzt bei jedem Eintreffen eines solchen Ereignisses jedesmal neu zeichnen würde, wäre das mit ziemlichem Overhead verbunden. Besser ist es, beim Eintreffen eines solchen Ereignisses einfach nur ein Neuzeichnen anzufordern. Da die `UpdateRequest`-Ereignisse normalerweise mit der Bildschirmfrequenz synchronisiert sind, kann es natürlich sein, dass mehrfach hintereinander `UpdateRequest`-Events an die Eventloop angehängt werden. Dabei werden diese aber zusammengefasst und nur ein Event ausgeschickt. Es muss ja auch nur einmal je angezeigtem Frame gezeichnet werden.
 
 Grundsätzlich muss man also nur die Funktion https://doc.qt.io/qt-5/qwindow.html#requestUpdate[QWindow::requestUpdate()] (oder unsere Bequemlichkeitsfunktion `renderLater()`) aufrufen, damit beim nächsten VSync wieder neu gezeichnet wird.
 
-Leider funktionier das Verfahren im Fall des `ExposeEvent` nicht perfekt. Gerade unter Windows führt das beim Vergrößern des Fensters zu unschönen Artefakten am rechten und unteren Bildschirmrand. Daher muss man in diesem Fall tatsächlich gleich in der Ereignisbehandlungsroutine neu zeichnen und dabei den OpenGL Viewport bereits an die neue Fenstergröße anpassen (das geschieht aber bereits in `OpenGLWindow::exposeEvent()`).
+Leider funktionier das Verfahren im Fall des `ExposeEvent` bzw. `ResizeEvent` nicht perfekt. Gerade unter Windows führt das beim Vergrößern des Fensters zu unschönen Artefakten am rechten und unteren Bildschirmrand. Daher muss man in diesem Fall tatsächlich sofort in der Ereignisbehandlungsroutine neu zeichnen und dabei den OpenGL Viewport bereits an die neue Fenstergröße anpassen. Das Neuzeichnen wird direkt im ExposeEvent-Handler von `OpenGLWindow` ausgelöst:
 
-Beim `ResizeEvent` ist zu beachten, dass beim Vergrößern des Fensters allerdings __nur__, wenn der Aufruf nicht zusammen mit einem `ExposeEvent` stattfindet. Daher sollte man in der Funktion `SceneView::resizeEvent()` _nicht_ `renderLater()` aufrufen!
+.OpenGLWindow.cpp:exposeEvent()
+[source,c++]
+----
+void OpenGLWindow::exposeEvent(QExposeEvent * /*event*/) {
+	renderNow(); // update right now
+}
+----
 
-Ohne eine Aufruf von `renderLater()` im ResizeEvent-Handler, erhält man folgende Aufrufreihenfolge bei der Fenstervergrößerung:
+Bei Größenveränderung des Fensters sendet Qt immer zuerst ein `ResizeEvent` gefolgt von einem `ExposeEvent` aus. Daher sollte man in der Funktion `SceneView::resizeEvent()` _nicht_ `renderLater()` aufrufen!
+
+Ohne eine Aufruf von `renderLater()` im ResizeEvent-Handler erhält man folgende Aufrufreihenfolge bei der Fenstervergrößerung:
 
 ----
 OpenGLWindow::resizeEvent()
@@ -198,7 +207,7 @@ Wie man sieht, wird jedes Mal doppelt gezeichnet, was eine deutlich spürbare Ve
 
 - beim ersten Anzeigen eines Fensters immer erst ein `ResizeEvent`, gefolgt von einem `ExposeEvent` geschickt wird
 - beim Größenändern eines Fensters ebenfalls immer ein `ResizeEvent`, gefolgt von einem `ExposeEvent` geschickt wird 
-- beim Minimieren und Maximieren eines Fensters nur je ein (oder auf dem Mac mehrere) `ExposeEvent` geschickt werden. Dies kann man nutzen, um eine Animation zu stoppen und beim erneuten Anzeigen (`isExposed() == true`) wieder zu starten. Dies ist aber nicht der Fokus in diesem Tutorial. Daher könnte man auch das `ExposeEvent` komplett ignorieren und `renderNow()` direkt am Ende von  `OpenGLWindow::resizeEvent()` aufrufen. So wie es aktuell implementiert ist, wird beim Minimieren und Maximieren mehrfach `ExposeEvent` mit `isExposed() == true` aufgerufen und damit wird mehrfach trotz unverändertem Viewport und unveränderte Szene gezeichnet. Das ist aber nicht weiter bemerkbar.
+- beim Minimieren und Maximieren eines Fensters nur je ein (oder auf dem Mac mehrere) `ExposeEvent` geschickt werden. Dies kann man nutzen, um eine Animation zu stoppen und beim erneuten Anzeigen (`isExposed() == true`) wieder zu starten. Dies ist aber nicht der Fokus in diesem Tutorial. Daher könnte man auch das `ExposeEvent` komplett ignorieren und `renderNow()` direkt am Ende von  `OpenGLWindow::resizeEvent()` aufrufen. So wie es aktuell implementiert ist, wird beim Minimieren und Maximieren mehrfach `ExposeEvent` mit `isExposed() == true` aufgerufen und damit wird mehrfach gezeichnet, trotz unverändertem Viewport und unveränderte Szene. Das ist aber nicht weiter bemerkbar und verschmerzbar.
 
 === Verwendung der Klasse 'SceneView'
 
@@ -327,7 +336,7 @@ Man kann testweise mal das Flag `GL_DEPTH_TEST` nicht setzen - die etwas verwirr
 
 Qt stellt in `QWindow` und `QWidget` Ereignisbehandlungsroutinen für Tastatur- und Mauseingaben zur Verfügung. Die Deklaration dieser Funktion sind oben in der `SceneView` Klassendeklaration zu sehen.
 
-Wenn man eine Taste auf der Tastatur drückt, wird z.B. ein `QEvent::KeyPress` ausgelöst und die Memberfunktion `keyPressEvent(QKeyEvent *event)` aufgerufen. Das passiert auch, wenn man die Taste _gedrückt_ hält. Unterscheiden kann man dieses durch Prüfen der Eigenschaft `AutoRepeat` (`QKeyEvent::isAutoRepeat()`).
+Wenn man eine Taste auf der Tastatur drückt wird ein `QEvent::KeyPress` ausgelöst und die Memberfunktion `keyPressEvent(QKeyEvent *event)` aufgerufen. Das passiert auch, wenn man die Taste _gedrückt_ hält. Unterscheiden kann man dieses durch Prüfen der Eigenschaft `AutoRepeat` (`QKeyEvent::isAutoRepeat()`).
 
 Für die Navigation in einer 3D Umgebung hält man die Tasten (z.B. WASD oder ähnliche) längere Zeit gedrückt (d.h. über mehrere Frames hinweg). Man benötigt also einen Zustandsmanager, der sich den aktuellen Zustand der Tasten merkt.
 
@@ -342,16 +351,16 @@ Letzterer ist eigentlich nur dann wichtig, wenn auf einzelne Tastendrücke reagi
 Zunächst müssen wir uns den Programmauflauf der Ereignisschleife und Auswertung der Tasteneingabe genauer anschauen.
 
 === Die Ereignisschleife und Tastatur-/Mausevents
-Zwischen zwei Frames läuft das Programm in der Ereignisschleife. Sobald eine Taste gedrückt oder losgelassen wird, ruft Qt die entsprechende Ereignisbehandlungsfunktion auf, d.h. `keyPressEvent()` bzw. `keyReleaseEvent()`.
+Zwischen zwei Frames (also Aufrufen von `paintGL()`) läuft das Programm in der Ereignisschleife. Sobald eine Taste gedrückt oder losgelassen wird, ruft Qt die entsprechende Ereignisbehandlungsfunktion auf, d.h. `keyPressEvent()` bzw. `keyReleaseEvent()`.
 
-Wenn die betreffende Taste bekannt ist, wird der aktuelle Zustand entsprechend geändert. Nun wird noch geprüft, ob die Taste eine Szenenveränderung (bspw. Kamerabewegung) bewirkt. In diesem Fall wird durch Aufruf von `renderLater()` ein Zeichenaufruf in die Event-Schleife eingereiht (kommt beim nächsten VSync). Dann geht die Kontrolle wieder zurück an die Ereignisschleife. 
+Wenn die betreffende Taste bekannt ist, wird der aktuelle Zustand im Zustandsmanager entsprechend geändert. Nun wird noch geprüft, ob die Taste eine Szenenveränderung (bspw. Kamerabewegung) bewirkt. In diesem Fall wird durch Aufruf von `renderLater()` ein Zeichenaufruf in die Event-Schleife eingereiht (kommt beim nächsten VSync). Dann geht die Kontrolle wieder zurück an die Ereignisschleife. 
 
 [NOTE]
 ====
-Es sollte wirklich nur neu gezeichnet werden, wenn dies durch Tastendruck- oder Mausbewegung notwendig wird. Dadurch, dass das `UpdateRequest` nur bei Bedarf gesendet wird, kann man wild auf der Tastatur herumhämmern, ohne dass auch nur ein OpenGL-Befehl aufgerufen wird.
+Es sollte wirklich nur neu gezeichnet werden, wenn dies durch Tastendruck- oder Mausbewegung notwendig wird. Dadurch, dass das `UpdateRequest` nur bei Bedarf gesendet wird, kann man ansonsten wild auf der Tastatur herumhämmern, ohne dass auch nur ein OpenGL-Befehl aufgerufen wird.
 ====
 
-Es ist nun möglich, dass ein weiteres Tastaturereignis eintrifft, _bevor_ das UpdateRequest-Ereignis eintritt. Bspw. könnte dies das `QEvent::KeyRelease`-Ereignis eines gerade zuvor eingetroffenen `QEvent::KeyPress`-Ereignisses der selben Taste sein. Deshalb wird der Zustand einer Taste beim `keyReleaseEvent()` auf "Wurde gedrückt" geändert, und nicht einfach wieder zurück auf "Nicht gedrückt". Sonst hätte man im Zustandsmanager keine Information mehr darüber, dass die Taste in diesem Frame kurz gedrückt wurde. Das ist aber bei hohen Bildwiederholfrequenzen hinreichend unwahrscheinlich, kann aber bei sehr komplexen Szenen (bzw. schwacher Hardware) hilfreich sein.
+Es ist nun möglich, dass ein weiteres Tastaturereignis eintrifft, _bevor_ das UpdateRequest-Ereignis eintritt. Bspw. könnte dies das `QEvent::KeyRelease`-Ereignis eines gerade zuvor eingetroffenen `QEvent::KeyPress`-Ereignisses derselben Taste sein. Deshalb wird der Zustand einer Taste beim `keyReleaseEvent()` auf "Wurde gedrückt" geändert, und nicht einfach wieder zurück auf "Nicht gedrückt". Sonst hätte man im Zustandsmanager keine Information mehr darüber, dass die Taste in diesem Frame kurz gedrückt wurde. Das ist zwar bei hohen Bildwiederholfrequenzen hinreichend unwahrscheinlich, kann aber bei sehr komplexen Szenen (bzw. schwacher Hardware) hilfreich sein.
 
 Die Funktion, welche prüft, ob die eine Navigationstaste gedrückt wurde, könnte wie im Tutorial 05-Beispiel so aussehen:
 
