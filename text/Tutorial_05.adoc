@@ -566,6 +566,23 @@ Am Ende des Tastaturabfrageteils werden noch die "wurde gedrückt"-Zustände zur
 
 Das Scrollrad soll in diesem Beispiel ein deutlich schnelleres Vorwärts- oder Rückwärtsbewegen durch die Szene ermöglichen. Deshalb werden die Mausradbewegungen mit größerer Verschiebegeschwindigkeit skaliert. Wie auch bei der Abfrage der Mausbewegung wird in der Funktion `resetWheelDelta()` der aktuell akkumulierte Scrollweg zurückgeliefert und intern im Zustandsmanager wieder auf 0 gesetzt. 
 
+=== Auf gedrückte Tasten reagieren
+
+Wie oben erläutert wird das Neuzeichnen nur bei Registrieren eines Tastendrucks angefordert. Nehmen wir mal an, die rechte Maustaste ist gedrückt und die Vorwärtstaste W wird gedrückt gehalten. Dann sendet das Betriebssystem (bzw. Window-Manager) in regelmäßigen Abständen KeyPress-Events (z.B. 50 je Sekunde, je nach Einstellung). Diese sind dann als `AutoRepeat` gekennzeichnet und führen damit nicht zu einer Änderung im Eingabe-Zustandsmanager, aber zu einer erneuten Prüfung der Neuzeichnung (Aufruf von `checkInput()`). Und da eine Kamera-relevante Taste gedrückt gehalten ist, wird ein Neuzeichnen via `renderLater()` angefordert. Als Konsequenz ruckelt das Bild dann im Rythmus der Tastenwiederholrate... nicht sehr angenehm anzusehen.
+
+Daher muss das Prüfen auf gedrückte Tasten regelmäßig, d.h. einmal pro Frame erfolgen. Und der geeignete Ort dafür ist das Ende der `paintGL()`-Funktion:
+
+.SceneView.cpp:paintGL()
+[source,]
+----
+void SceneView::paintGL() {
+    ...
+
+	checkInput();
+}
+----
+Ganz zum Schluss wird nochmal auf eine Tasteneingabe geprüft und damit bei Bedarf ein `UpdateRequest` eingereiht.
+
 Damit wäre die Tastatur- und Mauseingabe auch schon komplett.
 
 == Shaderprogramme
@@ -781,12 +798,12 @@ Es gibt eine wesentliche Grundregel in OpenGL:
 Wenn man effizient große Geometrien zeichnen möchte, dann muss man die Anzahl der `glDrawXXX` Aufrufe so klein wie möglich halten.
 ====
 
-Ein Beispiel: wenn man z.B. 2 Würfel zeichen möchte, hat man folgende Möglichkeiten:
+Ein Beispiel: wenn man **2** Würfel zeichen möchte, hat man folgende Möglichkeiten:
 
 - alle 12 Seiten einzeln Zeichen (12 `glDrawXXX` Aufrufe), z.B. als:
-    * `GL_TRIANGLES` (6 Vertices)
-    * `GL_TRIANGLE_STRIP` (4 Vertices) 
-    * `GL_QUADS` (4 Vertices)
+    * `GL_TRIANGLES` (6 Vertices je Seite)
+    * `GL_TRIANGLE_STRIP` (4 Vertices je Seite)
+    * `GL_QUADS` (4 Vertices je Seite)
 - jeden Würfel einzeln zeichnen (2 `glDrawXXX` Aufrufe), dabei alle Seiten des Würfels zusammen zeichnen via:
     * `GL_TRIANGLES` (8 Vertices, 6*6 Elementindices)
     * `GL_QUADS` (8 Vertices, 6*4 Elementindices)
@@ -794,7 +811,20 @@ Ein Beispiel: wenn man z.B. 2 Würfel zeichen möchte, hat man folgende Möglich
     * `GL_TRIANGLES` (2*8 Vertices, 2*6*6 Elementindices)
     * `GL_QUADS` (2*8 Vertices, 2*6*4 Elementindices)
 
+Die oben angegebene Anzahl der Vertexes gilt natürlich nur für einfarbige Würfel. Sollen die Seitenflächen unterschiedlich gefärbt sein, braucht man natürlich für jede Seite 4 Vertices, also bspw. bei `GL_TRIANGLES` brauch man für die 2 Würfel 2*6*4 Vertices.
+
 Wenn man Objekte mit gemischten Flächenprimitiven hat (also z.B. Dreiecke und Rechtecke, oder Polygone), dann kann man entweder nach Flächentyp zusammenfassen und je Flächentyp ein `glDrawXXX` Aufruf ausführen, oder eben alles als Dreiecke behandeln und nur einen Zeichenaufruf verwenden. Kann man mal durch Profiling ausprobieren, was dann schneller ist. Der Speicherverbrauch spielt auch eine Rolle, da der Datentransfer zwischen CPU und GPU immer auch an der Geschwindigkeit der Speicheranbindung hängt.
+
+Die Gruppierung von Zeichenelementen erfolgt im Prinzip nach folgenden Kriterien:
+
+- Vertexdaten bei interleaved Storage (z.B. nur Koordinaten wie beim Gitter unten, Koordinaten-und-Farben, Koordinaten-Normalen-Texturcoords-Farben)
+- Geometrietyp (siehe oben)
+- Objektveränderlichkeit
+
+Das Ganze hängt also stark von der Anwendung ab. Im _Tutorial 05_ gibt es zwei Arten von Objekten:
+
+- das Gitter, bestehend aus Linien und ausschließlich Koordinaten, gezeichnet via `GL_LINES`
+- die Boxen, mit `GL_TRIANGLES` gezeichnet.
 
 === Verwaltung von Zeichenobjekten
 
@@ -832,7 +862,9 @@ Die drei wichtigen Lebenszyklusphasen der Objekte sind durch die Funktionen `cre
 
 [CAUTION]
 ====
-Speichermanagement bei OpenGL Objekten sollte explizit erfolgen, und nicht im Destruktor von Klassen. Es ist beim Aufräumen im Destruktor durch die automatisiert generierte Aufrufreihenfolge der einzelnen Destruktoren schwierig sicherzustellen, dass der dazugehörige OpenGL-Kontext aktiv ist. Daher empfiehlt es sich, stets eine explizite `destroy()` Funktion zu verwenden.
+Speichermanagement bei OpenGL Objekten sollte explizit erfolgen, und nicht im Destruktor der Zeichenobjekt-Klassen. Es ist beim Aufräumen im Destruktor durch die automatisiert generierte Aufrufreihenfolge der einzelnen Destruktoren schwierig sicherzustellen, dass der dazugehörige OpenGL-Kontext aktiv ist. Daher empfiehlt es sich, stets eine explizite `destroy()` Funktion zu verwenden.
+
+Außerdem werden die Zeichenobjekte so kopierbar und können, unter anderem, in `std::vector` oder ähnlichen Container verwendet werden.
 ====
 
 Am Besten wird das Datenmanagement in einer Beispielimplementierung sichtbar.
@@ -973,6 +1005,36 @@ Die Funktion `destroy()` ist sicher selbsterklärend. Und die Render-Funktion eb
 Beachte, dass die Funktion `glDrawArrays()` als drittes Argument die Länge des Puffers als Anzahl der Elemente vom Typ des Puffers (hier GL_FLOAT) erwartet, und _nicht_ die Länge in Bytes.
 ====
 
+Die Funktion `render()` wird direkt aus `SceneView::paintGL()` aufgerufen. Hier ist der entsprechende Abschnitt aus der Funktion:
+
+.SceneView.cpp:paintGL()
+[source,c++]
+----
+void SceneView::paintGL() {
+    ...
+    
+	// set the background color = clear color
+	QVector3D backColor(0.1f, 0.15f, 0.3f);
+	glClearColor(0.1f, 0.15f, 0.3f, 1.0f);
+
+	QVector3D gridColor(0.5f, 0.5f, 0.7f);
+
+    ...
+
+	// *** render grid ***
+
+	SHADER(1)->bind();
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[0], m_worldToView);
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], gridColor);
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[2], backColor);
+	m_gridObject.render(); // render the grid
+	SHADER(1)->release();
+
+    ...
+----
+
+Hier sieht man auch, wie die Variablen an die Shaderprogramme übergeben werden. In Abschnitt "Shaderprogramme" oben wurde ja gezeigt, wie die IDs der `uniform` Variablen ermittelt werden. Nun müssen diese Variablen _vor jeder Verwendung_ des Shaderprogramms gesetzt werden. Dies erfolgt direkt vor dem Aufruf der `GridObject::render()` Funktion.
+
 Das Ergebnis dieses Zeichnens (mit uniformer Gitterfarbe) ist zunächst ganz nett:
 
 .Einfaches Gitterraster (einfarbig) mit sichtbarer endlicher Ausdehnung
@@ -980,7 +1042,7 @@ image::Tutorial_05_gridplain.png[Raster,pdfwidth=8cm]
 
 Aber schöne wäre es, wenn das Gitter mit zunehmender Tiefe verblasst.
 
-=== Gitter mit Abblendung in der Tiefe
+==== Gitter mit Abblendung in der Tiefe
 
 Das Gitter sollte sich nun in weiter Ferne der Hintergrundfarbe annähern. Man könnte das zum Beispiel erreichen, wenn man die Farbe des Gitters an weiter entfernten Punkte einfärbt.
 
@@ -1011,7 +1073,7 @@ void main() {
 }
 ----
 
-Es gibt 3 Parameter, die dem Shaderprogramm gegeben werden müssen:
+Es gibt 3 Parameter, die dem Shaderprogramm gegeben werden müssen (das passiert in  `SceneView::paintGL()`, siehe Quelltextausschnitt oben):
 
 - `worldToView` - Transformationsmatrix (von Weltkoordinaten zur perspektivischen Ansicht)
 - `gridColor` - Farbe des Gitters
@@ -1048,7 +1110,7 @@ void main() {
 }
 ----
 
-Letztlich werden nur noch die Vertex-Koordinaten transformiert und an den Shader weitergereicht. Der sieht dann so aus:
+Letztlich werden nur noch die Vertex-Koordinaten transformiert und an den Fragment-Shader weitergereicht. Der sieht dann so aus:
 
 .grid.frag (Fragmentshader)
 [source,c]
@@ -1072,14 +1134,181 @@ Die Variable `gl_FragCoord` wird für jeden einzelnen Bildpunkt von OpenGL berei
 
 Damit sieht das Ergebnis dann wie gewünscht aus:
 
-.Gitterraster mit Fragment-basierter Abblendung
+.Gitterraster mit Fragment-basierter Abblendung (Fog/Nebeleffekt)
 image::Tutorial_05_grid_fragshaderfade.png[Gitter, Fragmentshaderfade,pdfwidth=8cm]
+
+
+=== Zeichenobjekt #2: Viele viele Boxen
+
+Um die Performance der Grafikkarte (und der Anwendung) zu testen, kann man sehr viele Boxen modellieren und dann mittels eines einzigen `glDrawElements()`-Aufrufs zeichnen lassen. Bei modernen Grafikkarten sollten locker Millionen von Boxen flüssig gezeichnet werden können.
+
+Die Aufgabe besteht nun darin, die Vertexdaten aller Boxen und die dazugehörigen Elementindexe in die zwei Puffer (VBO und EBO) zu stecken, und den Quelltext auch noch einigermaßen verstehen zu können. 
+
+Zunächst wird wie beim Gitter ein Boxen-Zeichenobjekt erstellt:
+
+.BoxObject.h
+[source,c++]
+----
+class BoxObject {
+public:
+	BoxObject();
+
+    void create(QOpenGLShaderProgram * shaderProgramm);
+	void destroy();
+
+	void render();
+
+	std::vector<BoxMesh>		m_boxes;
+
+	std::vector<Vertex>			m_vertexBufferData;
+	std::vector<GLuint>			m_elementBufferData;
+
+    QOpenGLVertexArrayObject	m_vao;
+	QOpenGLBuffer				m_vbo;
+	QOpenGLBuffer				m_ebo;
+};
+----
+
+Sieht erstmal fast genauso aus wie bei der Klasse `GridObject`. 
+[NOTE]
+====
+Beide Klassen stellen ja die gleichen Funktionen zur Verfügung. Man könnte also auf die Idee kommen, hinsichtlich Initialisierung und Aufräumen alle Zeichenobjekte gleich zu behandeln. Geht sicher, hängt aber vom Programm ab (und der Datenveränderlichkeit), ob das sinnvoll ist. Beim _Tutorial 05_ wäre das sicher gut gewesen (hab ich mir aber wegen nur zwei Objekten gespart).
+====
+
+Vielleicht noch ein Hinweis zu den Puffern. Neben OpenGL-Pufferobjekten `m_vbo` und `m_ebo` sind die ursprünglichen Datenpuffer `m_vertexBufferData` und `m_elementBufferData` dauerhaft als Membervariablen vorhanden. Dies ermöglicht eine nachträgliche Aktualisierung eines Teils der Daten (z.B. Farben einer einzelnen Box oder einer Seite), ohne dass neu Speicher reserviert werden muss und die Puffer erneut aufgebaut werden.
+
+[TIP]
+====
+Teilweise Aktualisierung von Pufferdaten spielt in diesem Tutorial keine Rolle. Es lohnt sich aber, die Funktion https://doc.qt.io/qt-5/qopenglbuffer.html#mapRange[QOpenGLBuffer::mapRange] anzuschauen (bzw. die darunterliegenden nativen OpenGL-Funktionen `glMapBuffer` und `glMapBufferRange`).
+====
+
+Die eigentliche Geometrie, d.h. Größe und Position der Boxen wird durch die `BoxMesh`-Objekte bereitgestellt, welche im Vektor `m_boxes` vorgehalten werden.
+
+Die Implementierung der 3 Funktionen ist dann auch recht ähnlich wie beim `GridObject`.
+
+.BoxObject.cpp:destroy() und render()
+[source,c++]
+----
+void BoxObject::destroy() {
+	m_vao.destroy();
+	m_vbo.destroy();
+	m_ebo.destroy();
+}
+
+
+void BoxObject::render() {
+	m_vao.bind();
+	glDrawElements(GL_TRIANGLES, m_elementBufferData.size(), GL_UNSIGNED_INT, nullptr);
+	m_vao.release();
+}
+----
+
+Die Funktionen `destroy()` und `render()` sind selbsterklärend (wie schon beim `GridObject`. Zur Vollständigkeit sei nocheinmal der Aufruf der Zeichenfunktion gezeigt:
+
+.SceneView.cpp:paintGL()
+[source,c++]
+----
+void SceneView::paintGL() {
+    ...
+
+	// *** render boxes
+	SHADER(0)->bind();
+	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
+	m_boxObject.render(); // render the boxes
+	SHADER(0)->release();
+
+    ...
+----
+
+==== Erstellung der OpenGL-Puffer - struct 'Vertex'
+
+Interessanter ist dann schon die `create()`-Funktion, in der die Puffer befüllt werden:
+
+.BoxObject.cpp:create()
+[source,c++]
+----
+void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
+	// create and bind Vertex Array Object
+	m_vao.create(); 
+	m_vao.bind();
+	
+	// create and bind vertex buffer
+	m_vbo.create();
+	m_vbo.bind();
+	m_vbo.setUsagePattern(QOpenGLBuffer::StaticDraw);
+	int vertexMemSize = m_vertexBufferData.size()*sizeof(Vertex);
+	m_vbo.allocate(m_vertexBufferData.data(), vertexMemSize);
+
+    // create and bind element buffer
+	m_ebo.create();
+	m_ebo.bind();
+	m_ebo.setUsagePattern(QOpenGLBuffer::StaticDraw);
+	int elementMemSize = m_elementBufferData.size()*sizeof(GLuint);
+	m_ebo.allocate(m_elementBufferData.data(), elementMemSize);
+
+    // set shader attributes
+
+	// index 0 = position
+	shaderProgramm->enableAttributeArray(0); // array with index/id 0
+	shaderProgramm->setAttributeBuffer(0, GL_FLOAT, 0, 3, sizeof(Vertex));
+	// index 1 = color
+	shaderProgramm->enableAttributeArray(1); // array with index/id 1
+	shaderProgramm->setAttributeBuffer(1, GL_FLOAT, offsetof(Vertex, r), 3, sizeof(Vertex));
+
+	m_vao.release();
+	m_vbo.release();
+	m_ebo.release();
+}
+----
+
+Die `create()`-Funktion ist inzwischen sicher gut verständlich (ansonsten siehe _Tutorial 03_ und __Tutoral 04__):
+
+. das Vertex Array Objekt wird erstellt, 
+. die Pufferobjekte werden erstellt und die Inhalte der bereits initialisierten Puffer (`m_vertexBufferData` und `m_elementBufferData` werden in die OpenGL-Puffer kopiert)
+. die Attribute im Shaderprogramm werden gesetzt, d.h. die Zusammensetzung des Puffers
+
+Hier kommt das erste Mal die Struktur `Vertex` zum Einsatz. Diese gruppiert alle Attribute eines einzelen Vertex: 
+
+.Vertex.h
+[source,c++]
+----
+struct Vertex {
+	Vertex() {}
+	Vertex(const QVector3D & coords, const QColor & col) :
+		x(float(coords.x())),
+		y(float(coords.y())),
+		z(float(coords.z())),
+		r(float(col.redF())),
+		g(float(col.greenF())),
+		b(float(col.blueF()))
+	{
+	}
+
+	float x,y,z;
+	float r,g,b;
+};
+----
+Die Klasse enthält derzeit lediglich 6 floats, 3 für die Koordinaten, und 3 für das rgb-Farbtuple.
+
+Beim Erstellen eines Puffers im __interleaved__-Modus werden nun die Vertex-Daten nacheinander in den Puffer kopiert (Details dazu im nächsten Abschnitt).
+
+Dem Shaderprogramm muss man nun mitteilen, wo in diesem kontinuierlichen Speicherbereich die einzelen Attribute zu finden sind. Der `stride`-Parameter ist die Größe eines Vertex-Datemblocks in Bytes, welches `sizeof(Vertex)` zurückliefert. Das `offset` Argument (3. Argument in `setAttributeBuffer()`) ist die Anzahl der Bytes seit Beginn eines Vertexblocks, bei dem das jeweilige Datenelement beginnt. Im Fall des rgb-Farbtuples beginnt dieser Speicherbereich bei dem float `r`, und das passende Byte-Offset liefert `offset(Vertex, r)` zurück.
+
+[IMPORTANT]
+====
+Man könnte statt `offset(Vertex, r)` auch `3*sizeof(float)` oder `12` schreiben. *ABER* dann besteht die Gefahr, dass bei komplexeren Strukturen durch implizites Padding ungewollt eine Speicherbereichsverschiebung auftritt und das Shaderprogramm dann auf einen falschen Speicherbereich zugreift (siehe auch http://www.catb.org/esr/structure-packing). Dies ist auch der Grund, warum `sizeof(Vertex)` statt `6*sizeof(float)` als stride verwendet wird. Solange nur floats in der Struktur verwendet werden, wird der Compiler (normalerweise) kein Padding einfügen.
+====
+
+==== Erstellung der Boxen-Geometrie - Klasse BoxMesh
+
+Die ganze Arbeit der Vertex- und Index-Puffer-Erstellung wird im Konstruktor der Klasse `BoxObject` und der Hilfsklasse `BoxMesh` gemacht.
+
 
 
 
 == Antialiasing
 
-Es gibt hier verschiedene Möglichkeiten, die wohl einfachste aus Sicht der Programmierung ist das Einschalten von Multisampling (MSAA) (siehe Erläuterung auf https://www.khronos.org/opengl/wiki/Multisampling).
+Es gibt hier verschiedene Möglichkeiten, Antialiasing (Kantenglättung) zu verwenden. Die wohl einfachste aus Sicht der Programmierung ist das Einschalten von Multisampling (MSAA) (siehe Erläuterung auf https://www.khronos.org/opengl/wiki/Multisampling).
 
 Dazu muss man beim Konfigurieren des `QSurfaceFormat`-Objekts nur folgende Zeile hinzufügen:
 

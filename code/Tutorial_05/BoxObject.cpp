@@ -15,8 +15,8 @@ License    : BSD License,
 #include <QOpenGLShaderProgram>
 
 BoxObject::BoxObject() :
-	m_vertexBuffer(QOpenGLBuffer::VertexBuffer), // actually the default, so default constructor would have been enough
-	m_elementBuffer(QOpenGLBuffer::IndexBuffer)
+	m_vbo(QOpenGLBuffer::VertexBuffer), // actually the default, so default constructor would have been enough
+	m_ebo(QOpenGLBuffer::IndexBuffer)
 {
 
 	// create center box
@@ -49,7 +49,6 @@ BoxObject::BoxObject() :
 		m_boxes.push_back(b);
 	}
 
-
 	// n count
 	unsigned int NCubes = m_boxes.size();
 
@@ -71,33 +70,28 @@ BoxObject::BoxObject() :
 
 
 void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
-	// Create Shader (Do not release until VAO is created)
+	// create and bind Vertex Array Object
+	m_vao.create();
+	m_vao.bind();
 
-	// Create Vertex Array Object
-	m_vao.create(); // create Vertex Array Object
-
-	m_vao.bind(); // sets the Vertex Array Object current to the OpenGL context so we can write attributes to it
-
-	// Create Buffer (Do not release until VAO is created and released)
-	m_vertexBuffer.create();
-	m_vertexBuffer.bind();
-	m_vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+	// create and bind vertex buffer
+	m_vbo.create();
+	m_vbo.bind();
+	m_vbo.setUsagePattern(QOpenGLBuffer::StaticDraw);
 	int vertexMemSize = m_vertexBufferData.size()*sizeof(Vertex);
 	qDebug() << "BoxObject - VertexBuffer size =" << vertexMemSize/1024.0 << "kByte";
-	m_vertexBuffer.allocate(m_vertexBufferData.data(), vertexMemSize);
+	m_vbo.allocate(m_vertexBufferData.data(), vertexMemSize);
 
-	m_elementBuffer.create();
-	m_elementBuffer.bind();
-	m_elementBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+	// create and bind element buffer
+	m_ebo.create();
+	m_ebo.bind();
+	m_ebo.setUsagePattern(QOpenGLBuffer::StaticDraw);
 	int elementMemSize = m_elementBufferData.size()*sizeof(GLuint);
 	qDebug() << "BoxObject - ElementBuffer size =" << elementMemSize/1024.0 << "kByte";
-	m_elementBuffer.allocate(m_elementBufferData.data(), elementMemSize);
+	m_ebo.allocate(m_elementBufferData.data(), elementMemSize);
 
-	// Create Shader (Do not release until VAO is created)
-
+	// set shader attributes
 	// tell shader program we have two data arrays to be used as input to the shaders
-	// the two calls to setAttributeBuffer() reference again the 'vertex' buffer whose allocate() function was called last,
-	// in this case m_vertexDataBuffer.
 
 	// index 0 = position
 	shaderProgramm->enableAttributeArray(0); // array with index/id 0
@@ -106,17 +100,17 @@ void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
 	shaderProgramm->enableAttributeArray(1); // array with index/id 1
 	shaderProgramm->setAttributeBuffer(1, GL_FLOAT, offsetof(Vertex, r), 3, sizeof(Vertex));
 
-	m_vao.release();
 	// Release (unbind) all
-	m_vertexBuffer.release();
-	m_elementBuffer.release();
+	m_vao.release();
+	m_vbo.release();
+	m_ebo.release();
 }
 
 
 void BoxObject::destroy() {
 	m_vao.destroy();
-	m_vertexBuffer.destroy();
-	m_elementBuffer.destroy();
+	m_vbo.destroy();
+	m_ebo.destroy();
 }
 
 

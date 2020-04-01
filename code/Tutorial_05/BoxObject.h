@@ -21,6 +21,9 @@ QT_END_NAMESPACE
 
 #include "BoxMesh.h"
 
+/*! A container for all the boxes.
+	Basically creates the geometry of the individual boxes and populates the buffers.
+*/
 class BoxObject {
 public:
 	BoxObject();
@@ -40,9 +43,9 @@ public:
 	QOpenGLVertexArrayObject	m_vao;
 
 	/*! Holds position and colors in a single buffer. */
-	QOpenGLBuffer				m_vertexBuffer;
+	QOpenGLBuffer				m_vbo;
 	/*! Holds elements. */
-	QOpenGLBuffer				m_elementBuffer;
+	QOpenGLBuffer				m_ebo;
 };
 
 #endif // BOXOBJECT_H

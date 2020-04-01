@@ -116,10 +116,10 @@ void SceneView::paintGL() {
 
 	QVector3D gridColor(0.5f, 0.5f, 0.7f);
 
-	// *** render box
+	// *** render boxes
 	SHADER(0)->bind();
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
-	m_boxObject.render(); // render the box
+	m_boxObject.render(); // render the boxes
 	SHADER(0)->release();
 
 	// *** render grid afterwards ***

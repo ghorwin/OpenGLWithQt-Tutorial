@@ -16,9 +16,9 @@ License    : BSD License,
 
 
 void GridObject::create(QOpenGLShaderProgram * shaderProgramm) {
-	const unsigned int N = 100; // number of lines to draw in x and z direction
+	const unsigned int N = 1000; // number of lines to draw in x and z direction
 	// width is in "space units", whatever that means for you (meters, km, nanometers...)
-	float width = 500;
+	float width = 5000;
 	// grid is centered around origin, and expands to width/2 in -x, +x, -z and +z direction
 
 	// create a temporary buffer that will contain the x-z coordinates of all grid lines
