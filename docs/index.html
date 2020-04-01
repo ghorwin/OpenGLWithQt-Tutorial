@@ -73,7 +73,7 @@ table {
 <div class="details">
 <span id="author" class="author">Andreas Nicolai</span><br>
 <span id="email" class="email"><a href="mailto:andreas.nicolai@tu-dresden.de">andreas.nicolai@tu-dresden.de</a></span><br>
-<span id="revnumber">version 0.1.0,</span>
+<span id="revnumber">version 0.5.0,</span>
 <span id="revdate">März 2020</span>
 </div>
 <div id="toc" class="toc2">
@@ -176,6 +176,7 @@ table {
 <li><a href="#_der_tastatur_und_maus_zustandsmanager">5.4.1. Der Tastatur- und Maus-Zustandsmanager</a></li>
 <li><a href="#_die_ereignisschleife_und_tastatur_mausevents">5.4.2. Die Ereignisschleife und Tastatur-/Mausevents</a></li>
 <li><a href="#_auswertung_der_eingabe_und_anpassung_der_kameraposition_und_ausrichtung">5.4.3. Auswertung der Eingabe und Anpassung der Kameraposition- und Ausrichtung</a></li>
+<li><a href="#_auf_gedrückte_tasten_reagieren">5.4.4. Auf gedrückte Tasten reagieren</a></li>
 </ul>
 </li>
 <li><a href="#_shaderprogramme_2">5.5. Shaderprogramme</a></li>
@@ -190,7 +191,7 @@ table {
 <li><a href="#_effizientes_zeichnen_großer_geometrien">5.7.1. Effizientes Zeichnen großer Geometrien</a></li>
 <li><a href="#_verwaltung_von_zeichenobjekten">5.7.2. Verwaltung von Zeichenobjekten</a></li>
 <li><a href="#_zeichenobjekt_1_gitterraster_in_x_z_ebene">5.7.3. Zeichenobjekt #1: Gitterraster in X-Z Ebene</a></li>
-<li><a href="#_gitter_mit_abblendung_in_der_tiefe">5.7.4. Gitter mit Abblendung in der Tiefe</a></li>
+<li><a href="#_zeichenobjekt_2_viele_viele_boxen">5.7.4. Zeichenobjekt #2: Viele viele Boxen</a></li>
 </ul>
 </li>
 <li><a href="#_antialiasing">5.8. Antialiasing</a></li>
@@ -2519,7 +2520,7 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <h2 id="_tutorial_05_maus_und_tastatureingaben">5. Tutorial 05: Maus- und Tastatureingaben</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>In diesem Tutorial geht es primär um Maus- und Tastatureingaben. Und damit das irgendwie Sinn macht, brauchen wir ein (schön großes) 3D Modell, und deshalb ist dieses Tutorial auch <em>sehr sehr lang</em>.</p>
+<p>In diesem Tutorial geht es primär um Maus- und Tastatureingaben. Und damit das irgendwie Sinn macht, brauchen wir ein (schön großes) 3D Modell, und deshalb ist dieses Tutorial auch <em>sehr sehr lang</em>. Und nebenbei geht es noch um Verwaltung von Shaderobjekten, Zeichenobjekten, Nebeleffekt beim Gitterraster und und und&#8230;&#8203;</p>
 </div>
 <div class="imageblock">
 <div class="content">
@@ -3309,6 +3310,28 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 <div class="paragraph">
 <p>Das Scrollrad soll in diesem Beispiel ein deutlich schnelleres Vorwärts- oder Rückwärtsbewegen durch die Szene ermöglichen. Deshalb werden die Mausradbewegungen mit größerer Verschiebegeschwindigkeit skaliert. Wie auch bei der Abfrage der Mausbewegung wird in der Funktion <code>resetWheelDelta()</code> der aktuell akkumulierte Scrollweg zurückgeliefert und intern im Zustandsmanager wieder auf 0 gesetzt.</p>
 </div>
+</div>
+<div class="sect3">
+<h4 id="_auf_gedrückte_tasten_reagieren">5.4.4. Auf gedrückte Tasten reagieren</h4>
+<div class="paragraph">
+<p>Wie oben erläutert wird das Neuzeichnen nur bei Registrieren eines Tastendrucks angefordert. Nehmen wir mal an, die rechte Maustaste ist gedrückt und die Vorwärtstaste W wird gedrückt gehalten. Dann sendet das Betriebssystem (bzw. Window-Manager) in regelmäßigen Abständen KeyPress-Events (z.B. 50 je Sekunde, je nach Einstellung). Diese sind dann als <code>AutoRepeat</code> gekennzeichnet und führen damit nicht zu einer Änderung im Eingabe-Zustandsmanager, aber zu einer erneuten Prüfung der Neuzeichnung (Aufruf von <code>checkInput()</code>). Und da eine Kamera-relevante Taste gedrückt gehalten ist, wird ein Neuzeichnen via <code>renderLater()</code> angefordert. Als Konsequenz ruckelt das Bild dann im Rythmus der Tastenwiederholrate&#8230;&#8203; nicht sehr angenehm anzusehen.</p>
+</div>
+<div class="paragraph">
+<p>Daher muss das Prüfen auf gedrückte Tasten regelmäßig, d.h. einmal pro Frame erfolgen. Und der geeignete Ort dafür ist das Ende der <code>paintGL()</code>-Funktion:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp:paintGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code>void SceneView::paintGL() {
+    ...
+
+	checkInput();
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Ganz zum Schluss wird nochmal auf eine Tasteneingabe geprüft und damit bei Bedarf ein <code>UpdateRequest</code> eingereiht.</p>
+</div>
 <div class="paragraph">
 <p>Damit wäre die Tastatur- und Mauseingabe auch schon komplett.</p>
 </div>
@@ -3596,7 +3619,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </table>
 </div>
 <div class="paragraph">
-<p>Ein Beispiel: wenn man z.B. 2 Würfel zeichen möchte, hat man folgende Möglichkeiten:</p>
+<p>Ein Beispiel: wenn man <strong>2</strong> Würfel zeichen möchte, hat man folgende Möglichkeiten:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -3605,13 +3628,13 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 <div class="ulist">
 <ul>
 <li>
-<p><code>GL_TRIANGLES</code> (6 Vertices)</p>
+<p><code>GL_TRIANGLES</code> (6 Vertices je Seite)</p>
 </li>
 <li>
-<p><code>GL_TRIANGLE_STRIP</code> (4 Vertices)</p>
+<p><code>GL_TRIANGLE_STRIP</code> (4 Vertices je Seite)</p>
 </li>
 <li>
-<p><code>GL_QUADS</code> (4 Vertices)</p>
+<p><code>GL_QUADS</code> (4 Vertices je Seite)</p>
 </li>
 </ul>
 </div>
@@ -3645,7 +3668,39 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </ul>
 </div>
 <div class="paragraph">
+<p>Die oben angegebene Anzahl der Vertexes gilt natürlich nur für einfarbige Würfel. Sollen die Seitenflächen unterschiedlich gefärbt sein, braucht man natürlich für jede Seite 4 Vertices, also bspw. bei <code>GL_TRIANGLES</code> brauch man für die 2 Würfel 2*6*4 Vertices.</p>
+</div>
+<div class="paragraph">
 <p>Wenn man Objekte mit gemischten Flächenprimitiven hat (also z.B. Dreiecke und Rechtecke, oder Polygone), dann kann man entweder nach Flächentyp zusammenfassen und je Flächentyp ein <code>glDrawXXX</code> Aufruf ausführen, oder eben alles als Dreiecke behandeln und nur einen Zeichenaufruf verwenden. Kann man mal durch Profiling ausprobieren, was dann schneller ist. Der Speicherverbrauch spielt auch eine Rolle, da der Datentransfer zwischen CPU und GPU immer auch an der Geschwindigkeit der Speicheranbindung hängt.</p>
+</div>
+<div class="paragraph">
+<p>Die Gruppierung von Zeichenelementen erfolgt im Prinzip nach folgenden Kriterien:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Vertexdaten bei interleaved Storage (z.B. nur Koordinaten wie beim Gitter unten, Koordinaten-und-Farben, Koordinaten-Normalen-Texturcoords-Farben)</p>
+</li>
+<li>
+<p>Geometrietyp (siehe oben)</p>
+</li>
+<li>
+<p>Objektveränderlichkeit</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Das Ganze hängt also stark von der Anwendung ab. Im <em>Tutorial 05</em> gibt es zwei Arten von Objekten:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>das Gitter, bestehend aus Linien und ausschließlich Koordinaten, gezeichnet via <code>GL_LINES</code></p>
+</li>
+<li>
+<p>die Boxen, mit <code>GL_TRIANGLES</code> gezeichnet.</p>
+</li>
+</ul>
 </div>
 </div>
 <div class="sect3">
@@ -3692,7 +3747,10 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Speichermanagement bei OpenGL Objekten sollte explizit erfolgen, und nicht im Destruktor von Klassen. Es ist beim Aufräumen im Destruktor durch die automatisiert generierte Aufrufreihenfolge der einzelnen Destruktoren schwierig sicherzustellen, dass der dazugehörige OpenGL-Kontext aktiv ist. Daher empfiehlt es sich, stets eine explizite <code>destroy()</code> Funktion zu verwenden.</p>
+<p>Speichermanagement bei OpenGL Objekten sollte explizit erfolgen, und nicht im Destruktor der Zeichenobjekt-Klassen. Es ist beim Aufräumen im Destruktor durch die automatisiert generierte Aufrufreihenfolge der einzelnen Destruktoren schwierig sicherzustellen, dass der dazugehörige OpenGL-Kontext aktiv ist. Daher empfiehlt es sich, stets eine explizite <code>destroy()</code> Funktion zu verwenden.</p>
+</div>
+<div class="paragraph">
+<p>Außerdem werden die Zeichenobjekte so kopierbar und können, unter anderem, in <code>std::vector</code> oder ähnlichen Container verwendet werden.</p>
 </div>
 </td>
 </tr>
@@ -3876,6 +3934,38 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </table>
 </div>
 <div class="paragraph">
+<p>Die Funktion <code>render()</code> wird direkt aus <code>SceneView::paintGL()</code> aufgerufen. Hier ist der entsprechende Abschnitt aus der Funktion:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp:paintGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">paintGL</span><span class="p">()</span> <span class="p">{</span>
+    <span class="p">...</span>
+
+	<span class="c1">// set the background color = clear color</span>
+	<span class="n">QVector3D</span> <span class="n">backColor</span><span class="p">(</span><span class="mf">0.1</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.15</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.3</span><span class="n">f</span><span class="p">);</span>
+	<span class="n">glClearColor</span><span class="p">(</span><span class="mf">0.1</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.15</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.3</span><span class="n">f</span><span class="p">,</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">);</span>
+
+	<span class="n">QVector3D</span> <span class="n">gridColor</span><span class="p">(</span><span class="mf">0.5</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.5</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.7</span><span class="n">f</span><span class="p">);</span>
+
+    <span class="p">...</span>
+
+	<span class="c1">// *** render grid ***</span>
+
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">bind</span><span class="p">();</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setUniformValue</span><span class="p">(</span><span class="n">m_shaderPrograms</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">m_uniformIDs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">m_worldToView</span><span class="p">);</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setUniformValue</span><span class="p">(</span><span class="n">m_shaderPrograms</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">m_uniformIDs</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">gridColor</span><span class="p">);</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setUniformValue</span><span class="p">(</span><span class="n">m_shaderPrograms</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">m_uniformIDs</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">backColor</span><span class="p">);</span>
+	<span class="n">m_gridObject</span><span class="p">.</span><span class="n">render</span><span class="p">();</span> <span class="c1">// render the grid</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">release</span><span class="p">();</span>
+
+    <span class="p">...</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Hier sieht man auch, wie die Variablen an die Shaderprogramme übergeben werden. In Abschnitt "Shaderprogramme" oben wurde ja gezeigt, wie die IDs der <code>uniform</code> Variablen ermittelt werden. Nun müssen diese Variablen <em>vor jeder Verwendung</em> des Shaderprogramms gesetzt werden. Dies erfolgt direkt vor dem Aufruf der <code>GridObject::render()</code> Funktion.</p>
+</div>
+<div class="paragraph">
 <p>Das Ergebnis dieses Zeichnens (mit uniformer Gitterfarbe) ist zunächst ganz nett:</p>
 </div>
 <div class="imageblock">
@@ -3887,9 +3977,8 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 <div class="paragraph">
 <p>Aber schöne wäre es, wenn das Gitter mit zunehmender Tiefe verblasst.</p>
 </div>
-</div>
-<div class="sect3">
-<h4 id="_gitter_mit_abblendung_in_der_tiefe">5.7.4. Gitter mit Abblendung in der Tiefe</h4>
+<div class="sect4">
+<h5 id="_gitter_mit_abblendung_in_der_tiefe">Gitter mit Abblendung in der Tiefe</h5>
 <div class="paragraph">
 <p>Das Gitter sollte sich nun in weiter Ferne der Hintergrundfarbe annähern. Man könnte das zum Beispiel erreichen, wenn man die Farbe des Gitters an weiter entfernten Punkte einfärbt.</p>
 </div>
@@ -3922,7 +4011,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Es gibt 3 Parameter, die dem Shaderprogramm gegeben werden müssen:</p>
+<p>Es gibt 3 Parameter, die dem Shaderprogramm gegeben werden müssen (das passiert in  <code>SceneView::paintGL()</code>, siehe Quelltextausschnitt oben):</p>
 </div>
 <div class="ulist">
 <ul>
@@ -3977,7 +4066,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Letztlich werden nur noch die Vertex-Koordinaten transformiert und an den Shader weitergereicht. Der sieht dann so aus:</p>
+<p>Letztlich werden nur noch die Vertex-Koordinaten transformiert und an den Fragment-Shader weitergereicht. Der sieht dann so aus:</p>
 </div>
 <div class="listingblock">
 <div class="title">grid.frag (Fragmentshader)</div>
@@ -4007,14 +4096,630 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 <div class="content">
 <img src="./images/Tutorial_05_grid_fragshaderfade.png" alt="Gitter" width="Fragmentshaderfade">
 </div>
-<div class="title">Figure 8. Gitterraster mit Fragment-basierter Abblendung</div>
+<div class="title">Figure 8. Gitterraster mit Fragment-basierter Abblendung (Fog/Nebeleffekt)</div>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_zeichenobjekt_2_viele_viele_boxen">5.7.4. Zeichenobjekt #2: Viele viele Boxen</h4>
+<div class="paragraph">
+<p>Um die Performance der Grafikkarte (und der Anwendung) zu testen, kann man sehr viele Boxen modellieren und dann mittels eines einzigen <code>glDrawElements()</code>-Aufrufs zeichnen lassen. Bei modernen Grafikkarten sollten locker Millionen von Boxen flüssig gezeichnet werden können.</p>
+</div>
+<div class="paragraph">
+<p>Die Aufgabe besteht nun darin, die Vertexdaten aller Boxen und die dazugehörigen Elementindexe in die zwei Puffer (VBO und EBO) zu stecken, und den Quelltext auch noch einigermaßen verstehen zu können.</p>
+</div>
+<div class="paragraph">
+<p>Zunächst wird wie beim Gitter ein Boxen-Zeichenobjekt erstellt:</p>
+</div>
+<div class="listingblock">
+<div class="title">BoxObject.h</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">class</span> <span class="nc">BoxObject</span> <span class="p">{</span>
+<span class="nl">public:</span>
+	<span class="n">BoxObject</span><span class="p">();</span>
+
+    <span class="kt">void</span> <span class="n">create</span><span class="p">(</span><span class="n">QOpenGLShaderProgram</span> <span class="o">*</span> <span class="n">shaderProgramm</span><span class="p">);</span>
+	<span class="kt">void</span> <span class="n">destroy</span><span class="p">();</span>
+
+	<span class="kt">void</span> <span class="n">render</span><span class="p">();</span>
+
+	<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">BoxMesh</span><span class="o">&gt;</span>		<span class="n">m_boxes</span><span class="p">;</span>
+
+	<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Vertex</span><span class="o">&gt;</span>			<span class="n">m_vertexBufferData</span><span class="p">;</span>
+	<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">GLuint</span><span class="o">&gt;</span>			<span class="n">m_elementBufferData</span><span class="p">;</span>
+
+    <span class="n">QOpenGLVertexArrayObject</span>	<span class="n">m_vao</span><span class="p">;</span>
+	<span class="n">QOpenGLBuffer</span>				<span class="n">m_vbo</span><span class="p">;</span>
+	<span class="n">QOpenGLBuffer</span>				<span class="n">m_ebo</span><span class="p">;</span>
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Sieht erstmal fast genauso aus wie bei der Klasse <code>GridObject</code>.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Beide Klassen stellen ja die gleichen Funktionen zur Verfügung. Man könnte also auf die Idee kommen, hinsichtlich Initialisierung und Aufräumen alle Zeichenobjekte gleich zu behandeln. Geht sicher, hängt aber vom Programm ab (und der Datenveränderlichkeit), ob das sinnvoll ist. Beim <em>Tutorial 05</em> wäre das sicher gut gewesen (hab ich mir aber wegen nur zwei Objekten gespart).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Vielleicht noch ein Hinweis zu den Puffern. Neben OpenGL-Pufferobjekten <code>m_vbo</code> und <code>m_ebo</code> sind die ursprünglichen Datenpuffer <code>m_vertexBufferData</code> und <code>m_elementBufferData</code> dauerhaft als Membervariablen vorhanden. Dies ermöglicht eine nachträgliche Aktualisierung eines Teils der Daten (z.B. Farben einer einzelnen Box oder einer Seite), ohne dass neu Speicher reserviert werden muss und die Puffer erneut aufgebaut werden.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Teilweise Aktualisierung von Pufferdaten spielt in diesem Tutorial keine Rolle. Es lohnt sich aber, die Funktion <a href="https://doc.qt.io/qt-5/qopenglbuffer.html#mapRange">QOpenGLBuffer::mapRange</a> anzuschauen (bzw. die darunterliegenden nativen OpenGL-Funktionen <code>glMapBuffer</code> und <code>glMapBufferRange</code>).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Die eigentliche Geometrie, d.h. Größe und Position der Boxen wird durch die <code>BoxMesh</code>-Objekte bereitgestellt, welche im Vektor <code>m_boxes</code> vorgehalten werden.</p>
+</div>
+<div class="paragraph">
+<p>Die Implementierung der 3 Funktionen ist dann auch recht ähnlich wie beim <code>GridObject</code>.</p>
+</div>
+<div class="listingblock">
+<div class="title">BoxObject.cpp:destroy() und render()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">BoxObject</span><span class="o">::</span><span class="n">destroy</span><span class="p">()</span> <span class="p">{</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">destroy</span><span class="p">();</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">destroy</span><span class="p">();</span>
+	<span class="n">m_ebo</span><span class="p">.</span><span class="n">destroy</span><span class="p">();</span>
+<span class="p">}</span>
+
+
+<span class="kt">void</span> <span class="n">BoxObject</span><span class="o">::</span><span class="n">render</span><span class="p">()</span> <span class="p">{</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+	<span class="n">glDrawElements</span><span class="p">(</span><span class="n">GL_TRIANGLES</span><span class="p">,</span> <span class="n">m_elementBufferData</span><span class="p">.</span><span class="n">size</span><span class="p">(),</span> <span class="n">GL_UNSIGNED_INT</span><span class="p">,</span> <span class="nb">nullptr</span><span class="p">);</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Funktionen <code>destroy()</code> und <code>render()</code> sind selbsterklärend (wie schon beim <code>GridObject</code>. Zur Vollständigkeit sei nocheinmal der Aufruf der Zeichenfunktion gezeigt:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp:paintGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">paintGL</span><span class="p">()</span> <span class="p">{</span>
+    <span class="p">...</span>
+
+	<span class="c1">// *** render boxes</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">bind</span><span class="p">();</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setUniformValue</span><span class="p">(</span><span class="n">m_shaderPrograms</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="n">m_uniformIDs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">m_worldToView</span><span class="p">);</span>
+	<span class="n">m_boxObject</span><span class="p">.</span><span class="n">render</span><span class="p">();</span> <span class="c1">// render the boxes</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">release</span><span class="p">();</span>
+
+    <span class="p">...</span></code></pre>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_erstellung_der_opengl_puffer_struct_vertex">Erstellung der OpenGL-Puffer - struct <em>Vertex</em></h5>
+<div class="paragraph">
+<p>Interessanter ist dann schon die <code>create()</code>-Funktion, in der die Puffer befüllt werden:</p>
+</div>
+<div class="listingblock">
+<div class="title">BoxObject.cpp:create()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">BoxObject</span><span class="o">::</span><span class="n">create</span><span class="p">(</span><span class="n">QOpenGLShaderProgram</span> <span class="o">*</span> <span class="n">shaderProgramm</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// create and bind Vertex Array Object</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+
+	<span class="c1">// create and bind vertex buffer</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">setUsagePattern</span><span class="p">(</span><span class="n">QOpenGLBuffer</span><span class="o">::</span><span class="n">StaticDraw</span><span class="p">);</span>
+	<span class="kt">int</span> <span class="n">vertexMemSize</span> <span class="o">=</span> <span class="n">m_vertexBufferData</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="o">*</span><span class="k">sizeof</span><span class="p">(</span><span class="n">Vertex</span><span class="p">);</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">m_vertexBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span> <span class="n">vertexMemSize</span><span class="p">);</span>
+
+    <span class="c1">// create and bind element buffer</span>
+	<span class="n">m_ebo</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>
+	<span class="n">m_ebo</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+	<span class="n">m_ebo</span><span class="p">.</span><span class="n">setUsagePattern</span><span class="p">(</span><span class="n">QOpenGLBuffer</span><span class="o">::</span><span class="n">StaticDraw</span><span class="p">);</span>
+	<span class="kt">int</span> <span class="n">elementMemSize</span> <span class="o">=</span> <span class="n">m_elementBufferData</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="o">*</span><span class="k">sizeof</span><span class="p">(</span><span class="n">GLuint</span><span class="p">);</span>
+	<span class="n">m_ebo</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">m_elementBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span> <span class="n">elementMemSize</span><span class="p">);</span>
+
+    <span class="c1">// set shader attributes</span>
+
+	<span class="c1">// index 0 = position</span>
+	<span class="n">shaderProgramm</span><span class="o">-&gt;</span><span class="n">enableAttributeArray</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span> <span class="c1">// array with index/id 0</span>
+	<span class="n">shaderProgramm</span><span class="o">-&gt;</span><span class="n">setAttributeBuffer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">GL_FLOAT</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">Vertex</span><span class="p">));</span>
+	<span class="c1">// index 1 = color</span>
+	<span class="n">shaderProgramm</span><span class="o">-&gt;</span><span class="n">enableAttributeArray</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span> <span class="c1">// array with index/id 1</span>
+	<span class="n">shaderProgramm</span><span class="o">-&gt;</span><span class="n">setAttributeBuffer</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">GL_FLOAT</span><span class="p">,</span> <span class="n">offsetof</span><span class="p">(</span><span class="n">Vertex</span><span class="p">,</span> <span class="n">r</span><span class="p">),</span> <span class="mi">3</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">Vertex</span><span class="p">));</span>
+
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+	<span class="n">m_ebo</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die <code>create()</code>-Funktion ist inzwischen sicher gut verständlich (ansonsten siehe <em>Tutorial 03</em> und <em>Tutoral 04</em>):</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>das Vertex Array Objekt wird erstellt,</p>
+</li>
+<li>
+<p>die Pufferobjekte werden erstellt und die Inhalte der bereits initialisierten Puffer (<code>m_vertexBufferData</code> und <code>m_elementBufferData</code> werden in die OpenGL-Puffer kopiert)</p>
+</li>
+<li>
+<p>die Attribute im Shaderprogramm werden gesetzt, d.h. die Zusammensetzung des Puffers</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Hier kommt das erste Mal die Struktur <code>Vertex</code> zum Einsatz. Diese gruppiert alle Attribute eines einzelen Vertex:</p>
+</div>
+<div class="listingblock">
+<div class="title">Vertex.h</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">struct</span> <span class="n">Vertex</span> <span class="p">{</span>
+	<span class="n">Vertex</span><span class="p">()</span> <span class="p">{}</span>
+	<span class="n">Vertex</span><span class="p">(</span><span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">coords</span><span class="p">,</span> <span class="k">const</span> <span class="n">QColor</span> <span class="o">&amp;</span> <span class="n">col</span><span class="p">)</span> <span class="o">:</span>
+		<span class="n">x</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">coords</span><span class="p">.</span><span class="n">x</span><span class="p">())),</span>
+		<span class="n">y</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">coords</span><span class="p">.</span><span class="n">y</span><span class="p">())),</span>
+		<span class="n">z</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">coords</span><span class="p">.</span><span class="n">z</span><span class="p">())),</span>
+		<span class="n">r</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">col</span><span class="p">.</span><span class="n">redF</span><span class="p">())),</span>
+		<span class="n">g</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">col</span><span class="p">.</span><span class="n">greenF</span><span class="p">())),</span>
+		<span class="n">b</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">col</span><span class="p">.</span><span class="n">blueF</span><span class="p">()))</span>
+	<span class="p">{</span>
+	<span class="p">}</span>
+
+	<span class="kt">float</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">;</span>
+	<span class="kt">float</span> <span class="n">r</span><span class="p">,</span><span class="n">g</span><span class="p">,</span><span class="n">b</span><span class="p">;</span>
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Klasse enthält derzeit lediglich 6 floats, 3 für die Koordinaten, und 3 für das rgb-Farbtuple.</p>
+</div>
+<div class="paragraph">
+<p>Beim Erstellen eines Puffers im <em>interleaved</em>-Modus werden nun die Vertex-Daten nacheinander in den Puffer kopiert (Details dazu im nächsten Abschnitt).</p>
+</div>
+<div class="paragraph">
+<p>Dem Shaderprogramm muss man nun mitteilen, wo in diesem kontinuierlichen Speicherbereich die einzelen Attribute zu finden sind. Der <code>stride</code>-Parameter ist die Größe eines Vertex-Datemblocks in Bytes, welches <code>sizeof(Vertex)</code> zurückliefert. Das <code>offset</code> Argument (3. Argument in <code>setAttributeBuffer()</code>) ist die Anzahl der Bytes seit Beginn eines Vertexblocks, bei dem das jeweilige Datenelement beginnt. Im Fall des rgb-Farbtuples beginnt dieser Speicherbereich bei dem float <code>r</code>, und das passende Byte-Offset liefert <code>offset(Vertex, r)</code> zurück.</p>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Man könnte statt <code>offset(Vertex, r)</code> auch <code>3*sizeof(float)</code> oder <code>12</code> schreiben. <strong>ABER</strong> dann besteht die Gefahr, dass bei komplexeren Strukturen durch implizites Padding ungewollt eine Speicherbereichsverschiebung auftritt und das Shaderprogramm dann auf einen falschen Speicherbereich zugreift (siehe auch <a href="http://www.catb.org/esr/structure-packing" class="bare">http://www.catb.org/esr/structure-packing</a>). Dies ist auch der Grund, warum <code>sizeof(Vertex)</code> statt <code>6*sizeof(float)</code> als stride verwendet wird. Solange nur floats in der Struktur verwendet werden, wird der Compiler (normalerweise) kein Padding einfügen.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_initialisieren_der_vertex_und_elementpuffer_für_die_boxen">Initialisieren der Vertex- und Elementpuffer für die Boxen</h5>
+<div class="paragraph">
+<p>Die ganze Arbeit der Vertex- und Index-Puffer-Erstellung wird im Konstruktor der Klasse <code>BoxObject</code> und der Hilfsklasse <code>BoxMesh</code> gemacht.</p>
+</div>
+<div class="listingblock">
+<div class="title">BoxObject.cpp:Konstruktor</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">BoxObject</span><span class="o">::</span><span class="n">BoxObject</span><span class="p">()</span> <span class="o">:</span>
+	<span class="n">m_vbo</span><span class="p">(</span><span class="n">QOpenGLBuffer</span><span class="o">::</span><span class="n">VertexBuffer</span><span class="p">),</span> <span class="c1">// actually the default, so default constructor would have been enough</span>
+	<span class="n">m_ebo</span><span class="p">(</span><span class="n">QOpenGLBuffer</span><span class="o">::</span><span class="n">IndexBuffer</span><span class="p">)</span> <span class="c1">// make this an Index Buffer</span>
+<span class="p">{</span>
+
+	<span class="c1">// create center box</span>
+	<span class="n">BoxMesh</span> <span class="n">b</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">);</span>
+	<span class="n">b</span><span class="p">.</span><span class="n">setFaceColors</span><span class="p">({</span><span class="n">Qt</span><span class="o">::</span><span class="n">blue</span><span class="p">,</span> <span class="n">Qt</span><span class="o">::</span><span class="n">red</span><span class="p">,</span> <span class="n">Qt</span><span class="o">::</span><span class="n">yellow</span><span class="p">,</span> <span class="n">Qt</span><span class="o">::</span><span class="n">green</span><span class="p">,</span> <span class="n">Qt</span><span class="o">::</span><span class="n">magenta</span><span class="p">,</span> <span class="n">Qt</span><span class="o">::</span><span class="n">darkCyan</span><span class="p">});</span>
+	<span class="n">Transform3D</span> <span class="n">trans</span><span class="p">;</span>
+	<span class="n">trans</span><span class="p">.</span><span class="n">setTranslation</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+	<span class="n">b</span><span class="p">.</span><span class="n">transform</span><span class="p">(</span><span class="n">trans</span><span class="p">.</span><span class="n">toMatrix</span><span class="p">());</span>
+	<span class="n">m_boxes</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span> <span class="n">b</span><span class="p">);</span>
+
+	<span class="k">const</span> <span class="kt">int</span> <span class="n">BoxGenCount</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">;</span>
+	<span class="k">const</span> <span class="kt">int</span> <span class="n">GridDim</span> <span class="o">=</span> <span class="mi">50</span><span class="p">;</span> <span class="c1">// must be an int, or use cast below</span>
+
+	<span class="c1">// initialize grid (block count)</span>
+	<span class="kt">int</span> <span class="n">boxPerCells</span><span class="p">[</span><span class="n">GridDim</span><span class="p">][</span><span class="n">GridDim</span><span class="p">];</span>
+	<span class="k">for</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">GridDim</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
+		<span class="k">for</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">j</span><span class="o">&lt;</span><span class="n">GridDim</span><span class="p">;</span> <span class="o">++</span><span class="n">j</span><span class="p">)</span>
+			<span class="n">boxPerCells</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+	<span class="k">for</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">BoxGenCount</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+		<span class="c1">// create other boxes in randomize grid, x and z dimensions fixed, height varies discretely</span>
+		<span class="c1">// x and z translation in a grid that has 500 units width/depths with 5 m grid line spacing</span>
+		<span class="kt">int</span> <span class="n">xGrid</span> <span class="o">=</span> <span class="n">qrand</span><span class="p">()</span><span class="o">*</span><span class="kt">double</span><span class="p">(</span><span class="n">GridDim</span><span class="p">)</span><span class="o">/</span><span class="n">RAND_MAX</span><span class="p">;</span>
+		<span class="kt">int</span> <span class="n">zGrid</span> <span class="o">=</span> <span class="n">qrand</span><span class="p">()</span><span class="o">*</span><span class="kt">double</span><span class="p">(</span><span class="n">GridDim</span><span class="p">)</span><span class="o">/</span><span class="n">RAND_MAX</span><span class="p">;</span>
+		<span class="kt">int</span> <span class="n">boxCount</span> <span class="o">=</span> <span class="n">boxPerCells</span><span class="p">[</span><span class="n">xGrid</span><span class="p">][</span><span class="n">zGrid</span><span class="p">]</span><span class="o">++</span><span class="p">;</span>
+		<span class="kt">float</span> <span class="n">boxHeight</span> <span class="o">=</span> <span class="mf">4.5</span><span class="p">;</span>
+		<span class="n">BoxMesh</span> <span class="n">b</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span><span class="n">boxHeight</span><span class="p">,</span><span class="mi">3</span><span class="p">);</span>
+		<span class="n">b</span><span class="p">.</span><span class="n">setFaceColors</span><span class="p">({</span><span class="n">Qt</span><span class="o">::</span><span class="n">blue</span><span class="p">,</span> <span class="n">Qt</span><span class="o">::</span><span class="n">red</span><span class="p">,</span> <span class="n">Qt</span><span class="o">::</span><span class="n">yellow</span><span class="p">,</span> <span class="n">Qt</span><span class="o">::</span><span class="n">green</span><span class="p">,</span> <span class="n">Qt</span><span class="o">::</span><span class="n">magenta</span><span class="p">,</span> <span class="n">Qt</span><span class="o">::</span><span class="n">darkCyan</span><span class="p">});</span>
+		<span class="n">trans</span><span class="p">.</span><span class="n">setTranslation</span><span class="p">((</span><span class="o">-</span><span class="n">GridDim</span><span class="o">/</span><span class="mi">2</span><span class="o">+</span><span class="n">xGrid</span><span class="p">)</span><span class="o">*</span><span class="mi">5</span><span class="p">,</span> <span class="n">boxCount</span><span class="o">*</span><span class="mi">5</span> <span class="o">+</span> <span class="mf">0.5</span><span class="o">*</span><span class="n">boxHeight</span><span class="p">,</span> <span class="p">(</span><span class="o">-</span><span class="n">GridDim</span><span class="o">/</span><span class="mi">2</span> <span class="o">+</span> <span class="n">zGrid</span><span class="p">)</span><span class="o">*</span><span class="mi">5</span><span class="p">);</span>
+		<span class="n">b</span><span class="p">.</span><span class="n">transform</span><span class="p">(</span><span class="n">trans</span><span class="p">.</span><span class="n">toMatrix</span><span class="p">());</span>
+		<span class="n">m_boxes</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">b</span><span class="p">);</span>
+	<span class="p">}</span>
+
+	<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">NBoxes</span> <span class="o">=</span> <span class="n">m_boxes</span><span class="p">.</span><span class="n">size</span><span class="p">();</span>
+
+	<span class="c1">// resize storage arrays</span>
+	<span class="n">m_vertexBufferData</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">NBoxes</span><span class="o">*</span><span class="n">BoxMesh</span><span class="o">::</span><span class="n">VertexCount</span><span class="p">);</span>
+	<span class="n">m_elementBufferData</span><span class="p">.</span><span class="n">resize</span><span class="p">(</span><span class="n">NBoxes</span><span class="o">*</span><span class="n">BoxMesh</span><span class="o">::</span><span class="n">IndexCount</span><span class="p">);</span>
+
+	<span class="c1">// update the buffers</span>
+	<span class="n">Vertex</span> <span class="o">*</span> <span class="n">vertexBuffer</span> <span class="o">=</span> <span class="n">m_vertexBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">();</span>
+	<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">vertexCount</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+	<span class="n">GLuint</span> <span class="o">*</span> <span class="n">elementBuffer</span> <span class="o">=</span> <span class="n">m_elementBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">();</span>
+	<span class="k">for</span> <span class="p">(</span><span class="k">const</span> <span class="n">BoxMesh</span> <span class="o">&amp;</span> <span class="n">b</span> <span class="o">:</span> <span class="n">m_boxes</span><span class="p">)</span>
+		<span class="n">b</span><span class="p">.</span><span class="n">copy2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">vertexCount</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Wichtig ist zunächst die Initialisierung der <code>QOpenGLBuffer</code> Objekte. Als Konstruktorargument wird der Typ des Buffers angegeben (<code>VertexBuffer</code> ist der Standard, aber beim <code>m_ebo</code> Objekt muss man <code>IndexBuffer</code> festlegen).</p>
+</div>
+<div class="paragraph">
+<p>Dann wird zunächst eine Testbox erstellt. Dies beinhaltet die folgenden Schritte:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Erstellung eines <code>BoxMesh</code> Objekts mit den Ausdehnungen 4x2x3 (die Box wird zentriert um das eigene Koordinatensystem erstellt, also x=-2&#8230;&#8203;-2, y=-1&#8230;&#8203;1, z=-1,5&#8230;&#8203;1,5):</p>
+<div class="literalblock">
+<div class="content">
+<pre>BoxMesh b(4,2,3);</pre>
+</div>
+</div>
+</li>
+<li>
+<p>Festlegen der Seitenfarben:</p>
+<div class="literalblock">
+<div class="content">
+<pre>b.setFaceColors({Qt::blue, Qt::red, Qt::yellow, Qt::green, Qt::magenta, Qt::darkCyan});</pre>
+</div>
+</div>
+</li>
+<li>
+<p>Verschiebung der Box in das Weltenkoordinatensystem (erst Erstellung der Transformationsmatrix, dann anwenden der Transformation auf die Box):</p>
+<div class="literalblock">
+<div class="content">
+<pre>Transform3D trans;
+trans.setTranslation(0,1,0);
+b.transform(trans.toMatrix());</pre>
+</div>
+</div>
+</li>
+<li>
+<p>Zuletzt ablegen der Box im Vektor <code>m_boxes</code>:</p>
+<div class="literalblock">
+<div class="content">
+<pre>m_boxes.push_back( b);</pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Die Klasse <code>BoxMesh</code> merkt sich zunächst nur die Koordinaten und Farbzuordnungen.</p>
+</div>
+<div class="paragraph">
+<p>Als nächstes werden noch eine Reihe weiterer Boxen erstellt, und in einem Raster mit Dimension <em>GridDim x GridDim</em> gestapelt. Wenn man mal die eienen Grafikkarte testen will, kann man gerne <code>BoxGenCount</code> auf eine Million erhöhen und/oder das Gitterraster vergrößern (z.B. <code>GridDim=500</code>) um eine etwas größere "Stadt" zu bekommen.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Bei größeren Rasterdimensionen sieht man auch gut den Effekt des Tiefenclippings, d.h. Objekte hinter der FARPLANE werden nicht mehr gerendert.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Nun kommt der eigentlich interessante Teil. Es werden erst Pufferspeicher reserviert. Dabei liefern die Funktionen <code>BoxMesh::VertexCount</code> und <code>BoxMesh::IndexCount</code> die je Meshobjekt benötigte Anzahl von Elementen zurück. Man hätte hier auch gleich die Anzahl eintragen können, aber so bleibt der Code hinreichend universell und kann auf beliebige andere Meshobjekte übertragen werden.</p>
+</div>
+<div class="paragraph">
+<p>Zuletzt kommt das Befüllen der Puffer in traditioneller C-Methodik zum Befüllen kontinuierlicher Speicherbereiche mit Elementen:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">Vertex</span> <span class="o">*</span> <span class="n">vertexBuffer</span> <span class="o">=</span> <span class="n">m_vertexBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">();</span>
+<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">vertexCount</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="n">GLuint</span> <span class="o">*</span> <span class="n">elementBuffer</span> <span class="o">=</span> <span class="n">m_elementBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">();</span>
+<span class="k">for</span> <span class="p">(</span><span class="k">const</span> <span class="n">BoxMesh</span> <span class="o">&amp;</span> <span class="n">b</span> <span class="o">:</span> <span class="n">m_boxes</span><span class="p">)</span>
+	<span class="n">b</span><span class="p">.</span><span class="n">copy2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">vertexCount</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Es werden erst Zeiger auf den Beginn des Pufferspeichers geholt und der Startindex der Vertices auf 0 gesetzt. Dann werden in jedem Schleifendurchlauf die Daten eines BoxMeshes in die Puffer geschrieben und die Zeigervariablen entsprechend vorgerückt. Ebenso wird der Startindex der Vertexes erhöht (<code>vertexCount</code>), sodass bei er nächsten Box neue Vertexnummern vergeben werden.</p>
+</div>
+<div class="paragraph">
+<p>In dieser Art ließen sich ohne weiteres andere Objekttypen verwalten und zusammengefasst in einen Zeichenpuffer kopieren. Die ganze objektspezifische Geometriearbeit passiert im jeweiligen Mesh-Objekt, in diesem Fall in der Klasse <code>BoxMesh</code>.</p>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_die_klasse_boxmesh">Die Klasse BoxMesh</h5>
+<div class="paragraph">
+<p>Inzwischen sollte die Aufgabe der Klasse <code>BoxMesh</code> klar sein:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>speichern der originalen Geometrie (im lokalen Koordinatensystem)</p>
+</li>
+<li>
+<p>speichern/anwenden der Transformation zum Weltenkoordinatensystem</p>
+</li>
+<li>
+<p>befüllen des linearen Vertexpuffer-Speichers und Elementpuffer-Speichers</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Auch hier gibt es wieder verschiedene Möglichkeiten. Man kann sich, nach dem Prinzip der <em>lazy evaluation</em> erst einmal nur die für die Schritte benötigten Parameter merken, also z.B. Breite, Höhe und Länge der Box, und die Transformationsmatrix. Wenn dann der Vertexpuffer gefüllt werden soll, erstellt man die Vertexkoordinaten, führt die Transformation aus und kopiert dann die resultierenden Koordinaten. Das Verfahren ist sinnvoll, wenn sich die Transformation (also Model-zu-Weltkoordinaten) häufig ändert.</p>
+</div>
+<div class="paragraph">
+<p>Alternativ kann man, wie hier in Tutorial 05, auch die Koordinaten gleich berechnen, d.h. beim Erstellen des Objekt die Vertexkoordinaten im lokalen Koordinatensystem festlegen, und dann bei Ausführen der Transformation sofort an Ort und Stelle transformieren. Dies reduziert die Arbeit beim eigentlichen Befüllen des OpenGL-Vertex-Puffers, führt aber zu witzigen Effekten bei mehrfacher Anwendung der in-place Transformation (wegen der unvermeidlichen Rundungsfehler&#8230;&#8203; einfach mal mehrere 100 Mal im Kreis drehen und sich über die Geometrieveränderung freuen). Da Animation oder Transformation in diesem Tutorial keine Rolle spielt, werden die Boxen gleich zu Beginn ins Weltenkoordinatensystem transformiert.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Bevor wir uns der eigentlichen Implementierung widmen, hift vielleicht die eine oder andere Skizze, die Box-Geometrie zu verstehen:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/Tutorial_05_BoxVertexNumbering.png" alt="Box Vertex Numbering">
+</div>
+<div class="title">Figure 9. Nummerierung der Knoten (Vertices) der Box</div>
+</div>
+<div class="paragraph">
+<p>Die Nummerierung der Vertexes ist zunächst einmal für die Datenhaltung in der <code>BoxMesh</code>-Klasse notwendig. Es werden nämlich im Konstruktor schon einmal die Vertexkoordinaten berechnet:</p>
+</div>
+<div class="listingblock">
+<div class="title">BoxMesh.cpp, Konstruktor</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">BoxMesh</span><span class="o">::</span><span class="n">BoxMesh</span><span class="p">(</span><span class="kt">float</span> <span class="n">width</span><span class="p">,</span> <span class="kt">float</span> <span class="n">height</span><span class="p">,</span> <span class="kt">float</span> <span class="n">depth</span><span class="p">,</span> <span class="n">QColor</span> <span class="n">boxColor</span><span class="p">)</span> <span class="p">{</span>
+
+	<span class="n">m_vertices</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">QVector3D</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">width</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">height</span><span class="p">,</span>  <span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">depth</span><span class="p">));</span> <span class="c1">// a = 0</span>
+	<span class="n">m_vertices</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">QVector3D</span><span class="p">(</span> <span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">width</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">height</span><span class="p">,</span>  <span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">depth</span><span class="p">));</span> <span class="c1">// b = 1</span>
+	<span class="n">m_vertices</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">QVector3D</span><span class="p">(</span> <span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">width</span><span class="p">,</span>  <span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">height</span><span class="p">,</span>  <span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">depth</span><span class="p">));</span> <span class="c1">// c = 2</span>
+	<span class="n">m_vertices</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">QVector3D</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">width</span><span class="p">,</span>  <span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">height</span><span class="p">,</span>  <span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">depth</span><span class="p">));</span> <span class="c1">// d = 3</span>
+
+	<span class="n">m_vertices</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">QVector3D</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">width</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">height</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">depth</span><span class="p">));</span> <span class="c1">// e = 4</span>
+	<span class="n">m_vertices</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">QVector3D</span><span class="p">(</span> <span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">width</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">height</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">depth</span><span class="p">));</span> <span class="c1">// f = 5</span>
+	<span class="n">m_vertices</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">QVector3D</span><span class="p">(</span> <span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">width</span><span class="p">,</span>  <span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">height</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">depth</span><span class="p">));</span> <span class="c1">// g = 6</span>
+	<span class="n">m_vertices</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">QVector3D</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">width</span><span class="p">,</span>  <span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">height</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="n">f</span><span class="o">*</span><span class="n">depth</span><span class="p">));</span> <span class="c1">// h = 7</span>
+
+	<span class="n">setColor</span><span class="p">(</span><span class="n">boxColor</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Knotenkoordinaten sind zunächst in einem Vektor von <code>QVector3D</code> abgelegt. Bei einem nachfolgenden Aufruf zur Transformation werden diese Koordinaten einfach <em>verändert</em>:</p>
+</div>
+<div class="listingblock">
+<div class="title">BoxMesh.cpp:transform()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">BoxMesh</span><span class="o">::</span><span class="n">transform</span><span class="p">(</span><span class="k">const</span> <span class="n">QMatrix4x4</span> <span class="o">&amp;</span> <span class="n">transform</span><span class="p">)</span> <span class="p">{</span>
+	<span class="k">for</span> <span class="p">(</span><span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">v</span> <span class="o">:</span> <span class="n">m_vertices</span><span class="p">)</span>
+		<span class="n">v</span> <span class="o">=</span> <span class="n">transform</span><span class="o">*</span><span class="n">v</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="admonitionblock caution">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-caution" title="Caution"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Bei mehrfacher Ausführung von <code>transform()</code> auf die Rundungsfehler achten!</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Nun sind die Boxen also bereits im Weltenkoordinatensystem verankert und der Vertexpuffer und Indexpuffer können befüllt werden.</p>
+</div>
+<div class="paragraph">
+<p>Für das weitere Vorgehen ist es hilfreich, das Speicherlayout des Vertexpuffers einmal gesehen zu haben. Die folgende Abbildung zeigt das Ziel dieser Kopieraktion.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/Tutorial_05_vertexbuffer.png" alt="Vertex Buffer Layout">
+</div>
+<div class="title">Figure 10. Speicherlayout des Vertexpuffers</div>
+</div>
+<div class="paragraph">
+<p>Alle Boxen werden nacheinander im VBO abgelegt. Je Box sind das 6 Seiten, wobei für jede Seite 4 Vertexes mit je Koordinaten und Farbwerten abgelegt werden. Das Kopieren erfolgt in der Funktion <code>copy2Buffer()</code>, wobei jeweils die Daten für eine einzelne Box kopiert werden. In der Abbildung ist auch der <em>stride</em> (Länge eines Vertexdatenblocks) gezeigt.</p>
+</div>
+<div class="paragraph">
+<p>In der Funktion <code>copy2Buffer()</code> wird zunächst ein temporärer Vektor <code>cols</code> mit Farben für jede Seite angelegt, für den Fall, dass einfarbige Boxen verwendet werden:</p>
+</div>
+<div class="listingblock">
+<div class="title">BoxMesh.cpp:copy2Buffer()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">BoxMesh</span><span class="o">::</span><span class="n">copy2Buffer</span><span class="p">(</span><span class="n">Vertex</span> <span class="o">*&amp;</span> <span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">GLuint</span> <span class="o">*&amp;</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="o">&amp;</span> <span class="n">elementStartIndex</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+	<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">QColor</span><span class="o">&gt;</span> <span class="n">cols</span><span class="p">;</span>
+	<span class="n">Q_ASSERT</span><span class="p">(</span><span class="o">!</span><span class="n">m_colors</span><span class="p">.</span><span class="n">empty</span><span class="p">());</span>
+	<span class="c1">// three ways to store vertex colors</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">m_colors</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+		<span class="n">cols</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">QColor</span><span class="o">&gt;</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="n">m_colors</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+	<span class="p">}</span>
+	<span class="k">else</span> <span class="p">{</span>
+		<span class="n">Q_ASSERT</span><span class="p">(</span><span class="n">m_colors</span><span class="p">.</span><span class="n">size</span><span class="p">()</span> <span class="o">==</span> <span class="mi">6</span><span class="p">);</span>
+		<span class="n">cols</span> <span class="o">=</span> <span class="n">m_colors</span><span class="p">;</span>
+	<span class="p">}</span>
+
+	<span class="p">...</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Nun werden die Seiten nacheinander in der Reihenfolge <em>vorne, rechts, hinten, links, unten</em> und <em>oben</em> in die Puffer geschrieben:</p>
+</div>
+<div class="listingblock">
+<div class="title">BoxMesh.cpp:copy2Buffer(), fortgesetzt</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">BoxMesh</span><span class="o">::</span><span class="n">copy2Buffer</span><span class="p">(</span><span class="n">Vertex</span> <span class="o">*&amp;</span> <span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">GLuint</span> <span class="o">*&amp;</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="o">&amp;</span> <span class="n">elementStartIndex</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+	<span class="p">...</span>
+
+	<span class="c1">// front plane: a, b, c, d, vertexes (0, 1, 2, 3)</span>
+	<span class="n">copyPlane2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">elementStartIndex</span><span class="p">,</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+		<span class="p">);</span>
+
+	<span class="c1">// right plane: b=1, f=5, g=6, c=2, vertexes</span>
+	<span class="c1">// Mind: colors are numbered up</span>
+	<span class="n">copyPlane2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">elementStartIndex</span><span class="p">,</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+		<span class="p">);</span>
+
+	<span class="c1">// back plane: g=5, e=4, h=7, g=6</span>
+	<span class="n">copyPlane2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">elementStartIndex</span><span class="p">,</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">7</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+		<span class="p">);</span>
+
+	<span class="c1">// left plane: 4,0,3,7</span>
+	<span class="n">copyPlane2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">elementStartIndex</span><span class="p">,</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">3</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">7</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+		<span class="p">);</span>
+
+	<span class="c1">// bottom plane: 4,5,1,0</span>
+	<span class="n">copyPlane2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">elementStartIndex</span><span class="p">,</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">4</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">4</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">4</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+		<span class="p">);</span>
+
+	<span class="c1">// top plane: 3,2,6,7</span>
+	<span class="n">copyPlane2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">elementStartIndex</span><span class="p">,</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span>
+			<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">7</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">5</span><span class="p">])</span>
+		<span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Beim Aufruf der Funktion <code>copyPlane2Buffer()</code> stehen die Zeiger <code>vertexBuffer</code> und <code>elementBuffer</code> stehts am Anfang des Speicherbereichs, in den die nun folgenden Seitendaten geschrieben werden.</p>
+</div>
+<div class="paragraph">
+<p>Ebenso enthält die Variable <code>elementStartIndex</code> den Vertexindex, bei dem die Nummerierung beginnt. Bei der ersten Box beginnt die Nummerierung auf der Vorderseite mit 0 (d.h. Vertexes 0&#8230;&#8203;3 sind auf der Vorderseite), siehe auch folgende Abbildung:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/Tutorial_05_PlaneVertexNumbering.png" alt="Vertex-Nummerierung der Seiten">
+</div>
+<div class="title">Figure 11. Seitennummerierung und generierte Dreieckselemente</div>
+</div>
+<div class="paragraph">
+<p>Die Koordinaten und Farben werden beim Aufruf in die Vertex-Struktur kopiert.</p>
+</div>
+<div class="paragraph">
+<p>Nachdem die Daten für die Vorderseite kopiert wurden, sind die Zeiger entsprechend verschoben worden und zeigen nun auf den Speicherbereich der nächsten Seite. Beim Aufruf der Funktion <code>copyPlane2Buffer()</code> muss auf die korrekte Reihenfolge der Vertexes geachtet werden, sodass die Vertices immer entgegen des Uhrzeigersinns übergeben werden.</p>
+</div>
+<div class="paragraph">
+<p>Die letzte Abbildung zeigt auch die zwei Dreiecke, welche die Seite bilden. Deshalb wird in dieser Funktion sowohl der Vertexpuffer als auch der Indexpuffer befüllt. Innerhalb der Funktion <code>copyPlane2Buffer()</code> wird die Nummerierung relativ durchgeführt, d.h. die Vertices sind <em>immer</em> 0 bis 3, wobei allerdings stets der Startindex addiert wird (siehe Abbildung, rechte Seite).</p>
+</div>
+<div class="listingblock">
+<div class="title">BoxMesh.cpp:copyPlane2Buffer()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="nf">copyPlane2Buffer</span><span class="p">(</span><span class="n">Vertex</span> <span class="o">*</span> <span class="o">&amp;</span> <span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">GLuint</span> <span class="o">*</span> <span class="o">&amp;</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="o">&amp;</span> <span class="n">elementStartIndex</span><span class="p">,</span>
+    <span class="k">const</span> <span class="n">Vertex</span> <span class="o">&amp;</span> <span class="n">a</span><span class="p">,</span> <span class="k">const</span> <span class="n">Vertex</span> <span class="o">&amp;</span> <span class="n">b</span><span class="p">,</span> <span class="k">const</span> <span class="n">Vertex</span> <span class="o">&amp;</span> <span class="n">c</span><span class="p">,</span> <span class="k">const</span> <span class="n">Vertex</span> <span class="o">&amp;</span> <span class="n">d</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="c1">// first store the vertex data (a,b,c,d in counter-clockwise order)</span>
+
+	<span class="n">vertexBuffer</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">a</span><span class="p">;</span>
+	<span class="n">vertexBuffer</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">b</span><span class="p">;</span>
+	<span class="n">vertexBuffer</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">c</span><span class="p">;</span>
+	<span class="n">vertexBuffer</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">d</span><span class="p">;</span>
+
+    <span class="p">...</span>
+
+	<span class="c1">// advance vertexBuffer</span>
+	<span class="n">vertexBuffer</span> <span class="o">+=</span> <span class="mi">4</span><span class="p">;</span>
+
+	<span class="c1">// we generate data for two triangles: a, b, d  and b, c, d</span>
+
+	<span class="n">elementBuffer</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">elementStartIndex</span><span class="p">;</span>
+	<span class="n">elementBuffer</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">elementStartIndex</span><span class="o">+</span><span class="mi">1</span><span class="p">;</span>
+	<span class="n">elementBuffer</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">elementStartIndex</span><span class="o">+</span><span class="mi">3</span><span class="p">;</span>
+	<span class="n">elementBuffer</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="n">elementStartIndex</span><span class="o">+</span><span class="mi">1</span><span class="p">;</span>
+	<span class="n">elementBuffer</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">=</span> <span class="n">elementStartIndex</span><span class="o">+</span><span class="mi">2</span><span class="p">;</span>
+	<span class="n">elementBuffer</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">=</span> <span class="n">elementStartIndex</span><span class="o">+</span><span class="mi">3</span><span class="p">;</span>
+
+	<span class="c1">// advance elementBuffer</span>
+	<span class="n">elementBuffer</span> <span class="o">+=</span> <span class="mi">6</span><span class="p">;</span>
+	<span class="c1">// 4 vertices have been added, so increase start number for next plane</span>
+	<span class="n">elementStartIndex</span> <span class="o">+=</span> <span class="mi">4</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Hier machen wir uns nun eine nette Eigenschaft von C/C++ zu Nutze. Wenn wir einen Speicherbereich als Vektor einer Struktur behandeln, und via Index Objekte zuweisen, dass wird automatisch der Speicherbereich mit den Inhalten der Strukturen in der Reihenfolge der Deklaration der Variablen befüllt.</p>
+</div>
+<div class="paragraph">
+<p>Da die Addressen und der Startindex als Referenzvariablen übergeben wurden, können wir die Zeiger "weiterschieben" und die Vertexanzahl entsprechend erhöhen.</p>
+</div>
+<div class="paragraph">
+<p>Das schöne an der Funktion <code>copyPlane2Buffer()</code> ist, dass sie unverändert auch funktioniert, wenn die <code>Vertex</code>-Struktur später um Normalenvektoren und/oder Texturkoordinaten erweitert wird.</p>
+</div>
+<div class="paragraph">
+<p>Mehr gibt es auch zur Klasse <code>BoxMesh</code> nicht zu sagen, womit wir am Ende des <em>Tutorial 05</em> angelangt wären. Um das ganze aber noch abzurunden (und etwas schicker aussehen zu lassen) fehlt noch Kantenglättung.</p>
+</div>
 </div>
 </div>
 </div>
 <div class="sect2">
 <h3 id="_antialiasing">5.8. Antialiasing</h3>
 <div class="paragraph">
-<p>Es gibt hier verschiedene Möglichkeiten, die wohl einfachste aus Sicht der Programmierung ist das Einschalten von Multisampling (MSAA) (siehe Erläuterung auf <a href="https://www.khronos.org/opengl/wiki/Multisampling" class="bare">https://www.khronos.org/opengl/wiki/Multisampling</a>).</p>
+<p>Es gibt hier verschiedene Möglichkeiten, Antialiasing (Kantenglättung) zu verwenden. Die wohl einfachste aus Sicht der Programmierung ist das Einschalten von Multisampling (MSAA) (siehe Erläuterung auf <a href="https://www.khronos.org/opengl/wiki/Multisampling" class="bare">https://www.khronos.org/opengl/wiki/Multisampling</a>).</p>
 </div>
 <div class="paragraph">
 <p>Dazu muss man beim Konfigurieren des <code>QSurfaceFormat</code>-Objekts nur folgende Zeile hinzufügen:</p>
@@ -4025,10 +4730,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Multisampling braucht mehr Grafikkartenspeicher und ist durch das mehrfache Samplen von Pixeln/Fragmenten natürlich langsamer. Daher gibt es auch die Möglichkeit, Antialiasing in das Shaderprogramm einzubauen.</p>
-</div>
-<div class="paragraph">
-<p>TODO : Antialiased-Shader</p>
+<p>Multisampling braucht mehr Grafikkartenspeicher und ist durch das mehrfache Samplen von Pixeln/Fragmenten natürlich langsamer. Daher gibt es auch die Möglichkeit, Antialiasing in das Shaderprogramm einzubauen. Das ist aber, ebenso wie ein Drahtgittereffekt, ein Thema für ein anderes Tutorial.</p>
 </div>
 </div>
 </div>
@@ -4036,8 +4738,8 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 0.1.0<br>
-Last updated 2020-03-25 20:37:20 +0100
+Version 0.5.0<br>
+Last updated 2020-04-01 10:26:26 +0200
 </div>
 </div>
 <style>

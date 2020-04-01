@@ -1420,7 +1420,7 @@ Alternativ kann man, wie hier in Tutorial 05, auch die Koordinaten gleich berech
 
 Bevor wir uns der eigentlichen Implementierung widmen, hift vielleicht die eine oder andere Skizze, die Box-Geometrie zu verstehen:
 
-.Nummerierung der Knoten (Vertices) der Box (oben), flächenbezogene Nummerierung (unten)
+.Nummerierung der Knoten (Vertices) der Box
 image::Tutorial_05_BoxVertexNumbering.png[Box Vertex Numbering, pdfwidth=8cm]
 
 Die Nummerierung der Vertexes ist zunächst einmal für die Datenhaltung in der `BoxMesh`-Klasse notwendig. Es werden nämlich im Konstruktor schon einmal die Vertexkoordinaten berechnet:
@@ -1460,14 +1460,16 @@ void BoxMesh::transform(const QMatrix4x4 & transform) {
 Bei mehrfacher Ausführung von `transform()` auf die Rundungsfehler achten!
 ====
 
-Nun sind die Boxen also bereits im Weltenkoordinatensystem verankert und der Vertexpuffer und Indexpuffer können befüllt werden. Das passiert in der Funktion `copy2Buffer()`.
+Nun sind die Boxen also bereits im Weltenkoordinatensystem verankert und der Vertexpuffer und Indexpuffer können befüllt werden. 
 
-Die folgende Abbildung zeigt das Ziel dieser Kopieraktion, wobei `copy2Buffer()` jeweils alle Daten für eine Box kopiert.
+Für das weitere Vorgehen ist es hilfreich, das Speicherlayout des Vertexpuffers einmal gesehen zu haben. Die folgende Abbildung zeigt das Ziel dieser Kopieraktion.
 
 .Speicherlayout des Vertexpuffers
-image::Tutorial_05_vertexbuffer.png[Box Vertex Numbering, pdfwidth=8cm]
+image::Tutorial_05_vertexbuffer.png[Vertex Buffer Layout, pdfwidth=12cm]
 
-Jede Seite der Box wird nacheinander im VBO abgelegt, wobei je Seite 4 Vertexes mit je Koordinaten und Farbwerten abgelegt werden. In der Funktion `copy2Buffer()` wird daher zunächst ein Vektor mit Farben für jeden _seitenbezogenen Vertex_ angelegt, d.h. bei 6 Seiten und 4 Vertices je Seite = 24 Farbwerte.
+Alle Boxen werden nacheinander im VBO abgelegt. Je Box sind das 6 Seiten, wobei für jede Seite 4 Vertexes mit je Koordinaten und Farbwerten abgelegt werden. Das Kopieren erfolgt in der Funktion `copy2Buffer()`, wobei jeweils die Daten für eine einzelne Box kopiert werden. In der Abbildung ist auch der __stride__ (Länge eines Vertexdatenblocks) gezeigt.
+
+In der Funktion `copy2Buffer()` wird zunächst ein temporärer Vektor `cols` mit Farben für jede Seite angelegt, für den Fall, dass einfarbige Boxen verwendet werden:
 
 .BoxMesh.cpp:copy2Buffer()
 [source,c++]
@@ -1477,23 +1479,129 @@ void BoxMesh::copy2Buffer(Vertex *& vertexBuffer, GLuint *& elementBuffer, unsig
 	Q_ASSERT(!m_colors.empty());
 	// three ways to store vertex colors
 	if (m_colors.size() == 1) {
-		cols = std::vector<QColor>(6*4, m_colors[0]);
+		cols = std::vector<QColor>(6, m_colors[0]);
 	}
 	else {
 		Q_ASSERT(m_colors.size() == 6);
-		cols.reserve(24);
-		// face order: front, right, back, left, top, bottom
-		for (unsigned int i=0; i<6; ++i) {
-			QColor faceCol(m_colors[i]);
-			for (int j=0; j<4; ++j)
-				cols.push_back(faceCol);
-		}
+		cols = m_colors;
 	}
 	
 	...
 ----
 
 Nun werden die Seiten nacheinander in der Reihenfolge _vorne, rechts, hinten, links, unten_ und _oben_ in die Puffer geschrieben:
+
+.BoxMesh.cpp:copy2Buffer(), fortgesetzt
+[source,c++]
+----
+void BoxMesh::copy2Buffer(Vertex *& vertexBuffer, GLuint *& elementBuffer, unsigned int & elementStartIndex) const {
+	...
+	
+	// front plane: a, b, c, d, vertexes (0, 1, 2, 3)
+	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
+			Vertex(m_vertices[0], cols[0]),
+			Vertex(m_vertices[1], cols[0]),
+			Vertex(m_vertices[2], cols[0]),
+			Vertex(m_vertices[3], cols[0])
+		);
+
+	// right plane: b=1, f=5, g=6, c=2, vertexes
+	// Mind: colors are numbered up
+	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
+			Vertex(m_vertices[1], cols[1]),
+			Vertex(m_vertices[5], cols[1]),
+			Vertex(m_vertices[6], cols[1]),
+			Vertex(m_vertices[2], cols[1])
+		);
+
+	// back plane: g=5, e=4, h=7, g=6
+	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
+			Vertex(m_vertices[5], cols[2]),
+			Vertex(m_vertices[4], cols[2]),
+			Vertex(m_vertices[7], cols[2]),
+			Vertex(m_vertices[6], cols[2])
+		);
+
+	// left plane: 4,0,3,7
+	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
+			Vertex(m_vertices[4], cols[3]),
+			Vertex(m_vertices[0], cols[3]),
+			Vertex(m_vertices[3], cols[3]),
+			Vertex(m_vertices[7], cols[3])
+		);
+
+	// bottom plane: 4,5,1,0
+	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
+			Vertex(m_vertices[4], cols[4]),
+			Vertex(m_vertices[5], cols[4]),
+			Vertex(m_vertices[1], cols[4]),
+			Vertex(m_vertices[0], cols[4])
+		);
+
+	// top plane: 3,2,6,7
+	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
+			Vertex(m_vertices[3], cols[5]),
+			Vertex(m_vertices[2], cols[5]),
+			Vertex(m_vertices[6], cols[5]),
+			Vertex(m_vertices[7], cols[5])
+		);
+}
+----
+
+Beim Aufruf der Funktion `copyPlane2Buffer()` stehen die Zeiger `vertexBuffer` und `elementBuffer` stehts am Anfang des Speicherbereichs, in den die nun folgenden Seitendaten geschrieben werden. 
+
+Ebenso enthält die Variable `elementStartIndex` den Vertexindex, bei dem die Nummerierung beginnt. Bei der ersten Box beginnt die Nummerierung auf der Vorderseite mit 0 (d.h. Vertexes 0...3 sind auf der Vorderseite), siehe auch folgende Abbildung:
+
+.Seitennummerierung und generierte Dreieckselemente
+image::Tutorial_05_PlaneVertexNumbering.png[Vertex-Nummerierung der Seiten, pdfwidth=8cm]
+
+Die Koordinaten und Farben werden beim Aufruf in die Vertex-Struktur kopiert.
+
+Nachdem die Daten für die Vorderseite kopiert wurden, sind die Zeiger entsprechend verschoben worden und zeigen nun auf den Speicherbereich der nächsten Seite. Beim Aufruf der Funktion `copyPlane2Buffer()` muss auf die korrekte Reihenfolge der Vertexes geachtet werden, sodass die Vertices immer entgegen des Uhrzeigersinns übergeben werden.
+
+Die letzte Abbildung zeigt auch die zwei Dreiecke, welche die Seite bilden. Deshalb wird in dieser Funktion sowohl der Vertexpuffer als auch der Indexpuffer befüllt. Innerhalb der Funktion `copyPlane2Buffer()` wird die Nummerierung relativ durchgeführt, d.h. die Vertices sind _immer_ 0 bis 3, wobei allerdings stets der Startindex addiert wird (siehe Abbildung, rechte Seite). 
+
+.BoxMesh.cpp:copyPlane2Buffer()
+[source,c++]
+----
+void copyPlane2Buffer(Vertex * & vertexBuffer, GLuint * & elementBuffer, unsigned int & elementStartIndex,
+    const Vertex & a, const Vertex & b, const Vertex & c, const Vertex & d)
+{
+	// first store the vertex data (a,b,c,d in counter-clockwise order)
+
+	vertexBuffer[0] = a;
+	vertexBuffer[1] = b;
+	vertexBuffer[2] = c;
+	vertexBuffer[3] = d;
+
+    ...
+
+	// advance vertexBuffer
+	vertexBuffer += 4;
+
+	// we generate data for two triangles: a, b, d  and b, c, d
+
+	elementBuffer[0] = elementStartIndex;
+	elementBuffer[1] = elementStartIndex+1;
+	elementBuffer[2] = elementStartIndex+3;
+	elementBuffer[3] = elementStartIndex+1;
+	elementBuffer[4] = elementStartIndex+2;
+	elementBuffer[5] = elementStartIndex+3;
+
+	// advance elementBuffer
+	elementBuffer += 6;
+	// 4 vertices have been added, so increase start number for next plane
+	elementStartIndex += 4;
+}
+----
+
+Hier machen wir uns nun eine nette Eigenschaft von C/C++ zu Nutze. Wenn wir einen Speicherbereich als Vektor einer Struktur behandeln, und via Index Objekte zuweisen, dass wird automatisch der Speicherbereich mit den Inhalten der Strukturen in der Reihenfolge der Deklaration der Variablen befüllt.
+
+Da die Addressen und der Startindex als Referenzvariablen übergeben wurden, können wir die Zeiger "weiterschieben" und die Vertexanzahl entsprechend erhöhen.
+
+Das schöne an der Funktion `copyPlane2Buffer()` ist, dass sie unverändert auch funktioniert, wenn die `Vertex`-Struktur später um Normalenvektoren und/oder Texturkoordinaten erweitert wird.
+
+Mehr gibt es auch zur Klasse `BoxMesh` nicht zu sagen, womit wir am Ende des _Tutorial 05_ angelangt wären. Um das ganze aber noch abzurunden (und etwas schicker aussehen zu lassen) fehlt noch Kantenglättung.
 
 == Antialiasing
 
@@ -1506,6 +1614,4 @@ Dazu muss man beim Konfigurieren des `QSurfaceFormat`-Objekts nur folgende Zeile
 format.setSamples(4);	// enable multisampling (antialiasing)
 ----
 
-Multisampling braucht mehr Grafikkartenspeicher und ist durch das mehrfache Samplen von Pixeln/Fragmenten natürlich langsamer. Daher gibt es auch die Möglichkeit, Antialiasing in das Shaderprogramm einzubauen.
-
-TODO : Antialiased-Shader
+Multisampling braucht mehr Grafikkartenspeicher und ist durch das mehrfache Samplen von Pixeln/Fragmenten natürlich langsamer. Daher gibt es auch die Möglichkeit, Antialiasing in das Shaderprogramm einzubauen. Das ist aber, ebenso wie ein Drahtgittereffekt, ein Thema für ein anderes Tutorial.

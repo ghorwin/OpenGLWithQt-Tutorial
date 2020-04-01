@@ -42,17 +42,11 @@ void BoxMesh::copy2Buffer(Vertex *& vertexBuffer, GLuint *& elementBuffer, unsig
 	Q_ASSERT(!m_colors.empty());
 	// three ways to store vertex colors
 	if (m_colors.size() == 1) {
-		cols = std::vector<QColor>(6*4, m_colors[0]);
+		cols = std::vector<QColor>(6, m_colors[0]);
 	}
 	else {
 		Q_ASSERT(m_colors.size() == 6);
-		cols.reserve(24);
-		// face order: front, right, back, left, top, bottom
-		for (unsigned int i=0; i<6; ++i) {
-			QColor faceCol(m_colors[i]);
-			for (int j=0; j<4; ++j)
-				cols.push_back(faceCol);
-		}
+		cols = m_colors;
 	}
 
 	// now we populate the vertex buffer for all planes
@@ -60,50 +54,50 @@ void BoxMesh::copy2Buffer(Vertex *& vertexBuffer, GLuint *& elementBuffer, unsig
 	// front plane: a, b, c, d, vertexes (0, 1, 2, 3)
 	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
 			Vertex(m_vertices[0], cols[0]),
-			Vertex(m_vertices[1], cols[1]),
-			Vertex(m_vertices[2], cols[2]),
-			Vertex(m_vertices[3], cols[3])
+			Vertex(m_vertices[1], cols[0]),
+			Vertex(m_vertices[2], cols[0]),
+			Vertex(m_vertices[3], cols[0])
 		);
 
 	// right plane: b=1, f=5, g=6, c=2, vertexes
 	// Mind: colors are numbered up
 	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
-			Vertex(m_vertices[1], cols[4]),
-			Vertex(m_vertices[5], cols[5]),
-			Vertex(m_vertices[6], cols[6]),
-			Vertex(m_vertices[2], cols[7])
+			Vertex(m_vertices[1], cols[1]),
+			Vertex(m_vertices[5], cols[1]),
+			Vertex(m_vertices[6], cols[1]),
+			Vertex(m_vertices[2], cols[1])
 		);
 
 	// back plane: g=5, e=4, h=7, g=6
 	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
-			Vertex(m_vertices[5], cols[8]),
-			Vertex(m_vertices[4], cols[9]),
-			Vertex(m_vertices[7], cols[10]),
-			Vertex(m_vertices[6], cols[11])
+			Vertex(m_vertices[5], cols[2]),
+			Vertex(m_vertices[4], cols[2]),
+			Vertex(m_vertices[7], cols[2]),
+			Vertex(m_vertices[6], cols[2])
 		);
 
 	// left plane: 4,0,3,7
 	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
-			Vertex(m_vertices[4], cols[12]),
-			Vertex(m_vertices[0], cols[13]),
-			Vertex(m_vertices[3], cols[14]),
-			Vertex(m_vertices[7], cols[15])
+			Vertex(m_vertices[4], cols[3]),
+			Vertex(m_vertices[0], cols[3]),
+			Vertex(m_vertices[3], cols[3]),
+			Vertex(m_vertices[7], cols[3])
 		);
 
 	// bottom plane: 4,5,1,0
 	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
-			Vertex(m_vertices[4], cols[16]),
-			Vertex(m_vertices[5], cols[17]),
-			Vertex(m_vertices[1], cols[18]),
-			Vertex(m_vertices[0], cols[19])
+			Vertex(m_vertices[4], cols[4]),
+			Vertex(m_vertices[5], cols[4]),
+			Vertex(m_vertices[1], cols[4]),
+			Vertex(m_vertices[0], cols[4])
 		);
 
 	// top plane: 3,2,6,7
 	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
-			Vertex(m_vertices[3], cols[20]),
-			Vertex(m_vertices[2], cols[21]),
-			Vertex(m_vertices[6], cols[22]),
-			Vertex(m_vertices[7], cols[23])
+			Vertex(m_vertices[3], cols[5]),
+			Vertex(m_vertices[2], cols[5]),
+			Vertex(m_vertices[6], cols[5]),
+			Vertex(m_vertices[7], cols[5])
 		);
 }
 
