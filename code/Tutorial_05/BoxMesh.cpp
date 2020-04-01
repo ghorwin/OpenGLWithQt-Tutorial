@@ -37,14 +37,15 @@ void BoxMesh::transform(const QMatrix4x4 & transform) {
 }
 
 
-void BoxMesh::copy2Buffer(Vertex *& vertexBuffer, GLuint *& elementBuffer, unsigned int elementStartIndex)
-{
+void BoxMesh::copy2Buffer(Vertex *& vertexBuffer, GLuint *& elementBuffer, unsigned int & elementStartIndex) const {
 	std::vector<QColor> cols;
 	Q_ASSERT(!m_colors.empty());
 	// three ways to store vertex colors
-	if (m_colors.size() == 1)
+	if (m_colors.size() == 1) {
 		cols = std::vector<QColor>(6*4, m_colors[0]);
-	else if (m_colors.size() == 6) {
+	}
+	else {
+		Q_ASSERT(m_colors.size() == 6);
 		cols.reserve(24);
 		// face order: front, right, back, left, top, bottom
 		for (unsigned int i=0; i<6; ++i) {
@@ -52,11 +53,6 @@ void BoxMesh::copy2Buffer(Vertex *& vertexBuffer, GLuint *& elementBuffer, unsig
 			for (int j=0; j<4; ++j)
 				cols.push_back(faceCol);
 		}
-	}
-	else if (m_colors.size() == 8) {
-		cols.resize(24);
-		// face order: front, right, back, left, top, bottom
-		// TODO : copy colors to respective vertex location
 	}
 
 	// now we populate the vertex buffer for all planes

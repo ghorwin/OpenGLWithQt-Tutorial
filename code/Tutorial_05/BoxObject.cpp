@@ -16,10 +16,10 @@ License    : BSD License,
 
 BoxObject::BoxObject() :
 	m_vbo(QOpenGLBuffer::VertexBuffer), // actually the default, so default constructor would have been enough
-	m_ebo(QOpenGLBuffer::IndexBuffer)
+	m_ebo(QOpenGLBuffer::IndexBuffer) // make this an Index Buffer
 {
 
-	// create center box
+	// create first box
 	BoxMesh b(4,2,3);
 	b.setFaceColors({Qt::blue, Qt::red, Qt::yellow, Qt::green, Qt::magenta, Qt::darkCyan});
 	Transform3D trans;
@@ -27,8 +27,10 @@ BoxObject::BoxObject() :
 	b.transform(trans.toMatrix());
 	m_boxes.push_back( b);
 
+	// create 'some' other boxes
+
 	const int BoxGenCount = 10000;
-	const int GridDim = 50; // must be an int, or use cast below
+	const int GridDim = 50; // must be an int, or you have to use a cast below
 
 	// initialize grid (block count)
 	int boxPerCells[GridDim][GridDim];
@@ -37,7 +39,7 @@ BoxObject::BoxObject() :
 			boxPerCells[i][j] = 0;
 	for (unsigned int i=0; i<BoxGenCount; ++i) {
 		// create other boxes in randomize grid, x and z dimensions fixed, height varies discretely
-		// x and z translation in a grid that has 500 units width/depths with 5 m grid line spacing
+		// x and z translation in a grid that has dimension 'GridDim' with 5 space units as grid (line) spacing
 		int xGrid = qrand()*double(GridDim)/RAND_MAX;
 		int zGrid = qrand()*double(GridDim)/RAND_MAX;
 		int boxCount = boxPerCells[xGrid][zGrid]++;
@@ -49,23 +51,18 @@ BoxObject::BoxObject() :
 		m_boxes.push_back(b);
 	}
 
-	// n count
-	unsigned int NCubes = m_boxes.size();
+	unsigned int NBoxes = m_boxes.size();
 
-	// we have 6 sides of a cube, and each side needs 4 vertexes
-	m_vertexBufferData.resize(NCubes*BoxMesh::VertexCount);
-
-	// we have 6 sides of cube, and each side has two triangles, with 3 indexes each
-	m_elementBufferData.resize(NCubes*6*BoxMesh::IndexCount);
+	// resize storage arrays
+	m_vertexBufferData.resize(NBoxes*BoxMesh::VertexCount);
+	m_elementBufferData.resize(NBoxes*BoxMesh::IndexCount);
 
 	// update the buffers
 	Vertex * vertexBuffer = m_vertexBufferData.data();
 	unsigned int vertexCount = 0;
 	GLuint * elementBuffer = m_elementBufferData.data();
-	for (unsigned int i=0; i<m_boxes.size(); ++i) {
-		m_boxes[i].copy2Buffer(vertexBuffer, elementBuffer, vertexCount);
-		vertexCount += BoxMesh::VertexCount;
-	}
+	for (const BoxMesh & b : m_boxes)
+		b.copy2Buffer(vertexBuffer, elementBuffer, vertexCount);
 }
 
 

@@ -1299,11 +1299,113 @@ Dem Shaderprogramm muss man nun mitteilen, wo in diesem kontinuierlichen Speiche
 Man könnte statt `offset(Vertex, r)` auch `3*sizeof(float)` oder `12` schreiben. *ABER* dann besteht die Gefahr, dass bei komplexeren Strukturen durch implizites Padding ungewollt eine Speicherbereichsverschiebung auftritt und das Shaderprogramm dann auf einen falschen Speicherbereich zugreift (siehe auch http://www.catb.org/esr/structure-packing). Dies ist auch der Grund, warum `sizeof(Vertex)` statt `6*sizeof(float)` als stride verwendet wird. Solange nur floats in der Struktur verwendet werden, wird der Compiler (normalerweise) kein Padding einfügen.
 ====
 
-==== Erstellung der Boxen-Geometrie - Klasse BoxMesh
+==== Initialisieren der Vertex- und Elementpuffer für die Boxen
 
 Die ganze Arbeit der Vertex- und Index-Puffer-Erstellung wird im Konstruktor der Klasse `BoxObject` und der Hilfsklasse `BoxMesh` gemacht.
 
+.BoxObject.cpp:Konstruktor
+[source,c++]
+----
+BoxObject::BoxObject() :
+	m_vbo(QOpenGLBuffer::VertexBuffer), // actually the default, so default constructor would have been enough
+	m_ebo(QOpenGLBuffer::IndexBuffer) // make this an Index Buffer
+{
 
+	// create center box
+	BoxMesh b(4,2,3);
+	b.setFaceColors({Qt::blue, Qt::red, Qt::yellow, Qt::green, Qt::magenta, Qt::darkCyan});
+	Transform3D trans;
+	trans.setTranslation(0,1,0);
+	b.transform(trans.toMatrix());
+	m_boxes.push_back( b);
+
+	const int BoxGenCount = 10000;
+	const int GridDim = 50; // must be an int, or use cast below
+
+	// initialize grid (block count)
+	int boxPerCells[GridDim][GridDim];
+	for (unsigned int i=0; i<GridDim; ++i)
+		for (unsigned int j=0; j<GridDim; ++j)
+			boxPerCells[i][j] = 0;
+	for (unsigned int i=0; i<BoxGenCount; ++i) {
+		// create other boxes in randomize grid, x and z dimensions fixed, height varies discretely
+		// x and z translation in a grid that has 500 units width/depths with 5 m grid line spacing
+		int xGrid = qrand()*double(GridDim)/RAND_MAX;
+		int zGrid = qrand()*double(GridDim)/RAND_MAX;
+		int boxCount = boxPerCells[xGrid][zGrid]++;
+		float boxHeight = 4.5;
+		BoxMesh b(4,boxHeight,3);
+		b.setFaceColors({Qt::blue, Qt::red, Qt::yellow, Qt::green, Qt::magenta, Qt::darkCyan});
+		trans.setTranslation((-GridDim/2+xGrid)*5, boxCount*5 + 0.5*boxHeight, (-GridDim/2 + zGrid)*5);
+		b.transform(trans.toMatrix());
+		m_boxes.push_back(b);
+	}
+
+	unsigned int NBoxes = m_boxes.size();
+
+	// resize storage arrays
+	m_vertexBufferData.resize(NBoxes*BoxMesh::VertexCount);
+	m_elementBufferData.resize(NBoxes*BoxMesh::IndexCount);
+
+	// update the buffers
+	Vertex * vertexBuffer = m_vertexBufferData.data();
+	unsigned int vertexCount = 0;
+	GLuint * elementBuffer = m_elementBufferData.data();
+	for (const BoxMesh & b : m_boxes)
+		b.copy2Buffer(vertexBuffer, elementBuffer, vertexCount);
+}
+----
+
+Wichtig ist zunächst die Initialisierung der `QOpenGLBuffer` Objekte. Als Konstruktorargument wird der Typ des Buffers angegeben (`VertexBuffer` ist der Standard, aber beim `m_ebo` Objekt muss man `IndexBuffer` festlegen).
+
+Dann wird zunächst eine Testbox erstellt. Dies beinhaltet die folgenden Schritte:
+
+. Erstellung eines `BoxMesh` Objekts mit den Ausdehnungen 4x2x3 (die Box wird zentriert um das eigene Koordinatensystem erstellt, also x=-2...-2, y=-1...1, z=-1,5...1,5):
+
+	BoxMesh b(4,2,3);
+	
+. Festlegen der Seitenfarben:
+
+	b.setFaceColors({Qt::blue, Qt::red, Qt::yellow, Qt::green, Qt::magenta, Qt::darkCyan});
+	
+. Verschiebung der Box in das Weltenkoordinatensystem (erst Erstellung der Transformationsmatrix, dann anwenden der Transformation auf die Box):
+
+	Transform3D trans;
+	trans.setTranslation(0,1,0);
+	b.transform(trans.toMatrix());
+
+. Zuletzt ablegen der Box im Vektor `m_boxes`:
+
+	m_boxes.push_back( b);
+
+Die Klasse `BoxMesh` merkt sich zunächst nur die Koordinaten und Farbzuordnungen.
+
+Als nächstes werden noch eine Reihe weiterer Boxen erstellt, und in einem Raster mit Dimension _GridDim x GridDim_ gestapelt. Wenn man mal die eienen Grafikkarte testen will, kann man gerne `BoxGenCount` auf eine Million erhöhen und/oder das Gitterraster vergrößern (z.B. `GridDim=500`) um eine etwas größere "Stadt" zu bekommen.
+
+[NOTE]
+====
+Bei größeren Rasterdimensionen sieht man auch gut den Effekt des Tiefenclippings, d.h. Objekte hinter der FARPLANE werden nicht mehr gerendert.
+====
+
+Nun kommt der eigentlich interessante Teil. Es werden erst Pufferspeicher reserviert. Dabei liefern die Funktionen `BoxMesh::VertexCount` und `BoxMesh::IndexCount` die je Meshobjekt benötigte Anzahl von Elementen zurück. Man hätte hier auch gleich die Anzahl eintragen können, aber so bleibt der Code hinreichend universell und kann auf beliebige andere Meshobjekte übertragen werden.
+
+Zuletzt kommt das Befüllen der Puffer in traditioneller C-Methodik zum Befüllen kontinuierlicher Speicherbereiche mit Elementen:
+
+[source,c++]
+----
+Vertex * vertexBuffer = m_vertexBufferData.data();
+unsigned int vertexCount = 0;
+GLuint * elementBuffer = m_elementBufferData.data();
+for (const BoxMesh & b : m_boxes)
+	b.copy2Buffer(vertexBuffer, elementBuffer, vertexCount);
+----
+Es werden erst Zeiger auf den Beginn des Pufferspeichers geholt und der Startindex der Vertices auf 0 gesetzt. Dann werden in jedem Schleifendurchlauf die Daten eines BoxMeshes in die Puffer geschrieben und die Zeigervariablen entsprechend vorgerückt. Ebenso wird der Startindex der Vertexes erhöht (`vertexCount`), sodass bei er nächsten Box neue Vertexnummern vergeben werden.
+
+In dieser Art ließen sich ohne weiteres andere Objekttypen verwalten und zusammengefasst in einen Zeichenpuffer kopieren. Die ganze objektspezifische Geometriearbeit passiert im jeweiligen Mesh-Objekt, in diesem Fall in der Klasse `BoxMesh`.
+
+==== Die Klasse BoxMesh
+
+Inzwischen sollte die Aufgabe der Klasse `BoxMesh` klar sein. 
 
 
 == Antialiasing

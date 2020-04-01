@@ -25,8 +25,7 @@ License    : BSD License,
 	is constructed centered around the origin.
 
 	You can transform the box by calling transform(), which will then update all vertices of the box.
-	You can adjust the face colors by calling setFaceColors(), or set individual vertex colors by
-	calling setVertexColoers(), or set a uniform color by calling setColor().
+	You can adjust the face colors by calling setFaceColors().
 
 	The constants VertexCount and IndexCount return the number of vertexes and indexes needed to store the
 	triangles to paint the box.
@@ -40,8 +39,6 @@ public:
 	void setColor(QColor c) { m_colors = std::vector<QColor>(1,c); }
 	/*! Sets 6 colors for the different sides of the box: front, right, back, left, top, bottom */
 	void setFaceColors(const std::vector<QColor> & c) { Q_ASSERT(c.size() == 6); m_colors = c; }
-	/*! Sets 8 colors for the different vertexes of the box: ftl, ftr, fbl, ftbr, btl, btr, bbl, bbr */
-	void setVertexColors(const std::vector<QColor> & c) { Q_ASSERT(c.size() == 8); m_colors = c; }
 
 	/*! Transforms the box (in-place operation, mind precision loss if used repetively). */
 	void transform(const QMatrix4x4 & transform);
@@ -58,16 +55,14 @@ public:
 	*/
 	void copy2Buffer(Vertex * & vertexBuffer,
 					GLuint * & elementBuffer,
-					 unsigned int elementStartIndex);
+					unsigned int & elementStartIndex) const;
 
 	static const unsigned int VertexCount = 6*4;  // 6 faces, 4 vertexes each (because each may have different number of colors)
 	static const unsigned int IndexCount = 6*2*3; // 6 faces, 2 triangles each, 3 indexes per triangle
 
 private:
 	std::vector<QVector3D>	m_vertices;
-	std::vector<QColor>		m_colors;	// size 1 = uniform, size 6 = face colors, size 8 = vertex colors
-
-
+	std::vector<QColor>		m_colors;	// size 1 = uniform color, size 6 = face colors
 };
 
 #endif // BOXMESH_H
