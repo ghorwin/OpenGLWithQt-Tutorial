@@ -25,3 +25,24 @@ include::Tutorial_03.adoc[leveloffset=+1]
 include::Tutorial_04.adoc[leveloffset=+1]
 include::Tutorial_05.adoc[leveloffset=+1]
 
+== Tutorial 06: Fehlerbehandlung und und Profiling mit QOpenGLDebugLogger und QOpenGLTimeMonitor
+
+TODO : Hier werden die Qt Klassen für Fehleranalyse und Profiling von GPU Funktionen vorgestellt.
+
+== Tutorial 07: Markieren/Auswählen von Flächen (mit OpenMP Parallelisierung)
+
+TODO : Hier geht es nicht um Qt, sondern darum wie man innerhalb eines Qt Programms (Event loop) eine OpenMP-Schleife zum Berechnen von Schnittpunkten der Sichtgeraden benutzt, um so die angeklickte Fläche zu identifizieren.
+
+== Tutorial 08: Texturen mit QOpenGLTexture
+
+TODO : Texturenobjekt und wie sie mit QOpenGLTexture verwaltet werden.
+
+== Tutorial 09: Shadowmaps/Mehrfach-Render-Passes und QOpenGLFramebufferObject
+
+TODO : Schattenwurf durch doppeltes Rendern (erst Kamera in Sonnenposition in Framebuffer rendern, dann diesen als Texturinput für den 2. Renderpass nehmen).
+
+== Tutorial 0x: CMake als BuildSystem für Qt und OpenGL
+
+TODO : Vorlage CMakeLists.txt zum Bauen von Qt-Anwendungen mit OpenGL unter Linux, MacOS, Windows
+
+
