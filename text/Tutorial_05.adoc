@@ -1,7 +1,7 @@
 :imagesdir: ./images
 = Tutorial 05: Maus- und Tastatureingaben
 
-In diesem Tutorial geht es primär um Maus- und Tastatureingaben. Und damit das irgendwie Sinn macht, brauchen wir ein (schön großes) 3D Modell, und deshalb ist dieses Tutorial auch _sehr sehr lang_.
+In diesem Tutorial geht es primär um Maus- und Tastatureingaben. Und damit das irgendwie Sinn macht, brauchen wir ein (schön großes) 3D Modell, und deshalb ist dieses Tutorial auch _sehr sehr lang_. Und nebenbei geht es noch um Verwaltung von Shaderobjekten, Zeichenobjekten, Nebeleffekt beim Gitterraster und und und...
 
 .Tutorial_05 (Linux Screenshot), "Die Welt aus 10000 und einer Box"
 image::Tutorial_05_linux.png[Tutorial_05,pdfwidth=8cm]
@@ -1405,8 +1405,95 @@ In dieser Art ließen sich ohne weiteres andere Objekttypen verwalten und zusamm
 
 ==== Die Klasse BoxMesh
 
-Inzwischen sollte die Aufgabe der Klasse `BoxMesh` klar sein. 
+Inzwischen sollte die Aufgabe der Klasse `BoxMesh` klar sein:
 
+- speichern der originalen Geometrie (im lokalen Koordinatensystem)
+- speichern/anwenden der Transformation zum Weltenkoordinatensystem
+- befüllen des linearen Vertexpuffer-Speichers und Elementpuffer-Speichers
+
+[NOTE]
+====
+Auch hier gibt es wieder verschiedene Möglichkeiten. Man kann sich, nach dem Prinzip der _lazy evaluation_ erst einmal nur die für die Schritte benötigten Parameter merken, also z.B. Breite, Höhe und Länge der Box, und die Transformationsmatrix. Wenn dann der Vertexpuffer gefüllt werden soll, erstellt man die Vertexkoordinaten, führt die Transformation aus und kopiert dann die resultierenden Koordinaten. Das Verfahren ist sinnvoll, wenn sich die Transformation (also Model-zu-Weltkoordinaten) häufig ändert.
+
+Alternativ kann man, wie hier in Tutorial 05, auch die Koordinaten gleich berechnen, d.h. beim Erstellen des Objekt die Vertexkoordinaten im lokalen Koordinatensystem festlegen, und dann bei Ausführen der Transformation sofort an Ort und Stelle transformieren. Dies reduziert die Arbeit beim eigentlichen Befüllen des OpenGL-Vertex-Puffers, führt aber zu witzigen Effekten bei mehrfacher Anwendung der in-place Transformation (wegen der unvermeidlichen Rundungsfehler... einfach mal mehrere 100 Mal im Kreis drehen und sich über die Geometrieveränderung freuen). Da Animation oder Transformation in diesem Tutorial keine Rolle spielt, werden die Boxen gleich zu Beginn ins Weltenkoordinatensystem transformiert.
+====
+
+Bevor wir uns der eigentlichen Implementierung widmen, hift vielleicht die eine oder andere Skizze, die Box-Geometrie zu verstehen:
+
+.Nummerierung der Knoten (Vertices) der Box (oben), flächenbezogene Nummerierung (unten)
+image::Tutorial_05_BoxVertexNumbering.png[Box Vertex Numbering, pdfwidth=8cm]
+
+Die Nummerierung der Vertexes ist zunächst einmal für die Datenhaltung in der `BoxMesh`-Klasse notwendig. Es werden nämlich im Konstruktor schon einmal die Vertexkoordinaten berechnet:
+
+.BoxMesh.cpp, Konstruktor
+[source,c++]
+----
+BoxMesh::BoxMesh(float width, float height, float depth, QColor boxColor) {
+
+	m_vertices.push_back(QVector3D(-0.5f*width, -0.5f*height,  0.5f*depth)); // a = 0
+	m_vertices.push_back(QVector3D( 0.5f*width, -0.5f*height,  0.5f*depth)); // b = 1
+	m_vertices.push_back(QVector3D( 0.5f*width,  0.5f*height,  0.5f*depth)); // c = 2
+	m_vertices.push_back(QVector3D(-0.5f*width,  0.5f*height,  0.5f*depth)); // d = 3
+
+	m_vertices.push_back(QVector3D(-0.5f*width, -0.5f*height, -0.5f*depth)); // e = 4
+	m_vertices.push_back(QVector3D( 0.5f*width, -0.5f*height, -0.5f*depth)); // f = 5
+	m_vertices.push_back(QVector3D( 0.5f*width,  0.5f*height, -0.5f*depth)); // g = 6
+	m_vertices.push_back(QVector3D(-0.5f*width,  0.5f*height, -0.5f*depth)); // h = 7
+
+	setColor(boxColor);
+}
+----
+
+Die Knotenkoordinaten sind zunächst in einem Vektor von `QVector3D` abgelegt. Bei einem nachfolgenden Aufruf zur Transformation werden diese Koordinaten einfach __verändert__:
+
+.BoxMesh.cpp:transform()
+[source,c++]
+----
+void BoxMesh::transform(const QMatrix4x4 & transform) {
+	for (QVector3D & v : m_vertices)
+		v = transform*v;
+}
+----
+
+[CAUTION]
+====
+Bei mehrfacher Ausführung von `transform()` auf die Rundungsfehler achten!
+====
+
+Nun sind die Boxen also bereits im Weltenkoordinatensystem verankert und der Vertexpuffer und Indexpuffer können befüllt werden. Das passiert in der Funktion `copy2Buffer()`.
+
+Die folgende Abbildung zeigt das Ziel dieser Kopieraktion, wobei `copy2Buffer()` jeweils alle Daten für eine Box kopiert.
+
+.Speicherlayout des Vertexpuffers
+image::Tutorial_05_vertexbuffer.png[Box Vertex Numbering, pdfwidth=8cm]
+
+Jede Seite der Box wird nacheinander im VBO abgelegt, wobei je Seite 4 Vertexes mit je Koordinaten und Farbwerten abgelegt werden. In der Funktion `copy2Buffer()` wird daher zunächst ein Vektor mit Farben für jeden _seitenbezogenen Vertex_ angelegt, d.h. bei 6 Seiten und 4 Vertices je Seite = 24 Farbwerte.
+
+.BoxMesh.cpp:copy2Buffer()
+[source,c++]
+----
+void BoxMesh::copy2Buffer(Vertex *& vertexBuffer, GLuint *& elementBuffer, unsigned int & elementStartIndex) const {
+	std::vector<QColor> cols;
+	Q_ASSERT(!m_colors.empty());
+	// three ways to store vertex colors
+	if (m_colors.size() == 1) {
+		cols = std::vector<QColor>(6*4, m_colors[0]);
+	}
+	else {
+		Q_ASSERT(m_colors.size() == 6);
+		cols.reserve(24);
+		// face order: front, right, back, left, top, bottom
+		for (unsigned int i=0; i<6; ++i) {
+			QColor faceCol(m_colors[i]);
+			for (int j=0; j<4; ++j)
+				cols.push_back(faceCol);
+		}
+	}
+	
+	...
+----
+
+Nun werden die Seiten nacheinander in der Reihenfolge _vorne, rechts, hinten, links, unten_ und _oben_ in die Puffer geschrieben:
 
 == Antialiasing
 
