@@ -1,0 +1,41 @@
+= Tutorial 07: Markieren/Auswählen von Flächen (mit OpenMP Parallelisierung)
+
+In diesem Tutorial geht es darum, Flächen bzw. Objekte in der Scene auszuwählen. Es gibt hier 2 Techniken, die verfolgt werden sollen:
+
+- Rendern in einen offscreen-Framenbuffer mit individuellen Farben aller anklickbaren Objekte und Identifizierung der Objekte durch Abbildung der Farben auf originale Objekte/Flächen
+- Strahlenverfolgung (Ray Picking), d.h. Bestimmung der Sichtlinie im Weltenkoordinatensystem und dann Schnittpunktberechnung aller Objekte und Sortierung nach Tiefe (aufgrund der vielen Objekte und eindeutig parallelem Algorithmus ist dies ein klassisches Anwendungsgebiet für OpenMP).
+
+Auch dieses ist ein grundlegendes 3D Grafik-Prozedere und in diesem Tutorial nur drin, um die Verwendung der Klasse `QOpenGLFrameBuffer` zu demonstrieren.
+
+== Option 1: Falschfarbenrendering
+
+Technisch gibt es eine Einschränkung: es stehen *256^4 - 1* Farben stehen zur Verfügung (rgba) für ebenso viele Elemente. Reicht das nicht aus, muss entweder gefiltert werden (d.h. nur die _prinzipiell_ sichtbaren Objekte bekommen eine Nummer/Farbe), oder man benutzt Ray-Tracking.
+
+Die zahlreichen Tutorials in diesem Bereich verwenden die folgende Technik:
+
+- Schleife über alle anklickbaren Elemente
+
+    * Setzen der eindeutigen Farbe je Element via `uniform` im Shader
+    * Zeichen jedes Elements via `glDrawXXX`-Aufruf
+
+- Lesen der Pixelfarbe unter dem Mauscursor
+
+Unnötig zu erwähnen, dass alleine die Vielzahl an `glDrawXXX` Calls problematisch ist. Außerdem ist es je anch Anwendung nicht notwendig, dieses Prozedere bei _jedem_ Mausklick zu wiederholen.
+
+=== Optimierungsidee für quasi-statische Scenen
+
+Nehmen wir mal an, es handelt sich um ein Programm mit vorwiegend nicht-animierten Szenen (Zielvorgabe dieses Tutorials). Dann könnte man die Falschfarbenberechnung stets kurz nach dem Abschluss der Kamerabewegung machen (d.h. mit kleiner Zeitverzögerung), und das resultierende Falschfarbenbild im CPU-Speicher vorhalten. Wenn man nun mit der Maus klickt, hat man sofort den Farbwert unter dem Mauscursor zur Hand. Man könnte auch viele Klicks abfragen, ohne die GPU zu beschäftigen.
+
+Ist sicher eine recht einfache Variante und klingt super nach Arbeitseinsparung. Vor allem, wenn bei der Anwendungen ein Auswahl-Klick in der Scene zunächst nur mit irgendeiner Art der Hervorhebung verbunden ist. Die Scene müsste dann zwar neu gezeichnet werden, aber an der Falschfarbendarstellung zur Auswahl ändert sich nichts.
+
+Ohne die kleine "mit etwas Verzögerung zeichnen" Optimierung sieht der Algorithmus dann also so aus:
+
+- Falls Scenensicht bewegt: zeichnen der Scene in einen Framebuffer, wobei hier der Vertexshader die Farben der Flächen aus einem separaten Farbpuffer holt - dies erlaubt weiterhin die Verwendung von Indexlisten und Vertexarrays
+- Zeichnen der Scene wie gehabt
+
+Wir brauchen dafür also:
+- ein weiteres ShaderProgramm, welches die Koordinaten aus dem Vertexarray (mit interleaved Storage) liest, aber die Falsch-Farben aus einem _separaten Puffer_ holt
+- einen Framebuffer, in den die Falschfarbendarstellung kopiert wird
+- eine Möglichkeit, die Farbwerte des Puffers im CPU-Speicher abzulegen
+- eine Abfrage der Farbwerte und Identifikation des angeklickten Elements
+

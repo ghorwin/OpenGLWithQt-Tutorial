@@ -346,6 +346,14 @@ void SceneView::paintGL() {
 }
 ----
 
+[TIP]
+====
+Falls bei Verwendung des Tiefenpuffers/Tiefentests das Problem des z-Fighting auftritt, kann man die Genauigkeit des Tiefenpuffers erhöhen. Dies erfolgt durch Aufruf der Funktion `QSurfaceFormat::setDepthBufferSize()`. In diesem Tutorial liegen die Boxen immer schön weit auseinander, sodass eine Genauigkeit von 8bit ausreicht. Dieser wird bei Konfiguration des `QSurfaceFormat`-Objekts in `TestDialog.cpp` gesetzt:
+
+    format.setDepthBufferSize(8);
+
+====
+
 == Tastatur- und Mauseingabe
 
 Qt stellt in `QWindow` und `QWidget` Ereignisbehandlungsroutinen für Tastatur- und Mauseingaben zur Verfügung. Die Deklaration dieser Funktion sind oben in der `SceneView` Klassendeklaration zu sehen.
@@ -834,6 +842,7 @@ Die Gruppierung von Zeichenelementen erfolgt im Prinzip nach folgenden Kriterien
 - Vertexdaten bei interleaved Storage (z.B. nur Koordinaten wie beim Gitter unten, Koordinaten-und-Farben, Koordinaten-Normalen-Texturcoords-Farben)
 - Geometrietyp (siehe oben)
 - Objektveränderlichkeit
+- Transparenz (dazu in einem späteren Tutorial mehr)
 
 Das Ganze hängt also stark von der Anwendung ab. Im _Tutorial 05_ gibt es zwei Arten von Objekten:
 

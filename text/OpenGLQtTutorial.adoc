@@ -29,9 +29,7 @@ include::Tutorial_05.adoc[leveloffset=+1]
 
 TODO : Hier werden die Qt Klassen für Fehleranalyse und Profiling von GPU Funktionen vorgestellt.
 
-== Tutorial 07: Markieren/Auswählen von Flächen (mit OpenMP Parallelisierung)
-
-TODO : Hier geht es nicht um Qt, sondern darum wie man innerhalb eines Qt Programms (Event loop) eine OpenMP-Schleife zum Berechnen von Schnittpunkten der Sichtgeraden benutzt, um so die angeklickte Fläche zu identifizieren.
+include::Tutorial_07.adoc[leveloffset=+1]
 
 == Tutorial 08: Texturen mit QOpenGLTexture
 
