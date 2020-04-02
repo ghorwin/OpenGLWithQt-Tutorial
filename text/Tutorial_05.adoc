@@ -1144,7 +1144,7 @@ void main() {
 }
 ----
 
-Die Variable `gl_FragCoord` wird für jeden einzelnen Bildpunkt von OpenGL bereitgestellt und enthält die Normalized Device Coordinates (NDC). Wenn man beachtet, dass diese Koordinaten durch Division mit w berechnet werden, dann bekommt man die originale z-Koordinate durch Multiplikation mit w. Das ganze wird dann noch mit einem Begrenzungswert (`FARPLANE`) skaliert. Falls bei der Definition des View-Frustums andere Werte für Near/Farplane verwendet werden, muss man die Formel entsprechend anpassen.
+Die Variable `gl_FragCoord` wird für jeden einzelnen Bildpunkt von OpenGL bereitgestellt und enthält die Normalized Device Coordinates (NDC). Wenn man beachtet, dass diese Koordinaten durch Division mit w berechnet werden, dann bekommt man die originale z-Koordinate durch Multiplikation mit w. Das ganze wird dann noch mit einem Begrenzungswert (`FARPLANE`) skaliert. Falls bei der Definition des View-Frustums andere Werte für Near/Farplane verwendet werden, muss man die Formel entsprechend anpassen (siehe https://learnopengl.com/Advanced-OpenGL/Depth-testing für die dahinterliegende Mathematik).
 
 Damit sieht das Ergebnis dann wie gewünscht aus:
 
