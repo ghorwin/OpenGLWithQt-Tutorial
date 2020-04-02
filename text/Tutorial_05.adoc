@@ -332,6 +332,20 @@ Die Funktion `glDepthFunc(GL_LESS)` muss nicht aufgerufen werden, da das bei Ope
 Man kann testweise mal das Flag `GL_DEPTH_TEST` nicht setzen - die etwas verwirrende Darstellung ist, nun ja, verwirrend.
 ====
 
+Für den Tiefentest ist ein zusätzlicher Tiefenpuffer notwendig (bisher hatten wir nur den Farbpuffer (__engl. Color Buffer__). Wichtig ist daher, dass bei Verwendung eines Tiefenpuffers dieser Puffer ebenso wie der Farbpuffer zu Beginn des Zeichnens gelöscht wird. Dies passiert in `paintGL()`:
+
+.SceneView.cpp:paintGL()
+[source,c++]
+----
+void SceneView::paintGL() {
+    ...
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	
+	...
+}
+----
+
 == Tastatur- und Mauseingabe
 
 Qt stellt in `QWindow` und `QWidget` Ereignisbehandlungsroutinen für Tastatur- und Mauseingaben zur Verfügung. Die Deklaration dieser Funktion sind oben in der `SceneView` Klassendeklaration zu sehen.
