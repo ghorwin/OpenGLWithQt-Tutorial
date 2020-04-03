@@ -1,0 +1,102 @@
+= Tutorial 06: Fehlerbehandlung und und Profiling mit QOpenGLDebugLogger und QOpenGLTimeMonitor
+
+In diesem Tutorial geht es um zwei Themen:
+
+- sinnvolle Fehlerbehandlung und Kapselung der Fehlerausgaben
+- Profiling von GPU Operationen (sinnvoll für die nächsten Tutorials, in denen durchaus zeitkritische Operationen angestoßen werden)
+
+== Fehlerbehandlung
+
+Alle bisher vorgestellten Qt-Wrapper-Klassen um native OpenGL-Aufrufe haben bereits eine Fehleranalyse eingebaut, also bspw. `QOpenGLShaderProgram`, `QOpenGLBuffer` oder `QOpenGLContext`.
+
+Viele der Funktionen, die native OpenGL-Funktionen aufrufen, liefern ein `bool` zurück, und im Falle eines Fehlers (`false`) kann man mit der Memberfunktion `log()` eine Fehlermeldung abfragen.
+
+Eine typische Debugausgabe wurde in den bisherigen Tutorials schon verwendet:
+
+[source,c++]
+----
+...
+
+m_program = new QOpenGLShaderProgram();
+
+// read the shader programs from the resource
+if (!m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/pass_through.vert"))
+	qDebug() << "Vertex shader errors:\n" << m_program->log();
+
+if (!m_program->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/simple.frag"))
+	qDebug() << "Fragment shader errors:\n" << m_program->log();
+
+if (!m_program->link())
+	qDebug() << "Shader linker errors:\n" << m_program->log();
+	
+...
+----
+
+Es wäre natürlich sinnvoll, wenn man zwischen akzeptablen Fehlern (Warnungen) und kritischen Fehlern unterscheidet. Und eventuell möchte man in klassischer C++-Manier kritische Fehler als Exceptions nach draußen werfen.
+
+Obiger Quelltext wäre dann etwas länglicher und würde eventuell so aussehen:
+
+[source,c++]
+----
+void RectangleWindow::initializeGL() {
+    try {
+
+        ...
+        
+        m_program = new QOpenGLShaderProgram();
+        
+        if (!m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/pass_through.vert"))
+        	throw MyOpenGLException("Vertex shader compile error", m_program->log() );
+
+        ...
+    
+    } 
+    catch (MyOpenGLException & ex) {
+        throw MyOpenGLException(ex, "OpenGL Initialization failed.");
+    }
+}
+----
+
+und irgendwo weiter draußen:
+
+[source,c++]
+----
+        ...
+
+    }
+    catch (MyOpenGLException & ex) {
+        ex.writeMsgStackToStream(std::cerr);
+    }
+}
+----
+
+[IMPORTANT]
+====
+Entscheidend bei der Verwendung von Exceptions ist das kontrollierte Aufräumen der OpenGL-Resourcen. 
+====
+
+An anderer Stelle im Quelltext möchte man sich einfach darauf verlassen, dass ein bestimmter Aufruf korrekt abläuft. Hier kann man asserts verwenden:
+
+[source,c++]
+----
+Q_ASSERT(m_vertexBufferObject.bind());
+----
+
+Es lohnt sich allerdings, die jeweiligen Gründe für ein Fehlschlagen nachzulesen. Beim `QOpenGLBuffer` kann die `bind()` Funktion aus mehreren Gründen fehlschlagen:
+
+- Der Puffertyp wird bei der gerade verwendeten OpenGL-Implementierung (treiberseitig) nicht unterstützt (ein Portabilitätsproblem).
+- Der OpenGL-Context ist nicht aktuell (ein Programmierfehler).
+- Der Puffer wurde (noch) nicht erstellt (auch ein Programmierfelhler).
+
+Also bis auf den ersten Grund, ist ein `Q_ASSERT` sicher das Mittel der Wahl. Bei der  Plattformunterstützung hilft letztlich nur ein explizites Abfragen der Funktionalität - und, falls dies im Vorfeld nicht für alle Funktionen möglich ist, eben doch die Verwendung einer Exception.
+
+==== Beispiel für eine Exceptionklasse
+
+Eine eigene Exceptionklasse zu schreiben ist nicht wirklich ein Qt-typisches Problem, daher hier nur kurz ein minimalistischer Vorschlag zum selber ausbauen:
+
+[source,c++]
+----
+
+
+----
+

@@ -24,16 +24,12 @@ include::Tutorial_02.adoc[leveloffset=+1]
 include::Tutorial_03.adoc[leveloffset=+1]
 include::Tutorial_04.adoc[leveloffset=+1]
 include::Tutorial_05.adoc[leveloffset=+1]
-
-== Tutorial 06: Fehlerbehandlung und und Profiling mit QOpenGLDebugLogger und QOpenGLTimeMonitor
-
-TODO : Hier werden die Qt Klassen für Fehleranalyse und Profiling von GPU Funktionen vorgestellt.
-
+include::Tutorial_06.adoc[leveloffset=+1]
 include::Tutorial_07.adoc[leveloffset=+1]
 
 == Tutorial 08: Texturen mit QOpenGLTexture
 
-TODO : Texturenobjekt und wie sie mit QOpenGLTexture verwaltet werden.
+TODO : Texturenobjekte und wie sie mit QOpenGLTexture verwaltet werden.
 
 == Tutorial 09: Shadowmaps/Mehrfach-Render-Passes und QOpenGLFramebufferObject
 
