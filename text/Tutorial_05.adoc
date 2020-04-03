@@ -45,8 +45,6 @@ class OpenGLWindow : public QWindow, protected QOpenGLFunctions {
 public:
 	explicit OpenGLWindow(QWindow *parent = nullptr);
 
-	void initOpenGL();
-
 public slots:
 	void renderLater();
 	void renderNow();
@@ -61,14 +59,15 @@ protected:
 	virtual void paintGL() = 0;
 
 	QOpenGLContext *m_context;
+
+private:
+	void initOpenGL();
 };
 ----
 
 Die Funktionen `initializeGL()` und `paintGL()` sind aus den vorangegangen Tutorials bekannt. Die Funktion `resizeGL()` ist eigentlich nur eine Bequemlichkeitsfunktion, welche aus dem Eventhandler `resizeEvent()` aufgerufen wird.
 
-Neu ist jedoch die Funktion `initOpenGL()`, mit der die OpenGL-Initialisierung gezielt angestoßen werden kann. Normalerweise wird die Initialisierung beim ersten Anzeigen des Fensters (genaugenommen beim ersten ResizeEvent) aufgerufen. Dies kann aber für eine sinnvolle Fehlerbehandlung zu spät sein, weil dann das Fenster wahrscheinlich leer angezeigt wird. Daher ist es sinnvoll, die Funktion nach dem Erstellen des Renderfensters, aber vor Aufruf von `show()` auszuführen.
-
-Macht man das nicht, so wird diese Funktion wie bisher automatisch beim ersten Anzeigen aufgerufen, konkret im ResizeEvent-Handler:
+Neu ist jedoch die Funktion `initOpenGL()`, in der die OpenGL-Initialisierung (OpenGL Context) gemacht wird. Normalerweise wird die Initialisierung beim ersten Anzeigen des Fensters (genaugenommen beim ersten ResizeEvent) aufgerufen, bzw. beim ersten Zeichnen.
 
 .OpenGLWindow.cpp: Funktion resizeEvent()
 [source,c++]
