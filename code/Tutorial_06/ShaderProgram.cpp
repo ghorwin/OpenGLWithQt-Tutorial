@@ -25,6 +25,7 @@ ShaderProgram::ShaderProgram(const QString & vertexShaderFilePath, const QString
 
 
 void ShaderProgram::create() {
+	FUNCID(ShaderProgram::create);
 	Q_ASSERT(m_program == nullptr);
 
 	// build and compile our shader program
@@ -34,13 +35,13 @@ void ShaderProgram::create() {
 
 	// read the shader programs from the resource
 	if (!m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, m_vertexShaderFilePath))
-		throw OpenGLException("Vertex shader compiler error", m_program->log());
+		throw OpenGLException(QString("Error compiling vertex shader %1:\n%2").arg(m_vertexShaderFilePath).arg(m_program->log()), FUNC_ID);
 
 	if (!m_program->addShaderFromSourceFile(QOpenGLShader::Fragment, m_fragmentShaderFilePath))
-		throw OpenGLException("Fragment shader compiler error", m_program->log());
+		throw OpenGLException(QString("Error compiling fragment shader %1:\n%2").arg(m_fragmentShaderFilePath).arg(m_program->log()), FUNC_ID);
 
 	if (!m_program->link())
-		throw OpenGLException("Shader linker error", m_program->log());
+		throw OpenGLException(QString("Shader linker error:\n%2").arg(m_program->log()), FUNC_ID);
 
 	m_uniformIDs.clear();
 	for (const QString & uniformName : m_uniformNames)

@@ -32,11 +32,6 @@ class OpenGLWindow : public QWindow, protected QOpenGLFunctions {
 public:
 	explicit OpenGLWindow(QWindow *parent = nullptr);
 
-	/*! Explicit function to initialize the window. Can be called prior to
-		showing the window during application init.
-	*/
-	void initOpenGL();
-
 public slots:
 	/*! Redirects to slot requestUpdate(), which registers an UpdateRequest event in the event loop
 		to be issued with next VSync.
@@ -71,6 +66,10 @@ protected:
 
 
 	QOpenGLContext *m_context;
+
+private:
+	/*! Helper function to initialize the OpenGL context. */
+	void initOpenGL();
 };
 
 #endif // OpenGLWindow_H

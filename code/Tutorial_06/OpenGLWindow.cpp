@@ -28,27 +28,6 @@ OpenGLWindow::OpenGLWindow(QWindow *parent) :
 }
 
 
-void OpenGLWindow::initOpenGL() {
-	bool needsInitialize = false;
-
-	// protect against calling this function twice (accidentally)
-	if (m_context == nullptr) {
-		m_context = new QOpenGLContext(this);
-		m_context->setFormat(requestedFormat());
-		m_context->create();
-
-		needsInitialize = true;
-	}
-
-	m_context->makeCurrent(this);
-
-	if (needsInitialize) {
-		initializeOpenGLFunctions();
-		initializeGL(); // call user code
-	}
-}
-
-
 void OpenGLWindow::renderLater() {
 	// Schedule an UpdateRequest event in the event loop
 	// that will be send with the next VSync.
@@ -109,3 +88,15 @@ void OpenGLWindow::resizeEvent(QResizeEvent * event) {
 }
 
 
+void OpenGLWindow::initOpenGL() {
+	Q_ASSERT(m_context == nullptr);
+
+	m_context = new QOpenGLContext(this);
+	m_context->setFormat(requestedFormat());
+	m_context->create();
+
+	Q_ASSERT(m_context->makeCurrent(this));
+
+	initializeOpenGLFunctions();
+	initializeGL(); // call user code
+}

@@ -32,9 +32,16 @@ if (!m_program->link())
 ...
 ----
 
+=== Exceptions und Qt
+
 Es wäre natürlich sinnvoll, wenn man zwischen akzeptablen Fehlern (Warnungen) und kritischen Fehlern unterscheidet. Und eventuell möchte man in klassischer C++-Manier kritische Fehler als Exceptions nach draußen werfen.
 
-Obiger Quelltext wäre dann etwas länglicher und würde eventuell so aussehen:
+[TIP]
+====
+Die nachfolgend diskutierten Ansätze zur Exceptionbehandlung und Meldungsausgabe gelten aber eigentlich für jede Qt Anwendung, unabhängig von OpenGL.
+====
+
+Bei Verwendung von Exceptions wäre obiger Quelltext dann etwas länglicher und würde eventuell so aussehen:
 
 [source,c++]
 ----
@@ -72,7 +79,7 @@ und irgendwo weiter draußen:
 
 [IMPORTANT]
 ====
-Entscheidend bei der Verwendung von Exceptions ist das kontrollierte Aufräumen der OpenGL-Resourcen. 
+Entscheidend bei der Verwendung von Exceptions ist das kontrollierte Aufräumen der OpenGL-Resourcen. Auch gelten natürlich alle normalen Vorsichtsmaßnahmen und Programmierregeln für Exception-Code (siehe auch Scott Meyers "Effektives C++").
 ====
 
 An anderer Stelle im Quelltext möchte man sich einfach darauf verlassen, dass ein bestimmter Aufruf korrekt abläuft. Hier kann man asserts verwenden:
@@ -94,9 +101,133 @@ Also bis auf den ersten Grund, ist ein `Q_ASSERT` sicher das Mittel der Wahl. Be
 
 Eine eigene Exceptionklasse zu schreiben ist nicht wirklich ein Qt-typisches Problem, daher hier nur kurz ein minimalistischer Vorschlag zum selber ausbauen:
 
+.OpenGLException.h
 [source,c++]
 ----
+#ifndef OPENGLEXCEPTION_H
+#define OPENGLEXCEPTION_H
 
+#include <stdexcept>
+#include <list>
 
+#include <QString>
+
+class OpenGLException : public std::exception {
+public:
+	OpenGLException(const QString & msg);
+	OpenGLException(const QString & msg, const QString & where);
+	OpenGLException(OpenGLException & previous, const QString & msg);
+	OpenGLException(OpenGLException & previous, const QString & msg, const QString & where);
+	void writeMsgStackToStream(std::ostream & strm) const;
+
+private:
+	std::list<std::pair<QString, QString> > m_msgStack;
+};
+
+#define FUNCID(x) const char * const FUNC_ID = "[" #x "]"
+
+#endif // OPENGLEXCEPTION_H
 ----
 
+wobei die Implementierung recht selbsterklärend ist:
+
+.OpenGLException.cpp
+[source,c++]
+----
+#include "OpenGLException.h"
+
+#include <QStringList>
+
+OpenGLException::OpenGLException(const QString & msg) {
+	m_msgStack.push_back( std::make_pair(QString(msg), QString()));
+}
+
+OpenGLException::OpenGLException(const QString & msg, const QString & where) {
+	m_msgStack.push_back( std::make_pair(QString(msg), where));
+}
+
+OpenGLException::OpenGLException(OpenGLException & previous, const QString & msg) :
+	m_msgStack(previous.m_msgStack)
+{
+	m_msgStack.push_back( std::make_pair(QString(msg), QString()));
+}
+
+OpenGLException::OpenGLException(OpenGLException & previous, const QString & msg, const QString & where)  :
+	m_msgStack(previous.m_msgStack)
+{
+	m_msgStack.push_back( std::make_pair(QString(msg), where));
+}
+
+void OpenGLException::writeMsgStackToStream(std::ostream & strm) const {
+	for (std::list<std::pair<QString, QString> >::const_iterator it = m_msgStack.begin();
+		it != m_msgStack.end(); ++it)
+	{
+		QStringList lines = it->first.split("\n");
+		QString indx("[%1] ");
+		indx = indx.arg(std::distance(m_msgStack.begin(),it));
+		for (const QString & l : lines) {
+			if (it->second.isEmpty())
+				strm << (indx + l + "\n").toStdString();
+			else
+				strm << (indx + it->second + " : " + l + "\n").toStdString();
+		}
+		strm.flush();
+	}
+}
+----
+
+Interessanter ist eher die Verwendung, also bspw. in `ShaderProgram.cpp`:
+
+.ShaderProgram.cpp
+[source,c++]
+----
+void ShaderProgram::create() {
+	FUNCID(ShaderProgram::create);
+
+    ...
+
+	// read the shader programs from the resource
+	if (!m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, m_vertexShaderFilePath))
+		throw OpenGLException(QString("Error compiling vertex shader %1:\n%2").arg(m_vertexShaderFilePath).arg(m_program->log()), FUNC_ID);
+		
+	...
+----
+
+Vielleicht kurz noch eine Erläuterung zum `FUNCID()` Makro. Ist eigentlich nur eine Lese-/Schreibvereinfachung:
+
+[source,c++]
+----
+FUNCID(ShaderProgram::create);
+	
+// wird zu
+const char * const FUNC_ID = "[ShaderProgram::create]";
+----
+
+Die Klasse `QOpenGLException` nimmt im Konstruktor entweder ein oder zwei Argumente, im Beispiel oben ist die Variante mit den zwei Argumenten verwendet. Nun kann man in der Aufrufhierarchie weiter oben die Exception fangen und mit weiteren Informationen anreichern. Zum Beispiel:
+
+[source,c++]
+----
+void SceneView::initializeGL() {
+	FUNCID(SceneView::initializeGL);
+	try {
+		for (ShaderProgram & p : m_shaderPrograms)
+			p.create();
+
+        ...
+	}
+	catch (OpenGLException & ex) {
+		throw OpenGLException(ex, "OpenGL initialization failed.", FUNC_ID);
+	}
+}
+----
+
+Hier wird die Exception gefangen und erneut geworfen. Damit die bisherigen Informationen nicht verloren gehen, wird der Konstruktor mit `OpenGLException`-Argument verwendet. In der Implementierung oben sieht man, dass die neue Klasse die Meldungsliste der bisherigen Exception-Instanz übernimmt, und einfach die neue Information anhängt.
+
+Beim Aufruf von `ex.writeMsgStackToStream(std::cerr)` wird nun z.B. Folgendes ausgegeben:
+
+----
+[0] [ShaderProgram::create] : Error compiling fragment shader :/shaders/simple.frag:
+[0] [ShaderProgram::create] : 0(8) : error C1503: undefined variable "fragsColor"
+[0] [ShaderProgram::create] : 
+[1] [SceneView::initializeGL] : OpenGL initialization failed.
+----

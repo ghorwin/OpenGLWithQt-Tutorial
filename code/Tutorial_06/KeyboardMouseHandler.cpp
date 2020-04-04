@@ -154,9 +154,9 @@ QPoint KeyboardMouseHandler::resetMouseDelta(const QPoint currentPos) {
 
 
 int KeyboardMouseHandler::wheelDelta() const {
-	m_wheelDelta;
 	return m_wheelDelta;
 }
+
 
 int KeyboardMouseHandler::resetWheelDelta() {
 	int wd = m_wheelDelta;

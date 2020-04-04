@@ -70,6 +70,7 @@ SceneView::~SceneView() {
 
 
 void SceneView::initializeGL() {
+	FUNCID(SceneView::initializeGL);
 	try {
 		// initialize shader programs
 		for (ShaderProgram & p : m_shaderPrograms)
@@ -85,7 +86,7 @@ void SceneView::initializeGL() {
 		m_gridObject.create(SHADER(1));
 	}
 	catch (OpenGLException & ex) {
-		throw OpenGLException(ex, "[SceneView::initializeGL]", "OpenGL initialization failed.");
+		throw OpenGLException(ex, "OpenGL initialization failed.", FUNC_ID);
 	}
 }
 
@@ -171,7 +172,7 @@ void SceneView::mouseReleaseEvent(QMouseEvent *event) {
 	checkInput();
 }
 
-void SceneView::mouseMoveEvent(QMouseEvent *event) {
+void SceneView::mouseMoveEvent(QMouseEvent */*event*/) {
 	checkInput();
 }
 
