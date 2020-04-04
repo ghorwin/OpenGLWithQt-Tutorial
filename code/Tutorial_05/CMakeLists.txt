@@ -16,8 +16,6 @@ endif (NOT CMAKE_BUILD_TYPE)
 # Packages
 # -------------------------------------------------------------
 
-find_package( OpenGL REQUIRED )
-
 # Test for Qt5 modules
 find_package(Qt5Widgets REQUIRED)
 
@@ -26,14 +24,16 @@ set( QT_LIBRARIES
 	Qt5::Widgets
 )
 
+# we need OpenGL
+find_package( OpenGL REQUIRED )
 
 if( APPLE )
-	find_library(IOKIT NAMES IOKit REQUIRED)
-	find_library(COREFOUNDATION NAMES CoreFoundation REQUIRED)
-	find_library(SECURITY_FRAMEWORK Security REQUIRED)
-	find_library(SYSTEM_CONFIGURATION SystemConfiguration REQUIRED)
+	find_library( IOKIT NAMES IOKit REQUIRED )
+	find_library( COREFOUNDATION NAMES CoreFoundation REQUIRED )
+	find_library( SECURITY_FRAMEWORK Security REQUIRED )
+	find_library( SYSTEM_CONFIGURATION SystemConfiguration REQUIRED )
 
-	set(APPLE_FRAMEWORKS
+	set( APPLE_FRAMEWORKS
 		${IOKIT}
 		${SECURITY_FRAMEWORK}
 		${COREFOUNDATION}
@@ -46,9 +46,16 @@ endif( APPLE )
 # Application
 # -------------------------------------------------------------
 
+# automatically add CMAKE_CURRENT_SOURCE_DIR and CMAKE_CURRENT_BINARY_DIR to the include directories in every processed CMakeLists.txt
+set( CMAKE_INCLUDE_CURRENT_DIR ON )
+
 include_directories(
+	${PROJECT_SOURCE_DIR}		# needed so that ui-generated header files find our own headers
 	${Qt5Widgets_INCLUDE_DIRS}
 )
+
+# collect a list of all designer ui files
+file( GLOB APP_UIS ${PROJECT_SOURCE_DIR}/*.ui )
 
 # collect a list of all header files (to be used in MOC compiler)
 file( GLOB APP_HDRS ${PROJECT_SOURCE_DIR}/*.h )
@@ -59,28 +66,34 @@ file( GLOB APP_SRCS ${PROJECT_SOURCE_DIR}/*.cpp )
 # collect the Qt resource files (*.qrc)
 file( GLOB APP_QRCS ${PROJECT_SOURCE_DIR}/*.qrc )
 
+# look for Windows rc file
+file( GLOB APP_WIN_RC ${PROJECT_SOURCE_DIR}/*.rc )
+
+# look for Apple icns file
+file( GLOB APP_MACOS_ICNS ${PROJECT_SOURCE_DIR}/*.icns )
+
+qt5_wrap_ui( APP_UI_SRCS ${APP_UIS} )
 qt5_add_resources( APP_RC_SRCS ${APP_QRCS} )
 qt5_wrap_cpp( APP_MOC_SRCS ${APP_HDRS} )
 
 # build application executable for the different platforms
 if( WIN32 )
 	add_executable( ${PROJECT_NAME} WIN32
-					 ${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS} ${APP_WIN_RC}
+					${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS} ${APP_WIN_RC}
 	)
 
 	# on Windows, add gdi and gdi32 for OpenGL support
-	set(WIN_FRAMEWORKS iphlpapi gdiplus gdi32 user32 ole32)
+	set( WIN_FRAMEWORKS iphlpapi gdiplus gdi32 user32 ole32 )
 endif( WIN32 )
 
 if( UNIX )
 	if( APPLE )
 		add_executable( ${PROJECT_NAME} MACOSX_BUNDLE
-						 ${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS}
-						 ${PROJECT_SOURCE_DIR}/Tutorial.icns
+						${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS} ${APP_MACOS_ICNS}
 		)
 	else( APPLE )
 		add_executable( ${PROJECT_NAME}
-						 ${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS}
+						${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS}
 		)
 	endif( APPLE )
 endif( UNIX )
