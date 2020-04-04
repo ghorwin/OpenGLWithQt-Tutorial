@@ -18,8 +18,14 @@ endif (NOT CMAKE_BUILD_TYPE)
 
 find_package( OpenGL REQUIRED )
 
-# Test for Qt5
+# Test for Qt5 modules
 find_package(Qt5Widgets REQUIRED)
+
+# set corresponding libraries
+set( QT_LIBRARIES
+	Qt5::Widgets
+)
+
 
 if( APPLE )
 	find_library(IOKIT NAMES IOKit REQUIRED)
@@ -56,13 +62,13 @@ file( GLOB APP_QRCS ${PROJECT_SOURCE_DIR}/*.qrc )
 qt5_add_resources( APP_RC_SRCS ${APP_QRCS} )
 qt5_wrap_cpp( APP_MOC_SRCS ${APP_HDRS} )
 
-
 # build application executable for the different platforms
 if( WIN32 )
 	add_executable( ${PROJECT_NAME} WIN32
 					 ${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS} ${APP_WIN_RC}
 	)
 
+	# on Windows, add gdi and gdi32 for OpenGL support
 	set(WIN_FRAMEWORKS iphlpapi gdiplus gdi32 user32 ole32)
 endif( WIN32 )
 
@@ -82,7 +88,7 @@ endif( UNIX )
 
 # link libraries
 target_link_libraries( ${PROJECT_NAME}
-	Qt5::Widgets
+	${QT_LIBRARIES}
 	${OPENGL_LIBRARIES}
 	${APPLE_FRAMEWORKS}
 	${WIN_FRAMEWORKS}
