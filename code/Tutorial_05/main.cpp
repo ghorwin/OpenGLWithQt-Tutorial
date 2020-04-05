@@ -12,11 +12,12 @@ License    : BSD License,
 #include "TestDialog.h"
 
 #include <QApplication>
+#include <ctime>
 
 int main(int argc, char **argv) {
 	QApplication app(argc, argv);
 
-	qsrand(time(NULL));
+	qsrand(time(nullptr));
 
 	TestDialog dlg;
 	dlg.show();
