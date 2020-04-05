@@ -27,20 +27,6 @@ set( QT_LIBRARIES
 # we need OpenGL
 find_package( OpenGL REQUIRED )
 
-if( APPLE )
-	find_library( IOKIT NAMES IOKit REQUIRED )
-	find_library( COREFOUNDATION NAMES CoreFoundation REQUIRED )
-	find_library( SECURITY_FRAMEWORK Security REQUIRED )
-	find_library( SYSTEM_CONFIGURATION SystemConfiguration REQUIRED )
-
-	set( APPLE_FRAMEWORKS
-		${IOKIT}
-		${SECURITY_FRAMEWORK}
-		${COREFOUNDATION}
-		${SYSTEM_CONFIGURATION}
-	)
-endif( APPLE )
-
 
 # -------------------------------------------------------------
 # Application
