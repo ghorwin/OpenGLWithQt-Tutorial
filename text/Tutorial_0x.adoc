@@ -119,7 +119,9 @@ target_link_libraries( ${PROJECT_NAME}
 )
 ----
 
-=== Erstellung unter Linux
+=== Erstellung
+
+==== Linux
 
 Um Quelltexte und Resourcendateien nicht mit den generierten Dateien in einem Verzeichnis zu haben, lohnt sich ein _out-of-source_ build, d.h. in einem getrennte Verzeichnis. Beispielsweise kann man parallel zum `Tutorial_05`-Verzeichnis noch ein Verzeichnis `build_Tutorial_05` anlegen. In diesem Verzeichnis reichen dann folgende Befehle zur Erstellung aus:
 
@@ -138,17 +140,17 @@ Falls nicht das systemweit installierte Qt verwendet werden soll, kann man auch 
 
 [source,bash]
 ----
-export CMAKE_PREFIX_PATH=~/Qt/5.14.1/gcc_64/bin
+export CMAKE_PREFIX_PATH=~/Qt/5.14.1/gcc_64
 cmake -DCMAKE_BUILD_TYPE:String="Release" ../Tutorial_05 
 make -j4
 ----
 
 
-=== Erstellen unter MacOS
+==== MacOS
 
 Ganz genauso wie unter Linux.
 
-=== Erstellung unter Windows
+==== Windows
 
 Fast genauso wie unter Linux, nur eben mit Batch-Befehlen. Hier ist ein Beispiel für die Verwendung eines VC-Compilers, bereits als Batch-Datei zusammengestellt:
 
@@ -173,3 +175,19 @@ Natürlich muss man die Pfade zum VC Compiler und zur Qt Installation im Batch-S
 
 Alternativ kann man unter Windows CMake auch dazu benutzen, VC Projektdateien zu erstellen, aber wenn man Qt Creator hat, wer braucht dann VC als Editor?
 
+
+=== Deployment 
+
+==== MacOS
+
+
+----
+> otool -L Tutorial_05.app/Contents/MacOS/Tutorial_05 
+Tutorial_05.app/Contents/MacOS/Tutorial_05:
+	@rpath/QtWidgets.framework/Versions/5/QtWidgets (compatibility version 5.11.0, current version 5.11.3)
+	/System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL (compatibility version 1.0.0, current version 1.0.0)
+	@rpath/QtGui.framework/Versions/5/QtGui (compatibility version 5.11.0, current version 5.11.3)
+	@rpath/QtCore.framework/Versions/5/QtCore (compatibility version 5.11.0, current version 5.11.3)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 120.1.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1226.10.1)
+----
