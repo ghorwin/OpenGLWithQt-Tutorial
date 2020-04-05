@@ -34,7 +34,11 @@ if (!m_program->link())
 
 === Exceptions und Qt
 
-Es wäre natürlich sinnvoll, wenn man zwischen akzeptablen Fehlern (Warnungen) und kritischen Fehlern unterscheidet. Und eventuell möchte man in klassischer C++-Manier kritische Fehler als Exceptions nach draußen werfen.
+Es wäre natürlich sinnvoll, wenn man zwischen akzeptablen Fehlern (Warnungen) und kritischen Fehlern unterscheidet. 
+
+Ein Qt-typischer Weg der Fehlerbehandlung wäre die Prüfung von Fehlern in Funktionen und dann Kommunikation via Funktionsrückgabewerten, ob ein Fehler aufgetreten ist oder nicht. Alternativ können auch Fehlerflags gesetzt werden, die dann an verschiedenen Stellen geprüft werden müssen. Diese Art der Fehlerbehandlung verlangt jedoch selbst viel Disziplin von Programmierern und führt in der Praxis leider häufig dazu, dass ein Fehlerflag/Rückgabewert nicht getestet wird und deshalb das Programm irgendwas macht. In Zusammenhang mit OpenGL heißt das meist, ein leeres oder unvollständig gezeichnetes Bild.
+
+Bei kritischen Fehler, bei denen das Programm nicht sinnvoll weitergeführt werden kann, möchte man vielleicht in klassischer C++-Manier Exceptions verwenden. Dieses Kapitel behandelt eine Möglichkeit, mit Qt und Exceptions eine Fehlerbehandlung zu realisieren.
 
 [TIP]
 ====
@@ -79,7 +83,7 @@ und irgendwo weiter draußen:
 
 [IMPORTANT]
 ====
-Entscheidend bei der Verwendung von Exceptions ist das kontrollierte Aufräumen der OpenGL-Resourcen. Auch gelten natürlich alle normalen Vorsichtsmaßnahmen und Programmierregeln für Exception-Code (siehe auch Scott Meyers "Effektives C++").
+Entscheidend bei der Verwendung von Exceptions ist das kontrollierte Aufräumen der OpenGL-Resourcen. Auch gelten natürlich alle normalen Vorsichtsmaßnahmen und Programmierregeln für Exception-Code (siehe auch __Scott Meyers "Effektives C++"__).
 ====
 
 An anderer Stelle im Quelltext möchte man sich einfach darauf verlassen, dass ein bestimmter Aufruf korrekt abläuft. Hier kann man asserts verwenden:
@@ -231,3 +235,60 @@ Beim Aufruf von `ex.writeMsgStackToStream(std::cerr)` wird nun z.B. Folgendes au
 [0] [ShaderProgram::create] : 
 [1] [SceneView::initializeGL] : OpenGL initialization failed.
 ----
+
+==== QApplication::notify
+
+Man könnte jetzt die geworfene Exception einfach in der `main.cpp` fangen, also so:
+
+[source,c++]
+----
+try {
+	TestDialog dlg;
+	dlg.show();
+	return app.exec();
+} 
+catch (OpenGLException & ex) {
+	ex.writeMsgStackToStream(std::cerr);
+	return EXIT_FAILURE;
+}
+----
+Aber wenn nun eine Exception geworfen wird, bekommt man folgende Warnung ausgegeben:
+
+----
+Qt has caught an exception thrown from an event handler. Throwing
+exceptions from an event handler is not supported in Qt.
+You must not let any exception whatsoever propagate through Qt code.
+If that is not possible, in Qt 5 you must at least reimplement
+QCoreApplication::notify() and catch all exceptions there.
+----
+
+Wenn man in Qt eine Exception wirft, sollte diese eigentlich nicht bis in die Ereignisschleife gelangen (ursprünglich war Qt ohne Exception-Unterstützung konzipiert). Die "saubere" Variante besteht also darin, diese `notify()`-Funktion zu überladen:
+
+.DebugApplication.cpp
+[source,c++]
+----
+class DebugApplication : public QApplication {
+public:
+	DebugApplication( int & argc, char ** argv) :  QApplication(argc, argv), m_aboutToTerminate(false)
+	{}
+
+	virtual bool notify(QObject *recv, QEvent *e) override {
+		try {
+			return QApplication::notify( recv, e );
+		}
+		catch (OpenGLException &ex) {
+			ex.writeMsgStackToStream(std::cerr);
+			m_aboutToTerminate = true;
+			QApplication::exit(1);
+		}
+		return false;
+	}
+
+	// Flag to check for program abort
+	bool m_aboutToTerminate;
+};
+----
+
+Soweit recht klar, es sollte jedoch noch erwähnt werden, was das Flag `m_aboutToTerminate` for eine Bewandnis hat.
+
+Letztlich wird `notify()` als Teil der Ereignisschleife aufgerufen, d.h. 

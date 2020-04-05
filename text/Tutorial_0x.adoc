@@ -1,0 +1,175 @@
+= Tutorial 10: CMake als BuildSystem für Qt und OpenGL, und Deployment von Qt+OpenGL Anwendungen
+
+Für das automatische Bauen von Qt (z.B. mit Jenkins oder ähnlichen Build-Systemen) bietet sich CMake an. Es geht zwar auch mit qmake, aber in diesem Tutorial soll gezeigt werden, wie man das eine CMakeLists.txt-Datei für das Bauen von Qt-Anwendungen unter Linux, MacOS und Windows konfiguriert.
+
+Im 2. Teil des Tutorials geht es dann um das Deployment, d.h. welche Dateien jeweils kopiert werden müssen. Auch dies ist nicht wirklich OpenGL-spezifisch, aber zeigt nochmal, welche OpenGL-Bibliotheken auf den jeweiligen Betriebssystemen vorausgesetzt werden können, und welche kopiert werden müssen.
+
+== CMakeLists.txt für OpenGL-Anwendungen
+
+Hier ist eine Beispiel-CMakeLists.txt-Datei (aus Tutorial 05), welche das mal demonstriert:
+
+----
+# CMakeLists.txt file for OpenGL + Qt Tutorial Series
+
+# The project name
+project( Tutorial_05 )
+
+# Require a fairly recent cmake version
+cmake_minimum_required( VERSION 2.8.12 )
+
+# Set default build type
+if (NOT CMAKE_BUILD_TYPE)
+	set( CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
+		"Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
+endif (NOT CMAKE_BUILD_TYPE)
+
+# -------------------------------------------------------------
+# Packages
+# -------------------------------------------------------------
+
+# Test for Qt5 modules
+find_package(Qt5Widgets REQUIRED)
+
+# set corresponding libraries
+set( QT_LIBRARIES
+	Qt5::Widgets
+)
+
+# we need OpenGL
+find_package( OpenGL REQUIRED )
+
+if( APPLE )
+	find_library( IOKIT NAMES IOKit REQUIRED )
+	find_library( COREFOUNDATION NAMES CoreFoundation REQUIRED )
+	find_library( SECURITY_FRAMEWORK Security REQUIRED )
+	find_library( SYSTEM_CONFIGURATION SystemConfiguration REQUIRED )
+
+	set( APPLE_FRAMEWORKS
+		${IOKIT}
+		${SECURITY_FRAMEWORK}
+		${COREFOUNDATION}
+		${SYSTEM_CONFIGURATION}
+	)
+endif( APPLE )
+
+
+# -------------------------------------------------------------
+# Application
+# -------------------------------------------------------------
+
+# automatically add CMAKE_CURRENT_SOURCE_DIR and CMAKE_CURRENT_BINARY_DIR to the include directories in every processed CMakeLists.txt
+set( CMAKE_INCLUDE_CURRENT_DIR ON )
+
+include_directories(
+	${PROJECT_SOURCE_DIR}		# needed so that ui-generated header files find our own headers
+	${Qt5Widgets_INCLUDE_DIRS}
+)
+
+# collect a list of all designer ui files
+file( GLOB APP_UIS ${PROJECT_SOURCE_DIR}/*.ui )
+
+# collect a list of all header files (to be used in MOC compiler)
+file( GLOB APP_HDRS ${PROJECT_SOURCE_DIR}/*.h )
+
+# collect a list of all source files in this directory
+file( GLOB APP_SRCS ${PROJECT_SOURCE_DIR}/*.cpp )
+
+# collect the Qt resource files (*.qrc)
+file( GLOB APP_QRCS ${PROJECT_SOURCE_DIR}/*.qrc )
+
+# look for Windows rc file
+file( GLOB APP_WIN_RC ${PROJECT_SOURCE_DIR}/*.rc )
+
+# look for Apple icns file
+file( GLOB APP_MACOS_ICNS ${PROJECT_SOURCE_DIR}/*.icns )
+
+qt5_wrap_ui( APP_UI_SRCS ${APP_UIS} )
+qt5_add_resources( APP_RC_SRCS ${APP_QRCS} )
+qt5_wrap_cpp( APP_MOC_SRCS ${APP_HDRS} )
+
+# build application executable for the different platforms
+if( WIN32 )
+	add_executable( ${PROJECT_NAME} WIN32
+					${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS} ${APP_WIN_RC}
+	)
+
+	# on Windows, add gdi and gdi32 for OpenGL support
+	set( WIN_FRAMEWORKS iphlpapi gdiplus gdi32 user32 ole32 )
+endif( WIN32 )
+
+if( UNIX )
+	if( APPLE )
+		add_executable( ${PROJECT_NAME} MACOSX_BUNDLE
+						${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS} ${APP_MACOS_ICNS}
+		)
+	else( APPLE )
+		add_executable( ${PROJECT_NAME}
+						${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS}
+		)
+	endif( APPLE )
+endif( UNIX )
+
+
+# link libraries
+target_link_libraries( ${PROJECT_NAME}
+	${QT_LIBRARIES}
+	${OPENGL_LIBRARIES}
+	${APPLE_FRAMEWORKS}
+	${WIN_FRAMEWORKS}
+)
+----
+
+=== Erstellung unter Linux
+
+Um Quelltexte und Resourcendateien nicht mit den generierten Dateien in einem Verzeichnis zu haben, lohnt sich ein _out-of-source_ build, d.h. in einem getrennte Verzeichnis. Beispielsweise kann man parallel zum `Tutorial_05`-Verzeichnis noch ein Verzeichnis `build_Tutorial_05` anlegen. In diesem Verzeichnis reichen dann folgende Befehle zur Erstellung aus:
+
+[source,bash]
+----
+cmake -DCMAKE_BUILD_TYPE:String="Release" ../Tutorial_05 
+make -j4
+----
+
+Das Argument `-DCMAKE_BUILD_TYPE:String="Release"` legt ein Release-Build fest, Standard ist Debug. `-j4` legt beim make das Erstellen mit 4 parallelen Jobs fest.
+
+
+==== Mit eigener Qt Version bauen
+
+Falls nicht das systemweit installierte Qt verwendet werden soll, kann man auch den `CMAKE_PREFIX_PATH` auf eine eigene Qt Installation umbiegen.
+
+[source,bash]
+----
+export CMAKE_PREFIX_PATH=~/Qt/5.14.1/gcc_64/bin
+cmake -DCMAKE_BUILD_TYPE:String="Release" ../Tutorial_05 
+make -j4
+----
+
+
+=== Erstellen unter MacOS
+
+Ganz genauso wie unter Linux.
+
+=== Erstellung unter Windows
+
+Fast genauso wie unter Linux, nur eben mit Batch-Befehlen. Hier ist ein Beispiel für die Verwendung eines VC-Compilers, bereits als Batch-Datei zusammengestellt:
+
+[source,batch]
+----
+@echo off
+
+:: cl compiler path
+call "c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" x64
+
+:: path to Qt
+set CMAKE_PREFIX_PATH=c:\Qt\5.11.3\msvc2015_64
+
+:: configure in release mode, to build with JOM
+cmake -G "NMake Makefiles JOM" -DCMAKE_BUILD_TYPE:String="Release" ..\Tutorial_05
+
+:: build
+jom
+----
+
+Natürlich muss man die Pfade zum VC Compiler und zur Qt Installation im Batch-Script oben anpassen.
+
+Alternativ kann man unter Windows CMake auch dazu benutzen, VC Projektdateien zu erstellen, aber wenn man Qt Creator hat, wer braucht dann VC als Editor?
+

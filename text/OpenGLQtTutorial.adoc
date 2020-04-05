@@ -26,17 +26,10 @@ include::Tutorial_04.adoc[leveloffset=+1]
 include::Tutorial_05.adoc[leveloffset=+1]
 include::Tutorial_06.adoc[leveloffset=+1]
 include::Tutorial_07.adoc[leveloffset=+1]
-
-== Tutorial 08: Texturen mit QOpenGLTexture
-
-TODO : Texturenobjekte und wie sie mit QOpenGLTexture verwaltet werden.
+include::Tutorial_08.adoc[leveloffset=+1]
 
 == Tutorial 09: Shadowmaps/Mehrfach-Render-Passes und QOpenGLFramebufferObject
 
 TODO : Schattenwurf durch doppeltes Rendern (erst Kamera in Sonnenposition in Framebuffer rendern, dann diesen als Texturinput für den 2. Renderpass nehmen).
 
-== Tutorial 0x: CMake als BuildSystem für Qt und OpenGL
-
-TODO : Vorlage CMakeLists.txt zum Bauen von Qt-Anwendungen mit OpenGL unter Linux, MacOS, Windows
-
-
+include::Tutorial_0x.adoc[leveloffset=+1]

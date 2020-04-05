@@ -7,7 +7,11 @@ In diesem Tutorial geht es darum, Flächen bzw. Objekte in der Scene auszuwähle
 
 Auch dieses ist ein grundlegendes 3D Grafik-Prozedere und in diesem Tutorial nur drin, um die Verwendung der Klasse `QOpenGLFrameBuffer` zu demonstrieren.
 
-== Option 1: Falschfarbenrendering
+
+== Option 1: Strahlenverfolgung
+
+
+== Option 2: Falschfarbenrendering
 
 Technisch gibt es eine Einschränkung: es stehen *256^4 - 1* Farben stehen zur Verfügung (rgba) für ebenso viele Elemente. Reicht das nicht aus, muss entweder gefiltert werden (d.h. nur die _prinzipiell_ sichtbaren Objekte bekommen eine Nummer/Farbe), oder man benutzt Ray-Tracking.
 
