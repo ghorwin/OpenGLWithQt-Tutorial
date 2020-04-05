@@ -197,6 +197,38 @@ table {
 <li><a href="#_antialiasing">5.8. Antialiasing</a></li>
 </ul>
 </li>
+<li><a href="#_tutorial_06_fehlerbehandlung_und_und_profiling_mit_qopengldebuglogger_und_qopengltimemonitor">6. Tutorial 06: Fehlerbehandlung und und Profiling mit QOpenGLDebugLogger und QOpenGLTimeMonitor</a>
+<ul class="sectlevel2">
+<li><a href="#_fehlerbehandlung">6.1. Fehlerbehandlung</a>
+<ul class="sectlevel3">
+<li><a href="#_exceptions_und_qt">6.1.1. Exceptions und Qt</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#_tutorial_07_markierenauswählen_von_flächen_mit_openmp_parallelisierung">7. Tutorial 07: Markieren/Auswählen von Flächen (mit OpenMP Parallelisierung)</a>
+<ul class="sectlevel2">
+<li><a href="#_option_1_strahlenverfolgung">7.1. Option 1: Strahlenverfolgung</a></li>
+<li><a href="#_option_2_falschfarbenrendering">7.2. Option 2: Falschfarbenrendering</a>
+<ul class="sectlevel3">
+<li><a href="#_optimierungsidee_für_quasi_statische_scenen">7.2.1. Optimierungsidee für quasi-statische Scenen</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#_texturen_mit_qopengltexture">8. Texturen mit QOpenGLTexture</a></li>
+<li><a href="#_tutorial_09_shadowmapsmehrfach_render_passes_und_qopenglframebufferobject">9. Tutorial 09: Shadowmaps/Mehrfach-Render-Passes und QOpenGLFramebufferObject</a></li>
+<li><a href="#_tutorial_10_cmake_als_buildsystem_für_qt_und_opengl_und_deployment_von_qtopengl_anwendungen">10. Tutorial 10: CMake als BuildSystem für Qt und OpenGL, und Deployment von Qt+OpenGL Anwendungen</a>
+<ul class="sectlevel2">
+<li><a href="#_cmakelists_txt_für_opengl_anwendungen">10.1. CMakeLists.txt für OpenGL-Anwendungen</a>
+<ul class="sectlevel3">
+<li><a href="#_erstellung_unter_linux">10.1.1. Erstellung unter Linux</a></li>
+<li><a href="#_erstellen_unter_macos">10.1.2. Erstellen unter MacOS</a></li>
+<li><a href="#_erstellung_unter_windows">10.1.3. Erstellung unter Windows</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </div>
 </div>
@@ -2627,8 +2659,6 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <span class="nl">public:</span>
 	<span class="k">explicit</span> <span class="n">OpenGLWindow</span><span class="p">(</span><span class="n">QWindow</span> <span class="o">*</span><span class="n">parent</span> <span class="o">=</span> <span class="nb">nullptr</span><span class="p">);</span>
 
-	<span class="kt">void</span> <span class="n">initOpenGL</span><span class="p">();</span>
-
 <span class="k">public</span> <span class="n">slots</span><span class="o">:</span>
 	<span class="kt">void</span> <span class="n">renderLater</span><span class="p">();</span>
 	<span class="kt">void</span> <span class="n">renderNow</span><span class="p">();</span>
@@ -2643,6 +2673,9 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 	<span class="k">virtual</span> <span class="kt">void</span> <span class="n">paintGL</span><span class="p">()</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
 
 	<span class="n">QOpenGLContext</span> <span class="o">*</span><span class="n">m_context</span><span class="p">;</span>
+
+<span class="nl">private:</span>
+	<span class="kt">void</span> <span class="n">initOpenGL</span><span class="p">();</span>
 <span class="p">};</span></code></pre>
 </div>
 </div>
@@ -2650,10 +2683,28 @@ Passend zum VSync wird das UpdateRequest-Event verschickt, was zum OpenGL Render
 <p>Die Funktionen <code>initializeGL()</code> und <code>paintGL()</code> sind aus den vorangegangen Tutorials bekannt. Die Funktion <code>resizeGL()</code> ist eigentlich nur eine Bequemlichkeitsfunktion, welche aus dem Eventhandler <code>resizeEvent()</code> aufgerufen wird.</p>
 </div>
 <div class="paragraph">
-<p>Neu ist jedoch die Funktion <code>initOpenGL()</code>, mit der die OpenGL-Initialisierung gezielt angestoßen werden kann. Normalerweise wird die Initialisierung beim ersten Anzeigen des Fensters (genaugenommen beim ersten ResizeEvent) aufgerufen. Dies kann aber für eine sinnvolle Fehlerbehandlung zu spät sein, weil dann das Fenster wahrscheinlich leer angezeigt wird. Daher ist es sinnvoll, die Funktion nach dem Erstellen des Renderfensters, aber vor Aufruf von <code>show()</code> auszuführen.</p>
+<p>Neu ist jedoch die Funktion <code>initOpenGL()</code>, in der die OpenGL-Initialisierung (OpenGL Context) gemacht wird.</p>
+</div>
+<div class="listingblock">
+<div class="title">OpenGLWindow.cpp:initOpenGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">OpenGLWindow</span><span class="o">::</span><span class="n">initOpenGL</span><span class="p">()</span> <span class="p">{</span>
+	<span class="n">Q_ASSERT</span><span class="p">(</span><span class="n">m_context</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">);</span>
+
+	<span class="n">m_context</span> <span class="o">=</span> <span class="k">new</span> <span class="n">QOpenGLContext</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+	<span class="n">m_context</span><span class="o">-&gt;</span><span class="n">setFormat</span><span class="p">(</span><span class="n">requestedFormat</span><span class="p">());</span>
+	<span class="n">m_context</span><span class="o">-&gt;</span><span class="n">create</span><span class="p">();</span>
+
+	<span class="n">m_context</span><span class="o">-&gt;</span><span class="n">makeCurrent</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+	<span class="n">Q_ASSERT</span><span class="p">(</span><span class="n">m_context</span><span class="o">-&gt;</span><span class="n">isValid</span><span class="p">());</span>
+
+	<span class="n">initializeOpenGLFunctions</span><span class="p">();</span>
+	<span class="n">initializeGL</span><span class="p">();</span> <span class="c1">// call user code</span>
+<span class="p">}</span></code></pre>
+</div>
 </div>
 <div class="paragraph">
-<p>Macht man das nicht, so wird diese Funktion wie bisher automatisch beim ersten Anzeigen aufgerufen, konkret im ResizeEvent-Handler:</p>
+<p>Normalerweise wird die Initialisierung beim ersten Anzeigen des Fensters (genaugenommen beim ersten ResizeEvent) aufgerufen, bzw. beim ersten Zeichnen.</p>
 </div>
 <div class="listingblock">
 <div class="title">OpenGLWindow.cpp: Funktion resizeEvent()</div>
@@ -3005,6 +3056,40 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 <td class="content">
 <div class="paragraph">
 <p>Man kann testweise mal das Flag <code>GL_DEPTH_TEST</code> nicht setzen - die etwas verwirrende Darstellung ist, nun ja, verwirrend.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Für den Tiefentest ist ein zusätzlicher Tiefenpuffer notwendig (bisher hatten wir nur den Farbpuffer (<em>engl. Color Buffer</em>). Wichtig ist daher, dass bei Verwendung eines Tiefenpuffers dieser Puffer ebenso wie der Farbpuffer zu Beginn des Zeichnens gelöscht wird. Dies passiert in <code>paintGL()</code>:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp:paintGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">paintGL</span><span class="p">()</span> <span class="p">{</span>
+    <span class="p">...</span>
+
+	<span class="n">glClear</span><span class="p">(</span><span class="n">GL_COLOR_BUFFER_BIT</span> <span class="o">|</span> <span class="n">GL_DEPTH_BUFFER_BIT</span><span class="p">);</span>
+
+	<span class="p">...</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Falls bei Verwendung des Tiefenpuffers/Tiefentests das Problem des z-Fighting auftritt, kann man die Genauigkeit des Tiefenpuffers erhöhen. Dies erfolgt durch Aufruf der Funktion <code>QSurfaceFormat::setDepthBufferSize()</code>. In diesem Tutorial liegen die Boxen immer schön weit auseinander, sodass eine Genauigkeit von 8bit ausreicht. Dieser wird bei Konfiguration des <code>QSurfaceFormat</code>-Objekts in <code>TestDialog.cpp</code> gesetzt:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>format.setDepthBufferSize(8);</pre>
+</div>
 </div>
 </td>
 </tr>
@@ -3701,6 +3786,9 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 <li>
 <p>Objektveränderlichkeit</p>
 </li>
+<li>
+<p>Transparenz (dazu in einem späteren Tutorial mehr)</p>
+</li>
 </ul>
 </div>
 <div class="paragraph">
@@ -4101,7 +4189,7 @@ SceneView::paintGL(): Rendering to: 1288 x 912</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Die Variable <code>gl_FragCoord</code> wird für jeden einzelnen Bildpunkt von OpenGL bereitgestellt und enthält die Normalized Device Coordinates (NDC). Wenn man beachtet, dass diese Koordinaten durch Division mit w berechnet werden, dann bekommt man die originale z-Koordinate durch Multiplikation mit w. Das ganze wird dann noch mit einem Begrenzungswert (<code>FARPLANE</code>) skaliert. Falls bei der Definition des View-Frustums andere Werte für Near/Farplane verwendet werden, muss man die Formel entsprechend anpassen.</p>
+<p>Die Variable <code>gl_FragCoord</code> wird für jeden einzelnen Bildpunkt von OpenGL bereitgestellt und enthält die Normalized Device Coordinates (NDC). Wenn man beachtet, dass diese Koordinaten durch Division mit w berechnet werden, dann bekommt man die originale z-Koordinate durch Multiplikation mit w. Das ganze wird dann noch mit einem Begrenzungswert (<code>FARPLANE</code>) skaliert. Falls bei der Definition des View-Frustums andere Werte für Near/Farplane verwendet werden, muss man die Formel entsprechend anpassen (siehe <a href="https://learnopengl.com/Advanced-OpenGL/Depth-testing" class="bare">https://learnopengl.com/Advanced-OpenGL/Depth-testing</a> für die dahinterliegende Mathematik).</p>
 </div>
 <div class="paragraph">
 <p>Damit sieht das Ergebnis dann wie gewünscht aus:</p>
@@ -4749,11 +4837,683 @@ b.transform(trans.toMatrix());</pre>
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="_tutorial_06_fehlerbehandlung_und_und_profiling_mit_qopengldebuglogger_und_qopengltimemonitor">6. Tutorial 06: Fehlerbehandlung und und Profiling mit QOpenGLDebugLogger und QOpenGLTimeMonitor</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In diesem Tutorial geht es um zwei Themen:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>sinnvolle Fehlerbehandlung und Kapselung der Fehlerausgaben</p>
+</li>
+<li>
+<p>Profiling von GPU Operationen (sinnvoll für die nächsten Tutorials, in denen durchaus zeitkritische Operationen angestoßen werden)</p>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="_fehlerbehandlung">6.1. Fehlerbehandlung</h3>
+<div class="paragraph">
+<p>Alle bisher vorgestellten Qt-Wrapper-Klassen um native OpenGL-Aufrufe haben bereits eine Fehleranalyse eingebaut, also bspw. <code>QOpenGLShaderProgram</code>, <code>QOpenGLBuffer</code> oder <code>QOpenGLContext</code>.</p>
+</div>
+<div class="paragraph">
+<p>Viele der Funktionen, die native OpenGL-Funktionen aufrufen, liefern ein <code>bool</code> zurück, und im Falle eines Fehlers (<code>false</code>) kann man mit der Memberfunktion <code>log()</code> eine Fehlermeldung abfragen.</p>
+</div>
+<div class="paragraph">
+<p>Eine typische Debugausgabe wurde in den bisherigen Tutorials schon verwendet:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="p">...</span>
+
+<span class="n">m_program</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">QOpenGLShaderProgram</span><span class="p">();</span>
+
+<span class="c1">// read the shader programs from the resource</span>
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">m_program</span><span class="o">-&gt;</span><span class="n">addShaderFromSourceFile</span><span class="p">(</span><span class="n">QOpenGLShader</span><span class="o">::</span><span class="n">Vertex</span><span class="p">,</span> <span class="s">":/shaders/pass_through.vert"</span><span class="p">))</span>
+	<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Vertex shader errors:</span><span class="se">\n</span><span class="s">"</span> <span class="o">&lt;&lt;</span> <span class="n">m_program</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">();</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">m_program</span><span class="o">-&gt;</span><span class="n">addShaderFromSourceFile</span><span class="p">(</span><span class="n">QOpenGLShader</span><span class="o">::</span><span class="n">Fragment</span><span class="p">,</span> <span class="s">":/shaders/simple.frag"</span><span class="p">))</span>
+	<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Fragment shader errors:</span><span class="se">\n</span><span class="s">"</span> <span class="o">&lt;&lt;</span> <span class="n">m_program</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">();</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">m_program</span><span class="o">-&gt;</span><span class="n">link</span><span class="p">())</span>
+	<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Shader linker errors:</span><span class="se">\n</span><span class="s">"</span> <span class="o">&lt;&lt;</span> <span class="n">m_program</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">();</span>
+
+<span class="p">...</span></code></pre>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_exceptions_und_qt">6.1.1. Exceptions und Qt</h4>
+<div class="paragraph">
+<p>Es wäre natürlich sinnvoll, wenn man zwischen akzeptablen Fehlern (Warnungen) und kritischen Fehlern unterscheidet.</p>
+</div>
+<div class="paragraph">
+<p>Ein Qt-typischer Weg der Fehlerbehandlung wäre die Prüfung von Fehlern in Funktionen und dann Kommunikation via Funktionsrückgabewerten, ob ein Fehler aufgetreten ist oder nicht. Alternativ können auch Fehlerflags gesetzt werden, die dann an verschiedenen Stellen geprüft werden müssen. Diese Art der Fehlerbehandlung verlangt jedoch selbst viel Disziplin von Programmierern und führt in der Praxis leider häufig dazu, dass ein Fehlerflag/Rückgabewert nicht getestet wird und deshalb das Programm irgendwas macht. In Zusammenhang mit OpenGL heißt das meist, ein leeres oder unvollständig gezeichnetes Bild.</p>
+</div>
+<div class="paragraph">
+<p>Bei kritischen Fehler, bei denen das Programm nicht sinnvoll weitergeführt werden kann, möchte man vielleicht in klassischer C++-Manier Exceptions verwenden. Dieses Kapitel behandelt eine Möglichkeit, mit Qt und Exceptions eine Fehlerbehandlung zu realisieren.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Die nachfolgend diskutierten Ansätze zur Exceptionbehandlung und Meldungsausgabe gelten aber eigentlich für jede Qt Anwendung, unabhängig von OpenGL.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Bei Verwendung von Exceptions wäre obiger Quelltext dann etwas länglicher und würde eventuell so aussehen:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">RectangleWindow</span><span class="o">::</span><span class="n">initializeGL</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">try</span> <span class="p">{</span>
+
+        <span class="p">...</span>
+
+        <span class="n">m_program</span> <span class="o">=</span> <span class="k">new</span> <span class="n">QOpenGLShaderProgram</span><span class="p">();</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">m_program</span><span class="o">-&gt;</span><span class="n">addShaderFromSourceFile</span><span class="p">(</span><span class="n">QOpenGLShader</span><span class="o">::</span><span class="n">Vertex</span><span class="p">,</span> <span class="s">":/shaders/pass_through.vert"</span><span class="p">))</span>
+        	<span class="k">throw</span> <span class="n">MyOpenGLException</span><span class="p">(</span><span class="s">"Vertex shader compile error"</span><span class="p">,</span> <span class="n">m_program</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">()</span> <span class="p">);</span>
+
+        <span class="p">...</span>
+
+    <span class="p">}</span>
+    <span class="k">catch</span> <span class="p">(</span><span class="n">MyOpenGLException</span> <span class="o">&amp;</span> <span class="n">ex</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">throw</span> <span class="n">MyOpenGLException</span><span class="p">(</span><span class="n">ex</span><span class="p">,</span> <span class="s">"OpenGL Initialization failed."</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>und irgendwo weiter draußen:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++">        <span class="p">...</span>
+
+    <span class="err">}</span>
+    <span class="k">catch</span> <span class="p">(</span><span class="n">MyOpenGLException</span> <span class="o">&amp;</span> <span class="n">ex</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">ex</span><span class="p">.</span><span class="n">writeMsgStackToStream</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">cerr</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="err">}</span></code></pre>
+</div>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Entscheidend bei der Verwendung von Exceptions ist das kontrollierte Aufräumen der OpenGL-Resourcen. Auch gelten natürlich alle normalen Vorsichtsmaßnahmen und Programmierregeln für Exception-Code (siehe auch <em>Scott Meyers "Effektives C++"</em>).</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>An anderer Stelle im Quelltext möchte man sich einfach darauf verlassen, dass ein bestimmter Aufruf korrekt abläuft. Hier kann man asserts verwenden:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">Q_ASSERT</span><span class="p">(</span><span class="n">m_vertexBufferObject</span><span class="p">.</span><span class="n">bind</span><span class="p">());</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Es lohnt sich allerdings, die jeweiligen Gründe für ein Fehlschlagen nachzulesen. Beim <code>QOpenGLBuffer</code> kann die <code>bind()</code> Funktion aus mehreren Gründen fehlschlagen:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Der Puffertyp wird bei der gerade verwendeten OpenGL-Implementierung (treiberseitig) nicht unterstützt (ein Portabilitätsproblem).</p>
+</li>
+<li>
+<p>Der OpenGL-Context ist nicht aktuell (ein Programmierfehler).</p>
+</li>
+<li>
+<p>Der Puffer wurde (noch) nicht erstellt (auch ein Programmierfelhler).</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Also bis auf den ersten Grund, ist ein <code>Q_ASSERT</code> sicher das Mittel der Wahl. Bei der  Plattformunterstützung hilft letztlich nur ein explizites Abfragen der Funktionalität - und, falls dies im Vorfeld nicht für alle Funktionen möglich ist, eben doch die Verwendung einer Exception.</p>
+</div>
+<div class="sect4">
+<h5 id="_beispiel_für_eine_exceptionklasse">Beispiel für eine Exceptionklasse</h5>
+<div class="paragraph">
+<p>Eine eigene Exceptionklasse zu schreiben ist nicht wirklich ein Qt-typisches Problem, daher hier nur kurz ein minimalistischer Vorschlag zum selber ausbauen:</p>
+</div>
+<div class="listingblock">
+<div class="title">OpenGLException.h</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="cp">#ifndef OPENGLEXCEPTION_H
+#define OPENGLEXCEPTION_H
+</span>
+<span class="cp">#include &lt;stdexcept&gt;
+#include &lt;list&gt;
+</span>
+<span class="cp">#include &lt;QString&gt;
+</span>
+<span class="k">class</span> <span class="nc">OpenGLException</span> <span class="o">:</span> <span class="k">public</span> <span class="n">std</span><span class="o">::</span><span class="n">exception</span> <span class="p">{</span>
+<span class="nl">public:</span>
+	<span class="n">OpenGLException</span><span class="p">(</span><span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">msg</span><span class="p">);</span>
+	<span class="n">OpenGLException</span><span class="p">(</span><span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">where</span><span class="p">);</span>
+	<span class="n">OpenGLException</span><span class="p">(</span><span class="n">OpenGLException</span> <span class="o">&amp;</span> <span class="n">previous</span><span class="p">,</span> <span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">msg</span><span class="p">);</span>
+	<span class="n">OpenGLException</span><span class="p">(</span><span class="n">OpenGLException</span> <span class="o">&amp;</span> <span class="n">previous</span><span class="p">,</span> <span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">where</span><span class="p">);</span>
+	<span class="kt">void</span> <span class="n">writeMsgStackToStream</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">ostream</span> <span class="o">&amp;</span> <span class="n">strm</span><span class="p">)</span> <span class="k">const</span><span class="p">;</span>
+
+<span class="nl">private:</span>
+	<span class="n">std</span><span class="o">::</span><span class="n">list</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">QString</span><span class="p">,</span> <span class="n">QString</span><span class="o">&gt;</span> <span class="o">&gt;</span> <span class="n">m_msgStack</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="cp">#define FUNCID(x) const char * const FUNC_ID = "[" #x "]"
+</span>
+<span class="cp">#endif // OPENGLEXCEPTION_H</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>wobei die Implementierung recht selbsterklärend ist:</p>
+</div>
+<div class="listingblock">
+<div class="title">OpenGLException.cpp</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="cp">#include "OpenGLException.h"
+</span>
+<span class="cp">#include &lt;QStringList&gt;
+</span>
+<span class="n">OpenGLException</span><span class="o">::</span><span class="n">OpenGLException</span><span class="p">(</span><span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">msg</span><span class="p">)</span> <span class="p">{</span>
+	<span class="n">m_msgStack</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span> <span class="n">std</span><span class="o">::</span><span class="n">make_pair</span><span class="p">(</span><span class="n">QString</span><span class="p">(</span><span class="n">msg</span><span class="p">),</span> <span class="n">QString</span><span class="p">()));</span>
+<span class="p">}</span>
+
+<span class="n">OpenGLException</span><span class="o">::</span><span class="n">OpenGLException</span><span class="p">(</span><span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">where</span><span class="p">)</span> <span class="p">{</span>
+	<span class="n">m_msgStack</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span> <span class="n">std</span><span class="o">::</span><span class="n">make_pair</span><span class="p">(</span><span class="n">QString</span><span class="p">(</span><span class="n">msg</span><span class="p">),</span> <span class="n">where</span><span class="p">));</span>
+<span class="p">}</span>
+
+<span class="n">OpenGLException</span><span class="o">::</span><span class="n">OpenGLException</span><span class="p">(</span><span class="n">OpenGLException</span> <span class="o">&amp;</span> <span class="n">previous</span><span class="p">,</span> <span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">msg</span><span class="p">)</span> <span class="o">:</span>
+	<span class="n">m_msgStack</span><span class="p">(</span><span class="n">previous</span><span class="p">.</span><span class="n">m_msgStack</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="n">m_msgStack</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span> <span class="n">std</span><span class="o">::</span><span class="n">make_pair</span><span class="p">(</span><span class="n">QString</span><span class="p">(</span><span class="n">msg</span><span class="p">),</span> <span class="n">QString</span><span class="p">()));</span>
+<span class="p">}</span>
+
+<span class="n">OpenGLException</span><span class="o">::</span><span class="n">OpenGLException</span><span class="p">(</span><span class="n">OpenGLException</span> <span class="o">&amp;</span> <span class="n">previous</span><span class="p">,</span> <span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">msg</span><span class="p">,</span> <span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">where</span><span class="p">)</span>  <span class="o">:</span>
+	<span class="n">m_msgStack</span><span class="p">(</span><span class="n">previous</span><span class="p">.</span><span class="n">m_msgStack</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="n">m_msgStack</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span> <span class="n">std</span><span class="o">::</span><span class="n">make_pair</span><span class="p">(</span><span class="n">QString</span><span class="p">(</span><span class="n">msg</span><span class="p">),</span> <span class="n">where</span><span class="p">));</span>
+<span class="p">}</span>
+
+<span class="kt">void</span> <span class="n">OpenGLException</span><span class="o">::</span><span class="n">writeMsgStackToStream</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">ostream</span> <span class="o">&amp;</span> <span class="n">strm</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+	<span class="k">for</span> <span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">list</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="n">QString</span><span class="p">,</span> <span class="n">QString</span><span class="o">&gt;</span> <span class="o">&gt;::</span><span class="n">const_iterator</span> <span class="n">it</span> <span class="o">=</span> <span class="n">m_msgStack</span><span class="p">.</span><span class="n">begin</span><span class="p">();</span>
+		<span class="n">it</span> <span class="o">!=</span> <span class="n">m_msgStack</span><span class="p">.</span><span class="n">end</span><span class="p">();</span> <span class="o">++</span><span class="n">it</span><span class="p">)</span>
+	<span class="p">{</span>
+		<span class="n">QStringList</span> <span class="n">lines</span> <span class="o">=</span> <span class="n">it</span><span class="o">-&gt;</span><span class="n">first</span><span class="p">.</span><span class="n">split</span><span class="p">(</span><span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+		<span class="n">QString</span> <span class="n">indx</span><span class="p">(</span><span class="s">"[%1] "</span><span class="p">);</span>
+		<span class="n">indx</span> <span class="o">=</span> <span class="n">indx</span><span class="p">.</span><span class="n">arg</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">distance</span><span class="p">(</span><span class="n">m_msgStack</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span><span class="n">it</span><span class="p">));</span>
+		<span class="k">for</span> <span class="p">(</span><span class="k">const</span> <span class="n">QString</span> <span class="o">&amp;</span> <span class="n">l</span> <span class="o">:</span> <span class="n">lines</span><span class="p">)</span> <span class="p">{</span>
+			<span class="k">if</span> <span class="p">(</span><span class="n">it</span><span class="o">-&gt;</span><span class="n">second</span><span class="p">.</span><span class="n">isEmpty</span><span class="p">())</span>
+				<span class="n">strm</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">indx</span> <span class="o">+</span> <span class="n">l</span> <span class="o">+</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">).</span><span class="n">toStdString</span><span class="p">();</span>
+			<span class="k">else</span>
+				<span class="n">strm</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">indx</span> <span class="o">+</span> <span class="n">it</span><span class="o">-&gt;</span><span class="n">second</span> <span class="o">+</span> <span class="s">" : "</span> <span class="o">+</span> <span class="n">l</span> <span class="o">+</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">).</span><span class="n">toStdString</span><span class="p">();</span>
+		<span class="p">}</span>
+		<span class="n">strm</span><span class="p">.</span><span class="n">flush</span><span class="p">();</span>
+	<span class="p">}</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Interessanter ist eher die Verwendung, also bspw. in <code>ShaderProgram.cpp</code>:</p>
+</div>
+<div class="listingblock">
+<div class="title">ShaderProgram.cpp</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">ShaderProgram</span><span class="o">::</span><span class="n">create</span><span class="p">()</span> <span class="p">{</span>
+	<span class="n">FUNCID</span><span class="p">(</span><span class="n">ShaderProgram</span><span class="o">::</span><span class="n">create</span><span class="p">);</span>
+
+    <span class="p">...</span>
+
+	<span class="c1">// read the shader programs from the resource</span>
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">m_program</span><span class="o">-&gt;</span><span class="n">addShaderFromSourceFile</span><span class="p">(</span><span class="n">QOpenGLShader</span><span class="o">::</span><span class="n">Vertex</span><span class="p">,</span> <span class="n">m_vertexShaderFilePath</span><span class="p">))</span>
+		<span class="k">throw</span> <span class="n">OpenGLException</span><span class="p">(</span><span class="n">QString</span><span class="p">(</span><span class="s">"Error compiling vertex shader %1:</span><span class="se">\n</span><span class="s">%2"</span><span class="p">).</span><span class="n">arg</span><span class="p">(</span><span class="n">m_vertexShaderFilePath</span><span class="p">).</span><span class="n">arg</span><span class="p">(</span><span class="n">m_program</span><span class="o">-&gt;</span><span class="n">log</span><span class="p">()),</span> <span class="n">FUNC_ID</span><span class="p">);</span>
+
+	<span class="p">...</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Vielleicht kurz noch eine Erläuterung zum <code>FUNCID()</code> Makro. Ist eigentlich nur eine Lese-/Schreibvereinfachung:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">FUNCID</span><span class="p">(</span><span class="n">ShaderProgram</span><span class="o">::</span><span class="n">create</span><span class="p">);</span>
+
+<span class="c1">// wird zu</span>
+<span class="k">const</span> <span class="kt">char</span> <span class="o">*</span> <span class="k">const</span> <span class="n">FUNC_ID</span> <span class="o">=</span> <span class="s">"[ShaderProgram::create]"</span><span class="p">;</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Klasse <code>QOpenGLException</code> nimmt im Konstruktor entweder ein oder zwei Argumente, im Beispiel oben ist die Variante mit den zwei Argumenten verwendet. Nun kann man in der Aufrufhierarchie weiter oben die Exception fangen und mit weiteren Informationen anreichern. Zum Beispiel:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">initializeGL</span><span class="p">()</span> <span class="p">{</span>
+	<span class="n">FUNCID</span><span class="p">(</span><span class="n">SceneView</span><span class="o">::</span><span class="n">initializeGL</span><span class="p">);</span>
+	<span class="k">try</span> <span class="p">{</span>
+		<span class="k">for</span> <span class="p">(</span><span class="n">ShaderProgram</span> <span class="o">&amp;</span> <span class="n">p</span> <span class="o">:</span> <span class="n">m_shaderPrograms</span><span class="p">)</span>
+			<span class="n">p</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>
+
+        <span class="p">...</span>
+	<span class="p">}</span>
+	<span class="k">catch</span> <span class="p">(</span><span class="n">OpenGLException</span> <span class="o">&amp;</span> <span class="n">ex</span><span class="p">)</span> <span class="p">{</span>
+		<span class="k">throw</span> <span class="n">OpenGLException</span><span class="p">(</span><span class="n">ex</span><span class="p">,</span> <span class="s">"OpenGL initialization failed."</span><span class="p">,</span> <span class="n">FUNC_ID</span><span class="p">);</span>
+	<span class="p">}</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Hier wird die Exception gefangen und erneut geworfen. Damit die bisherigen Informationen nicht verloren gehen, wird der Konstruktor mit <code>OpenGLException</code>-Argument verwendet. In der Implementierung oben sieht man, dass die neue Klasse die Meldungsliste der bisherigen Exception-Instanz übernimmt, und einfach die neue Information anhängt.</p>
+</div>
+<div class="paragraph">
+<p>Beim Aufruf von <code>ex.writeMsgStackToStream(std::cerr)</code> wird nun z.B. Folgendes ausgegeben:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>[0] [ShaderProgram::create] : Error compiling fragment shader :/shaders/simple.frag:
+[0] [ShaderProgram::create] : 0(8) : error C1503: undefined variable "fragsColor"
+[0] [ShaderProgram::create] :
+[1] [SceneView::initializeGL] : OpenGL initialization failed.</pre>
+</div>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_qapplicationnotify">QApplication::notify</h5>
+<div class="paragraph">
+<p>Man könnte jetzt die geworfene Exception einfach in der <code>main.cpp</code> fangen, also so:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">try</span> <span class="p">{</span>
+	<span class="n">TestDialog</span> <span class="n">dlg</span><span class="p">;</span>
+	<span class="n">dlg</span><span class="p">.</span><span class="n">show</span><span class="p">();</span>
+	<span class="k">return</span> <span class="n">app</span><span class="p">.</span><span class="n">exec</span><span class="p">();</span>
+<span class="p">}</span>
+<span class="k">catch</span> <span class="p">(</span><span class="n">OpenGLException</span> <span class="o">&amp;</span> <span class="n">ex</span><span class="p">)</span> <span class="p">{</span>
+	<span class="n">ex</span><span class="p">.</span><span class="n">writeMsgStackToStream</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">cerr</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">EXIT_FAILURE</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Aber wenn nun eine Exception geworfen wird, bekommt man folgende Warnung ausgegeben:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>Qt has caught an exception thrown from an event handler. Throwing
+exceptions from an event handler is not supported in Qt.
+You must not let any exception whatsoever propagate through Qt code.
+If that is not possible, in Qt 5 you must at least reimplement
+QCoreApplication::notify() and catch all exceptions there.</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Wenn man in Qt eine Exception wirft, sollte diese eigentlich nicht bis in die Ereignisschleife gelangen (ursprünglich war Qt ohne Exception-Unterstützung konzipiert). Die "saubere" Variante besteht also darin, diese <code>notify()</code>-Funktion zu überladen:</p>
+</div>
+<div class="listingblock">
+<div class="title">DebugApplication.cpp</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">class</span> <span class="nc">DebugApplication</span> <span class="o">:</span> <span class="k">public</span> <span class="n">QApplication</span> <span class="p">{</span>
+<span class="nl">public:</span>
+	<span class="n">DebugApplication</span><span class="p">(</span> <span class="kt">int</span> <span class="o">&amp;</span> <span class="n">argc</span><span class="p">,</span> <span class="kt">char</span> <span class="o">**</span> <span class="n">argv</span><span class="p">)</span> <span class="o">:</span>  <span class="n">QApplication</span><span class="p">(</span><span class="n">argc</span><span class="p">,</span> <span class="n">argv</span><span class="p">),</span> <span class="n">m_aboutToTerminate</span><span class="p">(</span><span class="nb">false</span><span class="p">)</span>
+	<span class="p">{}</span>
+
+	<span class="k">virtual</span> <span class="kt">bool</span> <span class="n">notify</span><span class="p">(</span><span class="n">QObject</span> <span class="o">*</span><span class="n">recv</span><span class="p">,</span> <span class="n">QEvent</span> <span class="o">*</span><span class="n">e</span><span class="p">)</span> <span class="k">override</span> <span class="p">{</span>
+		<span class="k">try</span> <span class="p">{</span>
+			<span class="k">return</span> <span class="n">QApplication</span><span class="o">::</span><span class="n">notify</span><span class="p">(</span> <span class="n">recv</span><span class="p">,</span> <span class="n">e</span> <span class="p">);</span>
+		<span class="p">}</span>
+		<span class="k">catch</span> <span class="p">(</span><span class="n">OpenGLException</span> <span class="o">&amp;</span><span class="n">ex</span><span class="p">)</span> <span class="p">{</span>
+			<span class="n">ex</span><span class="p">.</span><span class="n">writeMsgStackToStream</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">cerr</span><span class="p">);</span>
+			<span class="n">m_aboutToTerminate</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+			<span class="n">QApplication</span><span class="o">::</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+		<span class="p">}</span>
+		<span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+	<span class="p">}</span>
+
+	<span class="c1">// Flag to check for program abort</span>
+	<span class="kt">bool</span> <span class="n">m_aboutToTerminate</span><span class="p">;</span>
+<span class="p">};</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Soweit recht klar, es sollte jedoch noch erwähnt werden, was das Flag <code>m_aboutToTerminate</code> for eine Bewandnis hat.</p>
+</div>
+<div class="paragraph">
+<p>Letztlich wird <code>notify()</code> als Teil der Ereignisschleife aufgerufen, d.h.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tutorial_07_markierenauswählen_von_flächen_mit_openmp_parallelisierung">7. Tutorial 07: Markieren/Auswählen von Flächen (mit OpenMP Parallelisierung)</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In diesem Tutorial geht es darum, Flächen bzw. Objekte in der Scene auszuwählen. Es gibt hier 2 Techniken, die verfolgt werden sollen:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Rendern in einen offscreen-Framenbuffer mit individuellen Farben aller anklickbaren Objekte und Identifizierung der Objekte durch Abbildung der Farben auf originale Objekte/Flächen</p>
+</li>
+<li>
+<p>Strahlenverfolgung (Ray Picking), d.h. Bestimmung der Sichtlinie im Weltenkoordinatensystem und dann Schnittpunktberechnung aller Objekte und Sortierung nach Tiefe (aufgrund der vielen Objekte und eindeutig parallelem Algorithmus ist dies ein klassisches Anwendungsgebiet für OpenMP).</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Auch dieses ist ein grundlegendes 3D Grafik-Prozedere und in diesem Tutorial nur drin, um die Verwendung der Klasse <code>QOpenGLFrameBuffer</code> zu demonstrieren.</p>
+</div>
+<div class="sect2">
+<h3 id="_option_1_strahlenverfolgung">7.1. Option 1: Strahlenverfolgung</h3>
+
+</div>
+<div class="sect2">
+<h3 id="_option_2_falschfarbenrendering">7.2. Option 2: Falschfarbenrendering</h3>
+<div class="paragraph">
+<p>Technisch gibt es eine Einschränkung: es stehen <strong>256^4 - 1</strong> Farben stehen zur Verfügung (rgba) für ebenso viele Elemente. Reicht das nicht aus, muss entweder gefiltert werden (d.h. nur die <em>prinzipiell</em> sichtbaren Objekte bekommen eine Nummer/Farbe), oder man benutzt Ray-Tracking.</p>
+</div>
+<div class="paragraph">
+<p>Die zahlreichen Tutorials in diesem Bereich verwenden die folgende Technik:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Schleife über alle anklickbaren Elemente</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Setzen der eindeutigen Farbe je Element via <code>uniform</code> im Shader</p>
+</li>
+<li>
+<p>Zeichen jedes Elements via <code>glDrawXXX</code>-Aufruf</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Lesen der Pixelfarbe unter dem Mauscursor</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Unnötig zu erwähnen, dass alleine die Vielzahl an <code>glDrawXXX</code> Calls problematisch ist. Außerdem ist es je anch Anwendung nicht notwendig, dieses Prozedere bei <em>jedem</em> Mausklick zu wiederholen.</p>
+</div>
+<div class="sect3">
+<h4 id="_optimierungsidee_für_quasi_statische_scenen">7.2.1. Optimierungsidee für quasi-statische Scenen</h4>
+<div class="paragraph">
+<p>Nehmen wir mal an, es handelt sich um ein Programm mit vorwiegend nicht-animierten Szenen (Zielvorgabe dieses Tutorials). Dann könnte man die Falschfarbenberechnung stets kurz nach dem Abschluss der Kamerabewegung machen (d.h. mit kleiner Zeitverzögerung), und das resultierende Falschfarbenbild im CPU-Speicher vorhalten. Wenn man nun mit der Maus klickt, hat man sofort den Farbwert unter dem Mauscursor zur Hand. Man könnte auch viele Klicks abfragen, ohne die GPU zu beschäftigen.</p>
+</div>
+<div class="paragraph">
+<p>Ist sicher eine recht einfache Variante und klingt super nach Arbeitseinsparung. Vor allem, wenn bei der Anwendungen ein Auswahl-Klick in der Scene zunächst nur mit irgendeiner Art der Hervorhebung verbunden ist. Die Scene müsste dann zwar neu gezeichnet werden, aber an der Falschfarbendarstellung zur Auswahl ändert sich nichts.</p>
+</div>
+<div class="paragraph">
+<p>Ohne die kleine "mit etwas Verzögerung zeichnen" Optimierung sieht der Algorithmus dann also so aus:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Falls Scenensicht bewegt: zeichnen der Scene in einen Framebuffer, wobei hier der Vertexshader die Farben der Flächen aus einem separaten Farbpuffer holt - dies erlaubt weiterhin die Verwendung von Indexlisten und Vertexarrays</p>
+</li>
+<li>
+<p>Zeichnen der Scene wie gehabt</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Wir brauchen dafür also:
+- ein weiteres ShaderProgramm, welches die Koordinaten aus dem Vertexarray (mit interleaved Storage) liest, aber die Falsch-Farben aus einem <em>separaten Puffer</em> holt
+- einen Framebuffer, in den die Falschfarbendarstellung kopiert wird
+- eine Möglichkeit, die Farbwerte des Puffers im CPU-Speicher abzulegen
+- eine Abfrage der Farbwerte und Identifikation des angeklickten Elements</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_texturen_mit_qopengltexture">8. Texturen mit QOpenGLTexture</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Natives OpenGL:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="c1">// Wrap style</span>
+<span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">GL_TEXTURE_WRAP_S</span><span class="p">,</span> <span class="n">GL_MIRRORED_REPEAT</span><span class="p">);</span>
+<span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">GL_TEXTURE_WRAP_T</span><span class="p">,</span> <span class="n">GL_MIRRORED_REPEAT</span><span class="p">);</span>
+
+<span class="c1">// Border color in case of GL_CLAMP_TO_BORDER</span>
+<span class="kt">float</span> <span class="n">borderColor</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="n">f</span><span class="p">,</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="n">f</span><span class="p">,</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="n">f</span><span class="p">,</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="n">f</span> <span class="p">};</span>
+<span class="n">glTexParameterfv</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">GL_TEXTURE_BORDER_COLOR</span><span class="p">,</span> <span class="n">borderColor</span><span class="p">);</span>
+
+<span class="c1">// Texture Filtering</span>
+<span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">GL_TEXTURE_MIN_FILTER</span><span class="p">,</span> <span class="n">GL_NEAREST</span><span class="p">);</span>
+<span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">GL_TEXTURE_MAG_FILTER</span><span class="p">,</span> <span class="n">GL_LINEAR</span><span class="p">);</span></code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tutorial_09_shadowmapsmehrfach_render_passes_und_qopenglframebufferobject">9. Tutorial 09: Shadowmaps/Mehrfach-Render-Passes und QOpenGLFramebufferObject</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>TODO : Schattenwurf durch doppeltes Rendern (erst Kamera in Sonnenposition in Framebuffer rendern, dann diesen als Texturinput für den 2. Renderpass nehmen).</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tutorial_10_cmake_als_buildsystem_für_qt_und_opengl_und_deployment_von_qtopengl_anwendungen">10. Tutorial 10: CMake als BuildSystem für Qt und OpenGL, und Deployment von Qt+OpenGL Anwendungen</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Für das automatische Bauen von Qt (z.B. mit Jenkins oder ähnlichen Build-Systemen) bietet sich CMake an. Es geht zwar auch mit qmake, aber in diesem Tutorial soll gezeigt werden, wie man das eine CMakeLists.txt-Datei für das Bauen von Qt-Anwendungen unter Linux, MacOS und Windows konfiguriert.</p>
+</div>
+<div class="paragraph">
+<p>Im 2. Teil des Tutorials geht es dann um das Deployment, d.h. welche Dateien jeweils kopiert werden müssen. Auch dies ist nicht wirklich OpenGL-spezifisch, aber zeigt nochmal, welche OpenGL-Bibliotheken auf den jeweiligen Betriebssystemen vorausgesetzt werden können, und welche kopiert werden müssen.</p>
+</div>
+<div class="sect2">
+<h3 id="_cmakelists_txt_für_opengl_anwendungen">10.1. CMakeLists.txt für OpenGL-Anwendungen</h3>
+<div class="paragraph">
+<p>Hier ist eine Beispiel-CMakeLists.txt-Datei (aus Tutorial 05), welche das mal demonstriert:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre># CMakeLists.txt file for OpenGL + Qt Tutorial Series
+
+# The project name
+project( Tutorial_05 )
+
+# Require a fairly recent cmake version
+cmake_minimum_required( VERSION 2.8.12 )
+
+# Set default build type
+if (NOT CMAKE_BUILD_TYPE)
+	set( CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
+		"Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
+endif (NOT CMAKE_BUILD_TYPE)
+
+# -------------------------------------------------------------
+# Packages
+# -------------------------------------------------------------
+
+# Test for Qt5 modules
+find_package(Qt5Widgets REQUIRED)
+
+# set corresponding libraries
+set( QT_LIBRARIES
+	Qt5::Widgets
+)
+
+# we need OpenGL
+find_package( OpenGL REQUIRED )
+
+if( APPLE )
+	find_library( IOKIT NAMES IOKit REQUIRED )
+	find_library( COREFOUNDATION NAMES CoreFoundation REQUIRED )
+	find_library( SECURITY_FRAMEWORK Security REQUIRED )
+	find_library( SYSTEM_CONFIGURATION SystemConfiguration REQUIRED )
+
+	set( APPLE_FRAMEWORKS
+		${IOKIT}
+		${SECURITY_FRAMEWORK}
+		${COREFOUNDATION}
+		${SYSTEM_CONFIGURATION}
+	)
+endif( APPLE )
+
+
+# -------------------------------------------------------------
+# Application
+# -------------------------------------------------------------
+
+# automatically add CMAKE_CURRENT_SOURCE_DIR and CMAKE_CURRENT_BINARY_DIR to the include directories in every processed CMakeLists.txt
+set( CMAKE_INCLUDE_CURRENT_DIR ON )
+
+include_directories(
+	${PROJECT_SOURCE_DIR}		# needed so that ui-generated header files find our own headers
+	${Qt5Widgets_INCLUDE_DIRS}
+)
+
+# collect a list of all designer ui files
+file( GLOB APP_UIS ${PROJECT_SOURCE_DIR}/*.ui )
+
+# collect a list of all header files (to be used in MOC compiler)
+file( GLOB APP_HDRS ${PROJECT_SOURCE_DIR}/*.h )
+
+# collect a list of all source files in this directory
+file( GLOB APP_SRCS ${PROJECT_SOURCE_DIR}/*.cpp )
+
+# collect the Qt resource files (*.qrc)
+file( GLOB APP_QRCS ${PROJECT_SOURCE_DIR}/*.qrc )
+
+# look for Windows rc file
+file( GLOB APP_WIN_RC ${PROJECT_SOURCE_DIR}/*.rc )
+
+# look for Apple icns file
+file( GLOB APP_MACOS_ICNS ${PROJECT_SOURCE_DIR}/*.icns )
+
+qt5_wrap_ui( APP_UI_SRCS ${APP_UIS} )
+qt5_add_resources( APP_RC_SRCS ${APP_QRCS} )
+qt5_wrap_cpp( APP_MOC_SRCS ${APP_HDRS} )
+
+# build application executable for the different platforms
+if( WIN32 )
+	add_executable( ${PROJECT_NAME} WIN32
+					${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS} ${APP_WIN_RC}
+	)
+
+	# on Windows, add gdi and gdi32 for OpenGL support
+	set( WIN_FRAMEWORKS iphlpapi gdiplus gdi32 user32 ole32 )
+endif( WIN32 )
+
+if( UNIX )
+	if( APPLE )
+		add_executable( ${PROJECT_NAME} MACOSX_BUNDLE
+						${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS} ${APP_MACOS_ICNS}
+		)
+	else( APPLE )
+		add_executable( ${PROJECT_NAME}
+						${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS}
+		)
+	endif( APPLE )
+endif( UNIX )
+
+
+# link libraries
+target_link_libraries( ${PROJECT_NAME}
+	${QT_LIBRARIES}
+	${OPENGL_LIBRARIES}
+	${APPLE_FRAMEWORKS}
+	${WIN_FRAMEWORKS}
+)</pre>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_erstellung_unter_linux">10.1.1. Erstellung unter Linux</h4>
+<div class="paragraph">
+<p>Um Quelltexte und Resourcendateien nicht mit den generierten Dateien in einem Verzeichnis zu haben, lohnt sich ein <em>out-of-source</em> build, d.h. in einem getrennte Verzeichnis. Beispielsweise kann man parallel zum <code>Tutorial_05</code>-Verzeichnis noch ein Verzeichnis <code>build_Tutorial_05</code> anlegen. In diesem Verzeichnis reichen dann folgende Befehle zur Erstellung aus:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash">cmake <span class="nt">-DCMAKE_BUILD_TYPE</span>:String<span class="o">=</span><span class="s2">"Release"</span> ../Tutorial_05
+make <span class="nt">-j4</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Das Argument <code>-DCMAKE_BUILD_TYPE:String="Release"</code> legt ein Release-Build fest, Standard ist Debug. <code>-j4</code> legt beim make das Erstellen mit 4 parallelen Jobs fest.</p>
+</div>
+<div class="sect4">
+<h5 id="_mit_eigener_qt_version_bauen">Mit eigener Qt Version bauen</h5>
+<div class="paragraph">
+<p>Falls nicht das systemweit installierte Qt verwendet werden soll, kann man auch den <code>CMAKE_PREFIX_PATH</code> auf eine eigene Qt Installation umbiegen.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">export </span><span class="nv">CMAKE_PREFIX_PATH</span><span class="o">=</span>~/Qt/5.14.1/gcc_64/bin
+cmake <span class="nt">-DCMAKE_BUILD_TYPE</span>:String<span class="o">=</span><span class="s2">"Release"</span> ../Tutorial_05
+make <span class="nt">-j4</span></code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_erstellen_unter_macos">10.1.2. Erstellen unter MacOS</h4>
+<div class="paragraph">
+<p>Ganz genauso wie unter Linux.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_erstellung_unter_windows">10.1.3. Erstellung unter Windows</h4>
+<div class="paragraph">
+<p>Fast genauso wie unter Linux, nur eben mit Batch-Befehlen. Hier ist ein Beispiel für die Verwendung eines VC-Compilers, bereits als Batch-Datei zusammengestellt:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="batch">@echo <span class="na">off</span>
+
+<span class="c">:: cl compiler path</span>
+<span class="k">call</span> <span class="s2">"c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat"</span> <span class="kd">x64</span>
+
+<span class="c">:: path to Qt</span>
+<span class="kd">set</span> <span class="kd">CMAKE_PREFIX_PATH</span><span class="o">=</span><span class="kd">c</span>:\Qt\5.11.3\msvc2015_64
+
+<span class="c">:: configure in release mode, to build with JOM</span>
+<span class="kd">cmake</span> <span class="na">-G </span><span class="s2">"NMake Makefiles JOM"</span> <span class="na">-DCMAKE</span>_BUILD_TYPE:String<span class="o">=</span><span class="s2">"Release"</span> ..\Tutorial_05
+
+<span class="c">:: build</span>
+<span class="kd">jom</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Natürlich muss man die Pfade zum VC Compiler und zur Qt Installation im Batch-Script oben anpassen.</p>
+</div>
+<div class="paragraph">
+<p>Alternativ kann man unter Windows CMake auch dazu benutzen, VC Projektdateien zu erstellen, aber wenn man Qt Creator hat, wer braucht dann VC als Editor?</p>
+</div>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
 Version 0.5.0<br>
-Last updated 2020-04-01 10:26:26 +0200
+Last updated 2020-04-05 09:39:09 +0200
 </div>
 </div>
 <style>

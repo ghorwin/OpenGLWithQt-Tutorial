@@ -67,7 +67,27 @@ private:
 
 Die Funktionen `initializeGL()` und `paintGL()` sind aus den vorangegangen Tutorials bekannt. Die Funktion `resizeGL()` ist eigentlich nur eine Bequemlichkeitsfunktion, welche aus dem Eventhandler `resizeEvent()` aufgerufen wird.
 
-Neu ist jedoch die Funktion `initOpenGL()`, in der die OpenGL-Initialisierung (OpenGL Context) gemacht wird. Normalerweise wird die Initialisierung beim ersten Anzeigen des Fensters (genaugenommen beim ersten ResizeEvent) aufgerufen, bzw. beim ersten Zeichnen.
+Neu ist jedoch die Funktion `initOpenGL()`, in der die OpenGL-Initialisierung (OpenGL Context) gemacht wird. 
+
+.OpenGLWindow.cpp:initOpenGL()
+[source,c++]
+----
+void OpenGLWindow::initOpenGL() {
+	Q_ASSERT(m_context == nullptr);
+
+	m_context = new QOpenGLContext(this);
+	m_context->setFormat(requestedFormat());
+	m_context->create();
+
+	m_context->makeCurrent(this);
+	Q_ASSERT(m_context->isValid());
+
+	initializeOpenGLFunctions();
+	initializeGL(); // call user code
+}
+----
+
+Normalerweise wird die Initialisierung beim ersten Anzeigen des Fensters (genaugenommen beim ersten ResizeEvent) aufgerufen, bzw. beim ersten Zeichnen.
 
 .OpenGLWindow.cpp: Funktion resizeEvent()
 [source,c++]
