@@ -5,6 +5,18 @@ In diesem Tutorial geht es um zwei Themen:
 - sinnvolle Fehlerbehandlung und Kapselung der Fehlerausgaben
 - Profiling von GPU Operationen (sinnvoll für die nächsten Tutorials, in denen durchaus zeitkritische Operationen angestoßen werden)
 
+Qt-Klassen in diesem Tutorial:
+
+- `QOpenGLDebugLogger`
+- `QOpenGLTimerQuery`
+- `QOpenGLTimeMonitor`
+- `QElapsedTimer`
+
+[NOTE]
+====
+Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_06[Tutorial_06]
+====
+
 == Fehlerbehandlung
 
 Alle bisher vorgestellten Qt-Wrapper-Klassen um native OpenGL-Aufrufe haben bereits eine Fehleranalyse eingebaut, also bspw. `QOpenGLShaderProgram`, `QOpenGLBuffer` oder `QOpenGLContext`.
@@ -207,7 +219,7 @@ FUNCID(ShaderProgram::create);
 const char * const FUNC_ID = "[ShaderProgram::create]";
 ----
 
-Die Klasse `QOpenGLException` nimmt im Konstruktor entweder ein oder zwei Argumente, im Beispiel oben ist die Variante mit den zwei Argumenten verwendet. Nun kann man in der Aufrufhierarchie weiter oben die Exception fangen und mit weiteren Informationen anreichern. Zum Beispiel:
+Die Klasse `OpenGLException` nimmt im Konstruktor entweder ein oder zwei Argumente, im Beispiel oben ist die Variante mit den zwei Argumenten verwendet. Nun kann man in der Aufrufhierarchie weiter oben die Exception fangen und mit weiteren Informationen anreichern. Zum Beispiel:
 
 [source,c++]
 ----
@@ -252,6 +264,7 @@ catch (OpenGLException & ex) {
 	return EXIT_FAILURE;
 }
 ----
+
 Aber wenn nun eine Exception geworfen wird, bekommt man folgende Warnung ausgegeben:
 
 ----
@@ -289,6 +302,239 @@ public:
 };
 ----
 
-Soweit recht klar, es sollte jedoch noch erwähnt werden, was das Flag `m_aboutToTerminate` for eine Bewandnis hat.
+Soweit recht klar, es sollte jedoch noch erwähnt werden, was das Flag `m_aboutToTerminate` for eine Bewandnis hat. Letztlich wird `notify()` als Teil der Ereignisschleife aufgerufen, d.h. nach Rückkehr aus `notify()` landet man wieder in der Ereignisschleife, und weitere Teiles des Programms (wie z.B. `paintGL()`-Funktionen) können aufgerufen werden, bevor `exit()` greift.
 
-Letztlich wird `notify()` als Teil der Ereignisschleife aufgerufen, d.h. 
+Damit man nicht auf un-initialisierte Variablen zugreift, kann man am Anfang von Funktionen dieses Flag prüfen, und notfalls einfach die Arbeit verweigern. In der `paintGL()`-Funktion sähe das z.B. so aus:
+
+.SceneView.cpp:paintGL()
+[source,c++]
+----
+void SceneView::paintGL() {
+	if (((DebugApplication *)qApp)->m_aboutToTerminate)
+		return;
+
+    ...
+}
+----
+
+Der alte C-cast ist natürlich nicht ganz auf der Höhe der Zeit, aber einen (teuren) dynamic cast braucht man nur, wenn man sich nicht sicher ist, ob tatsächlich ein `DebugApplication`-Objekt verwendet wird (also z.B. in einer Bibliotheksfunktion). 
+
+Ist die Ereignisschleife dann abgearbeitet, wird das Programm kontrolliert beendet, als hätte man das Hauptfenster geschlossen. Damit muss man dann auch das Aufräumen des Speichers nur einmal programmieren.
+
+=== Qt-MessageHandler
+
+An verschiedenen Stellen im Qt-Quelltext (und natürlich eigenem Quelltext) werden die Funktionen `qDebug()` oder `qWarning()` verwendet. Wenn man diese Ausgaben in einem QWidget sehen möchte (bspw. `QPlainTextEdit`), oder in eine Log-Datei schreiben möchte, kann man einen eigenen Qt-MessageHandler installieren:
+
+.main.cpp
+----
+void qDebugMsgHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg) {
+	(void) context;
+	QString msgPrefix = "[" + QDateTime::currentDateTime().toString() + "] ";
+	switch (type) {
+		case QtDebugMsg		: msgPrefix += "Debug:    "; break;
+		case QtWarningMsg	: msgPrefix += "Warning:  "; break;
+		case QtCriticalMsg	: msgPrefix += "Critical: "; break;
+		case QtFatalMsg		: msgPrefix += "Fatal:    "; break;
+		case QtInfoMsg		: msgPrefix += "Info:     "; break;
+	}
+	QStringList lines = msg.split("\n");
+	for (const QString & l : lines)
+		std::cout << (msgPrefix + l).toStdString() << std::endl;
+}
+
+
+int main(int argc, char **argv) {
+	qInstallMessageHandler(qDebugMsgHandler);
+
+    ...
+}
+----
+
+Das führt dann zu schön formatierten Ausgaben mit Zeitstempel:
+
+----
+[So. Apr. 5 21:17:58 2020] Debug:    GL_KHR_debug extension available
+[So. Apr. 5 21:18:02 2020] Debug:    Debug Logger initialized
+[So. Apr. 5 21:18:02 2020] Debug:    
+[So. Apr. 5 21:18:13 2020] Debug:    BoxObject - VertexBuffer size = 5625.56 kByte
+[So. Apr. 5 21:18:21 2020] Debug:    ++++ [APISource:OtherType] Buffer detailed info: Buffer object 1 (bound to GL_ARRAY_BUFFER_ARB, usage hint is GL_STATIC_DRAW) will use VIDEO memory as the source for buffer object operations.
+[So. Apr. 5 21:18:21 2020] Debug:    
+[So. Apr. 5 21:18:27 2020] Debug:    BoxObject - ElementBuffer size = 1406.39 kByte
+[So. Apr. 5 21:18:27 2020] Debug:    ++++ [APISource:OtherType] Buffer detailed info: Buffer object 2 (bound to GL_ELEMENT_ARRAY_BUFFER_ARB, usage hint is GL_STATIC_DRAW) will use VIDEO memory as the source for buffer object operations.
+[So. Apr. 5 21:18:27 2020] Debug:    
+[So. Apr. 5 21:18:27 2020] Debug:    GridObject - VertexBuffer size = 31.25 kByte
+[So. Apr. 5 21:18:27 2020] Debug:    ++++ [APISource:OtherType] Buffer detailed info: Buffer object 3 (bound to GL_ARRAY_BUFFER_ARB, usage hint is GL_STATIC_DRAW) will use VIDEO memory as the source for buffer object operations.
+[So. Apr. 5 21:18:27 2020] Debug:    
+[So. Apr. 5 21:18:27 2020] Debug:    SceneView::paintGL(): Rendering to: 700 x 416
+[So. Apr. 5 21:18:27 2020] Debug:       0.002048 ms/frame
+[So. Apr. 5 21:18:27 2020] Debug:       6.18394 ms/frame
+[So. Apr. 5 21:18:27 2020] Debug:       0.001024 ms/frame
+[So. Apr. 5 21:18:27 2020] Debug:       1.97427 ms/frame
+[So. Apr. 5 21:18:27 2020] Debug:    Total render time:  8.16128 ms/frame
+[So. Apr. 5 21:18:27 2020] Debug:    Total paintGL time:  11 ms----
+----
+
+In dieser Logausgabe sieht man schonmal zwei interessante Inhalte:
+
+- OpenGL-Debug-Informationen
+- Profiling-Ausgaben
+
+=== QOpenGLDebugLogger
+
+Zusätzliche Debug-Ausgaben lassen sich mit der Klasse `QOpenGLDebugLogger` erhalten (welche intern `glGetError()` aufruft und Meldungen via signal-slot-Verbindung an eigene Slots weiterleitet. Die Qt-Dokumentation beschreibt das Feature ausreichend - der Tutorial 06 Quelltext enthält ein Beispiel der Verwendung dieser Klasse.
+
+== Profiling und Performance-Tuning
+
+Wenn man OpenGL-Performance-Probleme analysieren und beheben will, braucht man Messungen. Hierfür gibt es OpenGL-Timers bzw. Zeitstempel, die durch die Qt-Klasse `QOpenGLTimerQuery` gekapselt sind.
+
+Die Verwendung ist denkbar einfach, allerdings mit einer kleinen Tücke:
+
+[source,c++]
+----
+QOpenGLTimerQuery startTimer;
+QOpenGLTimerQuery endTimer;
+
+...
+
+startTimer.create();
+endTimer.create();
+
+...
+
+startTimer.recordTimestamp();
+
+OPEN_GL_CODE
+
+endTimer.recordTimestamp();
+
+...
+
+GLuint64 startT = m_startTimer.waitForResult();
+GLuint64 endT = m_endTimer.waitForResult();
+qDebug() << "Render time: " << (endT - startT)*1e-6 << "ms/frame";
+
+...
+
+startTimer.destroy();
+endTimer.destroy();
+----
+
+Das Problem besteht nun darin, dass es etwas Zeit dauern kann, bis die Funktionen `waitForResult()` fertig sind. Während dieser Zeit wartet der Thread und blockiert die CPU. Ist also eventuell nicht die ideale Variante. Man kann auch erfragen, ob die Werte bereits da sind, mittels der Funktion `isResultAvailable()`.
+
+Man kann dann in der `paintGL()`-Funktion einfach diese Abfrage einbauen und die bis dahin gesammelten Daten ausgeben. Die einfachste Form ist jedoch das Warten auf die Daten am Ende der Schleife:
+
+.SceneView.cpp:paintGL()
+[source,c++]
+----
+void SceneView::paintGL() {
+
+    ....
+
+    // record start time stamp
+	m_startTimer.recordTimestamp();
+	
+	// *** render boxes
+	SHADER(0)->bind();
+	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
+	m_boxObject.render(); // render the boxes
+	SHADER(0)->release();
+
+	// *** render grid ***
+	SHADER(1)->bind();
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[0], m_worldToView);
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], gridColor);
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[2], backColor);
+	m_gridObject.render(); // render the grid
+	SHADER(1)->release();
+
+	m_endTimer.recordTimestamp();
+
+	GLuint64 startT = m_startTimer.waitForResult();
+	GLuint64 endT = m_endTimer.waitForResult();
+	qDebug() << "Render time: " << (endT - startT)*1e-6 << "ms/frame";
+	
+	...
+}
+----
+
+Wenn man etwas genauer wissen möchte, welcher Teil des OpenGL-Codes den größten Zeitaufwand bedeutet, so könnte man einfach mehrere Timer verwenden. Qt stellt zu diesem Zweck jedoch die hilfreiche Klasse `QOpenGLTimeMonitor` zur Verfügung, die mehrere in Sequenz aufgerufenen OpenGL-Timer-Objekte verwaltet.
+
+Die Verwendung ist hinreichend einfach:
+
+[source,c++]
+----
+QOpenGLTimeMonitor m_timers;
+
+...
+
+// Initialisierung
+m_timers.setSampleCount(5);
+m_timers.create();
+
+...
+
+// Render loop
+
+m_timers.reset();
+m_timers.recordSample(); // setup paint #1
+
+// *** render boxes
+SHADER(0)->bind();
+SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
+
+m_timers.recordSample(); // render #1
+m_boxObject.render(); 
+SHADER(0)->release();
+
+// *** render grid afterwards ***
+
+m_timers.recordSample(); // setup paint #2
+
+SHADER(1)->bind();
+SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[0], m_worldToView);
+SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], gridColor);
+SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[2], backColor);
+
+m_timers.recordSample(); // render #2
+m_gridObject.render();
+SHADER(1)->release();
+
+m_timers.recordSample(); // finish
+
+// Intervallausgabe
+QVector<GLuint64> intervals = m_timers.waitForIntervals();
+for (GLuint64 it : intervals)
+	qDebug() << it*1e-6 << "ms/frame";
+
+// Zeitstempel
+QVector<GLuint64> samples = m_timers.waitForSamples();
+// Gesamtzeitausgabe
+qDebug() << "Render time: " << (samples.back() - samples.front())*1e-6 << "ms/frame";
+
+...
+
+// Cleanup
+m_timers.destroy();
+----
+
+Wichtig ist, dass vor der Initialisierung mittels `setSamplesCount()` die Anzahl der geplanten `recordSample()`-Aufrufe festgelegt wird.
+
+=== GPU und CPU Profiling
+
+Die Schwierigkeit bei der Optimierung von OpenGL-Code liegt in der parallelen Ausführung von GPU und CPU-Code, und den mitunter schwierig zu erkennenden Sychronisationsstellen. Grundregel sollte sein, dass `paintGL()`-Aufrufe schnell genug hintereinander erfolgen, um Animationen/Kamerabewegungen flüssig darzustellen. D.h. die _Summe_ aus OpenGL-Zeit und CPU-Zeit (z.B. für Eingabebehandlung oder Datenverwaltung) sollte < als die zur Verfügung stehende Zeit pro Frame sein.
+
+Was man machen kann, ist die Zeit der gesamten `paintGL()`-Funktion zu messen, wobei man die Klasse `QElapsedTimer` verwenden kann, also z.B. so:
+
+.SceneView.cpp:paintGL()
+[source,c++]
+----
+void SceneView::paintGL() {
+	m_cpuTimer.start();
+	
+	....
+	
+	qint64 elapsedMs = m_cpuTimer.elapsed();
+	qDebug() << "Total paintGL time: " << elapsedMs << "ms";
+}
+----
+

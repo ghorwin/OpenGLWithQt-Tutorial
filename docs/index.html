@@ -202,6 +202,13 @@ table {
 <li><a href="#_fehlerbehandlung">6.1. Fehlerbehandlung</a>
 <ul class="sectlevel3">
 <li><a href="#_exceptions_und_qt">6.1.1. Exceptions und Qt</a></li>
+<li><a href="#_qt_messagehandler">6.1.2. Qt-MessageHandler</a></li>
+<li><a href="#_qopengldebuglogger">6.1.3. QOpenGLDebugLogger</a></li>
+</ul>
+</li>
+<li><a href="#_profiling_und_performance_tuning">6.2. Profiling und Performance-Tuning</a>
+<ul class="sectlevel3">
+<li><a href="#_gpu_und_cpu_profiling">6.2.1. GPU und CPU Profiling</a></li>
 </ul>
 </li>
 </ul>
@@ -222,9 +229,8 @@ table {
 <ul class="sectlevel2">
 <li><a href="#_cmakelists_txt_für_opengl_anwendungen">10.1. CMakeLists.txt für OpenGL-Anwendungen</a>
 <ul class="sectlevel3">
-<li><a href="#_erstellung_unter_linux">10.1.1. Erstellung unter Linux</a></li>
-<li><a href="#_erstellen_unter_macos">10.1.2. Erstellen unter MacOS</a></li>
-<li><a href="#_erstellung_unter_windows">10.1.3. Erstellung unter Windows</a></li>
+<li><a href="#_erstellung">10.1.1. Erstellung</a></li>
+<li><a href="#_deployment">10.1.2. Deployment</a></li>
 </ul>
 </li>
 </ul>
@@ -4853,6 +4859,39 @@ b.transform(trans.toMatrix());</pre>
 </li>
 </ul>
 </div>
+<div class="paragraph">
+<p>Qt-Klassen in diesem Tutorial:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>QOpenGLDebugLogger</code></p>
+</li>
+<li>
+<p><code>QOpenGLTimerQuery</code></p>
+</li>
+<li>
+<p><code>QOpenGLTimeMonitor</code></p>
+</li>
+<li>
+<p><code>QElapsedTimer</code></p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Quelltext für dieses Tutorial liegt im github repo:  <a href="https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_06">Tutorial_06</a></p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 <div class="sect2">
 <h3 id="_fehlerbehandlung">6.1. Fehlerbehandlung</h3>
 <div class="paragraph">
@@ -5098,7 +5137,7 @@ b.transform(trans.toMatrix());</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Die Klasse <code>QOpenGLException</code> nimmt im Konstruktor entweder ein oder zwei Argumente, im Beispiel oben ist die Variante mit den zwei Argumenten verwendet. Nun kann man in der Aufrufhierarchie weiter oben die Exception fangen und mit weiteren Informationen anreichern. Zum Beispiel:</p>
+<p>Die Klasse <code>OpenGLException</code> nimmt im Konstruktor entweder ein oder zwei Argumente, im Beispiel oben ist die Variante mit den zwei Argumenten verwendet. Nun kann man in der Aufrufhierarchie weiter oben die Exception fangen und mit weiteren Informationen anreichern. Zum Beispiel:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -5190,10 +5229,270 @@ QCoreApplication::notify() and catch all exceptions there.</pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Soweit recht klar, es sollte jedoch noch erwähnt werden, was das Flag <code>m_aboutToTerminate</code> for eine Bewandnis hat.</p>
+<p>Soweit recht klar, es sollte jedoch noch erwähnt werden, was das Flag <code>m_aboutToTerminate</code> for eine Bewandnis hat. Letztlich wird <code>notify()</code> als Teil der Ereignisschleife aufgerufen, d.h. nach Rückkehr aus <code>notify()</code> landet man wieder in der Ereignisschleife, und weitere Teiles des Programms (wie z.B. <code>paintGL()</code>-Funktionen) können aufgerufen werden, bevor <code>exit()</code> greift.</p>
 </div>
 <div class="paragraph">
-<p>Letztlich wird <code>notify()</code> als Teil der Ereignisschleife aufgerufen, d.h.</p>
+<p>Damit man nicht auf un-initialisierte Variablen zugreift, kann man am Anfang von Funktionen dieses Flag prüfen, und notfalls einfach die Arbeit verweigern. In der <code>paintGL()</code>-Funktion sähe das z.B. so aus:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp:paintGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">paintGL</span><span class="p">()</span> <span class="p">{</span>
+	<span class="k">if</span> <span class="p">(((</span><span class="n">DebugApplication</span> <span class="o">*</span><span class="p">)</span><span class="n">qApp</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">m_aboutToTerminate</span><span class="p">)</span>
+		<span class="k">return</span><span class="p">;</span>
+
+    <span class="p">...</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Der alte C-cast ist natürlich nicht ganz auf der Höhe der Zeit, aber einen (teuren) dynamic cast braucht man nur, wenn man sich nicht sicher ist, ob tatsächlich ein <code>DebugApplication</code>-Objekt verwendet wird (also z.B. in einer Bibliotheksfunktion).</p>
+</div>
+<div class="paragraph">
+<p>Ist die Ereignisschleife dann abgearbeitet, wird das Programm kontrolliert beendet, als hätte man das Hauptfenster geschlossen. Damit muss man dann auch das Aufräumen des Speichers nur einmal programmieren.</p>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_qt_messagehandler">6.1.2. Qt-MessageHandler</h4>
+<div class="paragraph">
+<p>An verschiedenen Stellen im Qt-Quelltext (und natürlich eigenem Quelltext) werden die Funktionen <code>qDebug()</code> oder <code>qWarning()</code> verwendet. Wenn man diese Ausgaben in einem QWidget sehen möchte (bspw. <code>QPlainTextEdit</code>), oder in eine Log-Datei schreiben möchte, kann man einen eigenen Qt-MessageHandler installieren:</p>
+</div>
+<div class="listingblock">
+<div class="title">main.cpp</div>
+<div class="content">
+<pre>void qDebugMsgHandler(QtMsgType type, const QMessageLogContext &amp;context, const QString &amp;msg) {
+	(void) context;
+	QString msgPrefix = "[" + QDateTime::currentDateTime().toString() + "] ";
+	switch (type) {
+		case QtDebugMsg		: msgPrefix += "Debug:    "; break;
+		case QtWarningMsg	: msgPrefix += "Warning:  "; break;
+		case QtCriticalMsg	: msgPrefix += "Critical: "; break;
+		case QtFatalMsg		: msgPrefix += "Fatal:    "; break;
+		case QtInfoMsg		: msgPrefix += "Info:     "; break;
+	}
+	QStringList lines = msg.split("\n");
+	for (const QString &amp; l : lines)
+		std::cout &lt;&lt; (msgPrefix + l).toStdString() &lt;&lt; std::endl;
+}
+
+
+int main(int argc, char **argv) {
+	qInstallMessageHandler(qDebugMsgHandler);
+
+    ...
+}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Das führt dann zu schön formatierten Ausgaben mit Zeitstempel:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>[So. Apr. 5 21:17:58 2020] Debug:    GL_KHR_debug extension available
+[So. Apr. 5 21:18:02 2020] Debug:    Debug Logger initialized
+[So. Apr. 5 21:18:02 2020] Debug:
+[So. Apr. 5 21:18:13 2020] Debug:    BoxObject - VertexBuffer size = 5625.56 kByte
+[So. Apr. 5 21:18:21 2020] Debug:    ++++ [APISource:OtherType] Buffer detailed info: Buffer object 1 (bound to GL_ARRAY_BUFFER_ARB, usage hint is GL_STATIC_DRAW) will use VIDEO memory as the source for buffer object operations.
+[So. Apr. 5 21:18:21 2020] Debug:
+[So. Apr. 5 21:18:27 2020] Debug:    BoxObject - ElementBuffer size = 1406.39 kByte
+[So. Apr. 5 21:18:27 2020] Debug:    ++++ [APISource:OtherType] Buffer detailed info: Buffer object 2 (bound to GL_ELEMENT_ARRAY_BUFFER_ARB, usage hint is GL_STATIC_DRAW) will use VIDEO memory as the source for buffer object operations.
+[So. Apr. 5 21:18:27 2020] Debug:
+[So. Apr. 5 21:18:27 2020] Debug:    GridObject - VertexBuffer size = 31.25 kByte
+[So. Apr. 5 21:18:27 2020] Debug:    ++++ [APISource:OtherType] Buffer detailed info: Buffer object 3 (bound to GL_ARRAY_BUFFER_ARB, usage hint is GL_STATIC_DRAW) will use VIDEO memory as the source for buffer object operations.
+[So. Apr. 5 21:18:27 2020] Debug:
+[So. Apr. 5 21:18:27 2020] Debug:    SceneView::paintGL(): Rendering to: 700 x 416
+[So. Apr. 5 21:18:27 2020] Debug:       0.002048 ms/frame
+[So. Apr. 5 21:18:27 2020] Debug:       6.18394 ms/frame
+[So. Apr. 5 21:18:27 2020] Debug:       0.001024 ms/frame
+[So. Apr. 5 21:18:27 2020] Debug:       1.97427 ms/frame
+[So. Apr. 5 21:18:27 2020] Debug:    Total render time:  8.16128 ms/frame
+[So. Apr. 5 21:18:27 2020] Debug:    Total paintGL time:  11 ms----</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In dieser Logausgabe sieht man schonmal zwei interessante Inhalte:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>OpenGL-Debug-Informationen</p>
+</li>
+<li>
+<p>Profiling-Ausgaben</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_qopengldebuglogger">6.1.3. QOpenGLDebugLogger</h4>
+<div class="paragraph">
+<p>Zusätzliche Debug-Ausgaben lassen sich mit der Klasse <code>QOpenGLDebugLogger</code> erhalten (welche intern <code>glGetError()</code> aufruft und Meldungen via signal-slot-Verbindung an eigene Slots weiterleitet. Die Qt-Dokumentation beschreibt das Feature ausreichend - der Tutorial 06 Quelltext enthält ein Beispiel der Verwendung dieser Klasse.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_profiling_und_performance_tuning">6.2. Profiling und Performance-Tuning</h3>
+<div class="paragraph">
+<p>Wenn man OpenGL-Performance-Probleme analysieren und beheben will, braucht man Messungen. Hierfür gibt es OpenGL-Timers bzw. Zeitstempel, die durch die Qt-Klasse <code>QOpenGLTimerQuery</code> gekapselt sind.</p>
+</div>
+<div class="paragraph">
+<p>Die Verwendung ist denkbar einfach, allerdings mit einer kleinen Tücke:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">QOpenGLTimerQuery</span> <span class="n">startTimer</span><span class="p">;</span>
+<span class="n">QOpenGLTimerQuery</span> <span class="n">endTimer</span><span class="p">;</span>
+
+<span class="p">...</span>
+
+<span class="n">startTimer</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>
+<span class="n">endTimer</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>
+
+<span class="p">...</span>
+
+<span class="n">startTimer</span><span class="p">.</span><span class="n">recordTimestamp</span><span class="p">();</span>
+
+<span class="n">OPEN_GL_CODE</span>
+
+<span class="n">endTimer</span><span class="p">.</span><span class="n">recordTimestamp</span><span class="p">();</span>
+
+<span class="p">...</span>
+
+<span class="n">GLuint64</span> <span class="n">startT</span> <span class="o">=</span> <span class="n">m_startTimer</span><span class="p">.</span><span class="n">waitForResult</span><span class="p">();</span>
+<span class="n">GLuint64</span> <span class="n">endT</span> <span class="o">=</span> <span class="n">m_endTimer</span><span class="p">.</span><span class="n">waitForResult</span><span class="p">();</span>
+<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Render time: "</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">endT</span> <span class="o">-</span> <span class="n">startT</span><span class="p">)</span><span class="o">*</span><span class="mf">1e-6</span> <span class="o">&lt;&lt;</span> <span class="s">"ms/frame"</span><span class="p">;</span>
+
+<span class="p">...</span>
+
+<span class="n">startTimer</span><span class="p">.</span><span class="n">destroy</span><span class="p">();</span>
+<span class="n">endTimer</span><span class="p">.</span><span class="n">destroy</span><span class="p">();</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Das Problem besteht nun darin, dass es etwas Zeit dauern kann, bis die Funktionen <code>waitForResult()</code> fertig sind. Während dieser Zeit wartet der Thread und blockiert die CPU. Ist also eventuell nicht die ideale Variante. Man kann auch erfragen, ob die Werte bereits da sind, mittels der Funktion <code>isResultAvailable()</code>.</p>
+</div>
+<div class="paragraph">
+<p>Man kann dann in der <code>paintGL()</code>-Funktion einfach diese Abfrage einbauen und die bis dahin gesammelten Daten ausgeben. Die einfachste Form ist jedoch das Warten auf die Daten am Ende der Schleife:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp:paintGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">paintGL</span><span class="p">()</span> <span class="p">{</span>
+
+    <span class="p">....</span>
+
+    <span class="c1">// record start time stamp</span>
+	<span class="n">m_startTimer</span><span class="p">.</span><span class="n">recordTimestamp</span><span class="p">();</span>
+
+	<span class="c1">// *** render boxes</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">bind</span><span class="p">();</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setUniformValue</span><span class="p">(</span><span class="n">m_shaderPrograms</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="n">m_uniformIDs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">m_worldToView</span><span class="p">);</span>
+	<span class="n">m_boxObject</span><span class="p">.</span><span class="n">render</span><span class="p">();</span> <span class="c1">// render the boxes</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">release</span><span class="p">();</span>
+
+	<span class="c1">// *** render grid ***</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">bind</span><span class="p">();</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setUniformValue</span><span class="p">(</span><span class="n">m_shaderPrograms</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">m_uniformIDs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">m_worldToView</span><span class="p">);</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setUniformValue</span><span class="p">(</span><span class="n">m_shaderPrograms</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">m_uniformIDs</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">gridColor</span><span class="p">);</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setUniformValue</span><span class="p">(</span><span class="n">m_shaderPrograms</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">m_uniformIDs</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">backColor</span><span class="p">);</span>
+	<span class="n">m_gridObject</span><span class="p">.</span><span class="n">render</span><span class="p">();</span> <span class="c1">// render the grid</span>
+	<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">release</span><span class="p">();</span>
+
+	<span class="n">m_endTimer</span><span class="p">.</span><span class="n">recordTimestamp</span><span class="p">();</span>
+
+	<span class="n">GLuint64</span> <span class="n">startT</span> <span class="o">=</span> <span class="n">m_startTimer</span><span class="p">.</span><span class="n">waitForResult</span><span class="p">();</span>
+	<span class="n">GLuint64</span> <span class="n">endT</span> <span class="o">=</span> <span class="n">m_endTimer</span><span class="p">.</span><span class="n">waitForResult</span><span class="p">();</span>
+	<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Render time: "</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">endT</span> <span class="o">-</span> <span class="n">startT</span><span class="p">)</span><span class="o">*</span><span class="mf">1e-6</span> <span class="o">&lt;&lt;</span> <span class="s">"ms/frame"</span><span class="p">;</span>
+
+	<span class="p">...</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Wenn man etwas genauer wissen möchte, welcher Teil des OpenGL-Codes den größten Zeitaufwand bedeutet, so könnte man einfach mehrere Timer verwenden. Qt stellt zu diesem Zweck jedoch die hilfreiche Klasse <code>QOpenGLTimeMonitor</code> zur Verfügung, die mehrere in Sequenz aufgerufenen OpenGL-Timer-Objekte verwaltet.</p>
+</div>
+<div class="paragraph">
+<p>Die Verwendung ist hinreichend einfach:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">QOpenGLTimeMonitor</span> <span class="n">m_timers</span><span class="p">;</span>
+
+<span class="p">...</span>
+
+<span class="c1">// Initialisierung</span>
+<span class="n">m_timers</span><span class="p">.</span><span class="n">setSampleCount</span><span class="p">(</span><span class="mi">5</span><span class="p">);</span>
+<span class="n">m_timers</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>
+
+<span class="p">...</span>
+
+<span class="c1">// Render loop</span>
+
+<span class="n">m_timers</span><span class="p">.</span><span class="n">reset</span><span class="p">();</span>
+<span class="n">m_timers</span><span class="p">.</span><span class="n">recordSample</span><span class="p">();</span> <span class="c1">// setup paint #1</span>
+
+<span class="c1">// *** render boxes</span>
+<span class="n">SHADER</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">bind</span><span class="p">();</span>
+<span class="n">SHADER</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setUniformValue</span><span class="p">(</span><span class="n">m_shaderPrograms</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="n">m_uniformIDs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">m_worldToView</span><span class="p">);</span>
+
+<span class="n">m_timers</span><span class="p">.</span><span class="n">recordSample</span><span class="p">();</span> <span class="c1">// render #1</span>
+<span class="n">m_boxObject</span><span class="p">.</span><span class="n">render</span><span class="p">();</span>
+<span class="n">SHADER</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">release</span><span class="p">();</span>
+
+<span class="c1">// *** render grid afterwards ***</span>
+
+<span class="n">m_timers</span><span class="p">.</span><span class="n">recordSample</span><span class="p">();</span> <span class="c1">// setup paint #2</span>
+
+<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">bind</span><span class="p">();</span>
+<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setUniformValue</span><span class="p">(</span><span class="n">m_shaderPrograms</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">m_uniformIDs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">m_worldToView</span><span class="p">);</span>
+<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setUniformValue</span><span class="p">(</span><span class="n">m_shaderPrograms</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">m_uniformIDs</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">gridColor</span><span class="p">);</span>
+<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setUniformValue</span><span class="p">(</span><span class="n">m_shaderPrograms</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="n">m_uniformIDs</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">backColor</span><span class="p">);</span>
+
+<span class="n">m_timers</span><span class="p">.</span><span class="n">recordSample</span><span class="p">();</span> <span class="c1">// render #2</span>
+<span class="n">m_gridObject</span><span class="p">.</span><span class="n">render</span><span class="p">();</span>
+<span class="n">SHADER</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">release</span><span class="p">();</span>
+
+<span class="n">m_timers</span><span class="p">.</span><span class="n">recordSample</span><span class="p">();</span> <span class="c1">// finish</span>
+
+<span class="c1">// Intervallausgabe</span>
+<span class="n">QVector</span><span class="o">&lt;</span><span class="n">GLuint64</span><span class="o">&gt;</span> <span class="n">intervals</span> <span class="o">=</span> <span class="n">m_timers</span><span class="p">.</span><span class="n">waitForIntervals</span><span class="p">();</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">GLuint64</span> <span class="n">it</span> <span class="o">:</span> <span class="n">intervals</span><span class="p">)</span>
+	<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">it</span><span class="o">*</span><span class="mf">1e-6</span> <span class="o">&lt;&lt;</span> <span class="s">"ms/frame"</span><span class="p">;</span>
+
+<span class="c1">// Zeitstempel</span>
+<span class="n">QVector</span><span class="o">&lt;</span><span class="n">GLuint64</span><span class="o">&gt;</span> <span class="n">samples</span> <span class="o">=</span> <span class="n">m_timers</span><span class="p">.</span><span class="n">waitForSamples</span><span class="p">();</span>
+<span class="c1">// Gesamtzeitausgabe</span>
+<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Render time: "</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">samples</span><span class="p">.</span><span class="n">back</span><span class="p">()</span> <span class="o">-</span> <span class="n">samples</span><span class="p">.</span><span class="n">front</span><span class="p">())</span><span class="o">*</span><span class="mf">1e-6</span> <span class="o">&lt;&lt;</span> <span class="s">"ms/frame"</span><span class="p">;</span>
+
+<span class="p">...</span>
+
+<span class="c1">// Cleanup</span>
+<span class="n">m_timers</span><span class="p">.</span><span class="n">destroy</span><span class="p">();</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Wichtig ist, dass vor der Initialisierung mittels <code>setSamplesCount()</code> die Anzahl der geplanten <code>recordSample()</code>-Aufrufe festgelegt wird.</p>
+</div>
+<div class="sect3">
+<h4 id="_gpu_und_cpu_profiling">6.2.1. GPU und CPU Profiling</h4>
+<div class="paragraph">
+<p>Die Schwierigkeit bei der Optimierung von OpenGL-Code liegt in der parallelen Ausführung von GPU und CPU-Code, und den mitunter schwierig zu erkennenden Sychronisationsstellen. Grundregel sollte sein, dass <code>paintGL()</code>-Aufrufe schnell genug hintereinander erfolgen, um Animationen/Kamerabewegungen flüssig darzustellen. D.h. die <em>Summe</em> aus OpenGL-Zeit und CPU-Zeit (z.B. für Eingabebehandlung oder Datenverwaltung) sollte &lt; als die zur Verfügung stehende Zeit pro Frame sein.</p>
+</div>
+<div class="paragraph">
+<p>Was man machen kann, ist die Zeit der gesamten <code>paintGL()</code>-Funktion zu messen, wobei man die Klasse <code>QElapsedTimer</code> verwenden kann, also z.B. so:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp:paintGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">paintGL</span><span class="p">()</span> <span class="p">{</span>
+	<span class="n">m_cpuTimer</span><span class="p">.</span><span class="n">start</span><span class="p">();</span>
+
+	<span class="p">....</span>
+
+	<span class="n">qint64</span> <span class="n">elapsedMs</span> <span class="o">=</span> <span class="n">m_cpuTimer</span><span class="p">.</span><span class="n">elapsed</span><span class="p">();</span>
+	<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Total paintGL time: "</span> <span class="o">&lt;&lt;</span> <span class="n">elapsedMs</span> <span class="o">&lt;&lt;</span> <span class="s">"ms"</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
 </div>
 </div>
 </div>
@@ -5444,7 +5743,9 @@ target_link_libraries( ${PROJECT_NAME}
 </div>
 </div>
 <div class="sect3">
-<h4 id="_erstellung_unter_linux">10.1.1. Erstellung unter Linux</h4>
+<h4 id="_erstellung">10.1.1. Erstellung</h4>
+<div class="sect4">
+<h5 id="_linux">Linux</h5>
 <div class="paragraph">
 <p>Um Quelltexte und Resourcendateien nicht mit den generierten Dateien in einem Verzeichnis zu haben, lohnt sich ein <em>out-of-source</em> build, d.h. in einem getrennte Verzeichnis. Beispielsweise kann man parallel zum <code>Tutorial_05</code>-Verzeichnis noch ein Verzeichnis <code>build_Tutorial_05</code> anlegen. In diesem Verzeichnis reichen dann folgende Befehle zur Erstellung aus:</p>
 </div>
@@ -5457,6 +5758,7 @@ make <span class="nt">-j4</span></code></pre>
 <div class="paragraph">
 <p>Das Argument <code>-DCMAKE_BUILD_TYPE:String="Release"</code> legt ein Release-Build fest, Standard ist Debug. <code>-j4</code> legt beim make das Erstellen mit 4 parallelen Jobs fest.</p>
 </div>
+</div>
 <div class="sect4">
 <h5 id="_mit_eigener_qt_version_bauen">Mit eigener Qt Version bauen</h5>
 <div class="paragraph">
@@ -5464,21 +5766,20 @@ make <span class="nt">-j4</span></code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="rouge highlight"><code data-lang="bash"><span class="nb">export </span><span class="nv">CMAKE_PREFIX_PATH</span><span class="o">=</span>~/Qt/5.14.1/gcc_64/bin
+<pre class="rouge highlight"><code data-lang="bash"><span class="nb">export </span><span class="nv">CMAKE_PREFIX_PATH</span><span class="o">=</span>~/Qt/5.14.1/gcc_64
 cmake <span class="nt">-DCMAKE_BUILD_TYPE</span>:String<span class="o">=</span><span class="s2">"Release"</span> ../Tutorial_05
 make <span class="nt">-j4</span></code></pre>
 </div>
 </div>
 </div>
-</div>
-<div class="sect3">
-<h4 id="_erstellen_unter_macos">10.1.2. Erstellen unter MacOS</h4>
+<div class="sect4">
+<h5 id="_macos">MacOS</h5>
 <div class="paragraph">
 <p>Ganz genauso wie unter Linux.</p>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_erstellung_unter_windows">10.1.3. Erstellung unter Windows</h4>
+<div class="sect4">
+<h5 id="_windows">Windows</h5>
 <div class="paragraph">
 <p>Fast genauso wie unter Linux, nur eben mit Batch-Befehlen. Hier ist ein Beispiel für die Verwendung eines VC-Compilers, bereits als Batch-Datei zusammengestellt:</p>
 </div>
@@ -5504,6 +5805,25 @@ make <span class="nt">-j4</span></code></pre>
 </div>
 <div class="paragraph">
 <p>Alternativ kann man unter Windows CMake auch dazu benutzen, VC Projektdateien zu erstellen, aber wenn man Qt Creator hat, wer braucht dann VC als Editor?</p>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_deployment">10.1.2. Deployment</h4>
+<div class="sect4">
+<h5 id="_macos_2">MacOS</h5>
+<div class="listingblock">
+<div class="content">
+<pre>&gt; otool -L Tutorial_05.app/Contents/MacOS/Tutorial_05
+Tutorial_05.app/Contents/MacOS/Tutorial_05:
+	@rpath/QtWidgets.framework/Versions/5/QtWidgets (compatibility version 5.11.0, current version 5.11.3)
+	/System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL (compatibility version 1.0.0, current version 1.0.0)
+	@rpath/QtGui.framework/Versions/5/QtGui (compatibility version 5.11.0, current version 5.11.3)
+	@rpath/QtCore.framework/Versions/5/QtCore (compatibility version 5.11.0, current version 5.11.3)
+	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 120.1.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1226.10.1)</pre>
+</div>
+</div>
 </div>
 </div>
 </div>

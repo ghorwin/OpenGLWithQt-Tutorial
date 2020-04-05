@@ -160,7 +160,7 @@ void OpenGLWindow::initOpenGL() {
 
 	initializeOpenGLFunctions();
 
-#ifdef    GL_DEBUG
+#ifdef GL_DEBUG
 	if (m_context->hasExtension(QByteArrayLiteral("GL_KHR_debug")))
 		qDebug() << "GL_KHR_debug extension available";
 	else

@@ -66,8 +66,7 @@ SceneView::~SceneView() {
 		m_boxObject.destroy();
 		m_gridObject.destroy();
 
-		m_startTimer.destroy();
-		m_endTimer.destroy();
+		m_gpuTimers.destroy();
 	}
 }
 
@@ -89,8 +88,8 @@ void SceneView::initializeGL() {
 		m_gridObject.create(SHADER(1));
 
 		// Timer
-		m_startTimer.create();
-		m_endTimer.create();
+		m_gpuTimers.setSampleCount(5);
+		m_gpuTimers.create();
 	}
 	catch (OpenGLException & ex) {
 		throw OpenGLException(ex, "OpenGL initialization failed.", FUNC_ID);
@@ -116,6 +115,7 @@ void SceneView::resizeGL(int width, int height) {
 
 
 void SceneView::paintGL() {
+	m_cpuTimer.start();
 	if (((DebugApplication *)qApp)->m_aboutToTerminate)
 		return;
 
@@ -136,29 +136,31 @@ void SceneView::paintGL() {
 
 	QVector3D gridColor(0.5f, 0.5f, 0.7f);
 
-/*	if (m_startTimer.isResultAvailable() && m_endTimer.isResultAvailable()) {
-		GLuint64 startT = m_startTimer.waitForResult();
-		GLuint64 endT = m_endTimer.waitForResult();
+	m_gpuTimers.reset();
 
-		qDebug() << "Frame time: " << (endT - startT)*1e-6 << "ms";
-	}
-*/
+	m_gpuTimers.recordSample(); // setup boxes
 
 	// *** render boxes
-	m_startTimer.recordTimestamp();
 	SHADER(0)->bind();
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
-	m_boxObject.render(); // render the boxes
+
+	m_gpuTimers.recordSample(); // render boxes
+	m_boxObject.render();
 	SHADER(0)->release();
 
 	// *** render grid afterwards ***
 
+	m_gpuTimers.recordSample(); // setup grid
 	SHADER(1)->bind();
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[0], m_worldToView);
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], gridColor);
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[2], backColor);
-	m_gridObject.render(); // render the grid
+
+	m_gpuTimers.recordSample(); // render grid
+	m_gridObject.render();
 	SHADER(1)->release();
+
+	m_gpuTimers.recordSample(); // done painting
 
 #if 0
 	// do some animation stuff
@@ -166,15 +168,17 @@ void SceneView::paintGL() {
 	updateWorld2ViewMatrix();
 	renderLater();
 #endif
-	m_endTimer.recordTimestamp();
 
 	checkInput();
-//	if (m_startTimer.isResultAvailable() && m_endTimer.isResultAvailable()) {
-		GLuint64 startT = m_startTimer.waitForResult();
-		GLuint64 endT = m_endTimer.waitForResult();
 
-		qDebug() << "Frame time: " << (endT - startT)*1e-6 << "ms";
-//	}
+	QVector<GLuint64> intervals = m_gpuTimers.waitForIntervals();
+	for (GLuint64 it : intervals)
+		qDebug() << "  " << it*1e-6 << "ms/frame";
+	QVector<GLuint64> samples = m_gpuTimers.waitForSamples();
+	qDebug() << "Total render time: " << (samples.back() - samples.front())*1e-6 << "ms/frame";
+
+	qint64 elapsedMs = m_cpuTimer.elapsed();
+	qDebug() << "Total paintGL time: " << elapsedMs << "ms";
 }
 
 
