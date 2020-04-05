@@ -202,7 +202,7 @@ void SceneView::mouseReleaseEvent(QMouseEvent *event) {
 	checkInput();
 }
 
-void SceneView::mouseMoveEvent(QMouseEvent */*event*/) {
+void SceneView::mouseMoveEvent(QMouseEvent * /*event*/) {
 	checkInput();
 }
 
