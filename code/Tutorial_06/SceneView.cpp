@@ -15,7 +15,7 @@ License    : BSD License,
 #include <QOpenGLShaderProgram>
 #include <QDateTime>
 
-#include "OpenGLException.h"
+#include "DebugApplication.h"
 
 #define SHADER(x) m_shaderPrograms[x].shaderProgram()
 
@@ -109,6 +109,10 @@ void SceneView::resizeGL(int width, int height) {
 
 
 void SceneView::paintGL() {
+	DebugApplication * a = (DebugApplication *)qApp;
+	if (a->m_aboutToTerminate)
+		return;
+
 	// process input, i.e. check if any keys have been pressed
 	if (m_inputEventReceived)
 		processInput();

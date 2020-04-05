@@ -57,6 +57,7 @@ HEADERS += \
 	BoxMesh.h \
 	BoxObject.h \
 	Camera.h \
+	DebugApplication.h \
 	GridObject.h \
 	KeyboardMouseHandler.h \
 	OpenGLException.h \

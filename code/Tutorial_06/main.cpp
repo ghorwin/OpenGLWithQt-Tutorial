@@ -12,11 +12,13 @@ License    : BSD License,
 #include "TestDialog.h"
 
 #include <iostream>
+#include <ctime>
 
 #include <QApplication>
 #include <QDateTime>
 
 #include "OpenGLException.h"
+#include "DebugApplication.h"
 
 void qDebugMsgHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg) {
 	(void) context;
@@ -31,28 +33,6 @@ void qDebugMsgHandler(QtMsgType type, const QMessageLogContext &context, const Q
 	QStringList lines = msg.split("\n");
 	for (const QString & l : lines)
 		std::cout << (msgPrefix + l).toStdString() << std::endl;
-}
-
-
-class DebugApplication : public QApplication {
-public:
-	DebugApplication( int & argc, char ** argv) :  QApplication(argc, argv)
-	{}
-
-	virtual bool notify(QObject *recv, QEvent *e) override;
-};
-
-
-bool DebugApplication::notify(QObject *recv, QEvent *e) {
-
-	try {
-		return QApplication::notify( recv, e );
-	}
-	catch (OpenGLException &ex) {
-		ex.writeMsgStackToStream(std::cerr);
-		QApplication::exit(1);
-	}
-	return false;
 }
 
 

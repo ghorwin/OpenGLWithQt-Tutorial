@@ -95,7 +95,8 @@ void OpenGLWindow::initOpenGL() {
 	m_context->setFormat(requestedFormat());
 	m_context->create();
 
-	Q_ASSERT(m_context->makeCurrent(this));
+	m_context->makeCurrent(this);
+	Q_ASSERT(m_context->isValid());
 
 	initializeOpenGLFunctions();
 	initializeGL(); // call user code
