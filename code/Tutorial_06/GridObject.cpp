@@ -57,6 +57,7 @@ void GridObject::create(QOpenGLShaderProgram * shaderProgramm) {
 	m_vbo.bind();
 	m_vbo.setUsagePattern(QOpenGLBuffer::StaticDraw);
 	int vertexMemSize = m_bufferSize*sizeof(float);
+	qDebug() << "GridObject - VertexBuffer size =" << vertexMemSize/1024.0 << "kByte";
 	m_vbo.allocate(gridVertexBufferData.data(), vertexMemSize);
 
 	// layout(location = 0) = vec2 position

@@ -17,6 +17,8 @@ Source code is based on Qt Example OpenGLWindow, but has been simplified a lot.
 #include <QtGui/QWindow>
 #include <QtGui/QOpenGLFunctions>
 
+#include <QOpenGLDebugLogger>
+
 QT_BEGIN_NAMESPACE
 class QOpenGLContext;
 class QOpenGLContext;
@@ -65,11 +67,19 @@ protected:
 	virtual void paintGL() = 0;
 
 
-	QOpenGLContext *m_context;
+	QOpenGLContext		*m_context;
+
+private slots:
+
+	/*! Receives debug messages from QOpenGLDebugLogger */
+	void onMessageLogged(const QOpenGLDebugMessage &msg);
+
 
 private:
 	/*! Helper function to initialize the OpenGL context. */
 	void initOpenGL();
+
+	QOpenGLDebugLogger	*m_debugLogger;
 };
 
 #endif // OpenGLWindow_H

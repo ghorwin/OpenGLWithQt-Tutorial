@@ -22,7 +22,8 @@ Source code is based on Qt Example OpenGLWindow, but has been simplified a lot.
 
 OpenGLWindow::OpenGLWindow(QWindow *parent) :
 	QWindow(parent),
-	m_context(nullptr)
+	m_context(nullptr),
+	m_debugLogger(nullptr)
 {
 	setSurfaceType(QWindow::OpenGLSurface);
 }
@@ -88,6 +89,65 @@ void OpenGLWindow::resizeEvent(QResizeEvent * event) {
 }
 
 
+void OpenGLWindow::onMessageLogged(const QOpenGLDebugMessage &msg) {
+	QString prefix;
+
+	// Format based on severity
+	switch (msg.severity()) {
+		case QOpenGLDebugMessage::NotificationSeverity:
+			prefix += "++++";
+		break;
+		case QOpenGLDebugMessage::HighSeverity:
+			prefix += "+++";
+		break;
+		case QOpenGLDebugMessage::MediumSeverity:
+			prefix += "++";
+		break;
+		case QOpenGLDebugMessage::LowSeverity:
+			prefix += "+";
+		break;
+	}
+
+	prefix += " [";
+
+	// Format based on source
+#define CASE(c) case QOpenGLDebugMessage::c: prefix += #c; break
+	switch (msg.source())
+	{
+	  CASE(APISource);
+	  CASE(WindowSystemSource);
+	  CASE(ShaderCompilerSource);
+	  CASE(ThirdPartySource);
+	  CASE(ApplicationSource);
+	  CASE(OtherSource);
+	  CASE(InvalidSource);
+	}
+ #undef CASE
+
+	prefix += ":";
+
+	// Format based on type
+ #define CASE(c) case QOpenGLDebugMessage::c: prefix += #c; break
+	switch (msg.type())
+	{
+		CASE(ErrorType);
+		CASE(DeprecatedBehaviorType);
+		CASE(UndefinedBehaviorType);
+		CASE(PortabilityType);
+		CASE(PerformanceType);
+		CASE(OtherType);
+		CASE(MarkerType);
+		CASE(GroupPushType);
+		CASE(GroupPopType);
+	}
+#undef CASE
+
+	prefix += "] ";
+	qDebug().noquote().nospace() << prefix << msg.message() << "\n";
+
+}
+
+
 void OpenGLWindow::initOpenGL() {
 	Q_ASSERT(m_context == nullptr);
 
@@ -99,5 +159,19 @@ void OpenGLWindow::initOpenGL() {
 	Q_ASSERT(m_context->isValid());
 
 	initializeOpenGLFunctions();
+
+#ifdef    GL_DEBUG
+	if (m_context->hasExtension(QByteArrayLiteral("GL_KHR_debug")))
+		qDebug() << "GL_KHR_debug extension available";
+	else
+		qWarning() << "GL_KHR_debug extension *not* available";
+	m_debugLogger = new QOpenGLDebugLogger(this);
+	if (m_debugLogger->initialize()) {
+		qDebug() << "Debug Logger initialized\n";
+		connect(m_debugLogger, SIGNAL(messageLogged(QOpenGLDebugMessage)), this, SLOT(onMessageLogged(QOpenGLDebugMessage)));
+		m_debugLogger->startLogging();
+	}
+#endif // GL_DEBUG
+
 	initializeGL(); // call user code
 }

@@ -33,6 +33,9 @@ TestDialog::TestDialog() :
 	format.setVersion(3,3);
 	format.setSamples(4);	// enable multisampling (antialiasing)
 	format.setDepthBufferSize(8);
+#ifdef GL_DEBUG_
+	format.setOption(QSurfaceFormat::DebugContext);
+#endif // GL_DEBUG
 
 	m_sceneView = new SceneView;
 	m_sceneView->setFormat(format);

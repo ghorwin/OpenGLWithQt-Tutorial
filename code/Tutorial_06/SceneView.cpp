@@ -109,8 +109,7 @@ void SceneView::resizeGL(int width, int height) {
 
 
 void SceneView::paintGL() {
-	DebugApplication * a = (DebugApplication *)qApp;
-	if (a->m_aboutToTerminate)
+	if (((DebugApplication *)qApp)->m_aboutToTerminate)
 		return;
 
 	// process input, i.e. check if any keys have been pressed
