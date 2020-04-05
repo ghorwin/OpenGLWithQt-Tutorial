@@ -65,6 +65,9 @@ SceneView::~SceneView() {
 
 		m_boxObject.destroy();
 		m_gridObject.destroy();
+
+		m_startTimer.destroy();
+		m_endTimer.destroy();
 	}
 }
 
@@ -84,6 +87,10 @@ void SceneView::initializeGL() {
 		// initialize drawable objects
 		m_boxObject.create(SHADER(0));
 		m_gridObject.create(SHADER(1));
+
+		// Timer
+		m_startTimer.create();
+		m_endTimer.create();
 	}
 	catch (OpenGLException & ex) {
 		throw OpenGLException(ex, "OpenGL initialization failed.", FUNC_ID);
@@ -118,7 +125,7 @@ void SceneView::paintGL() {
 
 	const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
 	glViewport(0, 0, width() * retinaScale, height() * retinaScale);
-//	qDebug() << "SceneView::paintGL(): Rendering to:" << width() << "x" << height();
+	qDebug() << "SceneView::paintGL(): Rendering to:" << width() << "x" << height();
 
 	// set the background color = clear color
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -129,7 +136,16 @@ void SceneView::paintGL() {
 
 	QVector3D gridColor(0.5f, 0.5f, 0.7f);
 
+/*	if (m_startTimer.isResultAvailable() && m_endTimer.isResultAvailable()) {
+		GLuint64 startT = m_startTimer.waitForResult();
+		GLuint64 endT = m_endTimer.waitForResult();
+
+		qDebug() << "Frame time: " << (endT - startT)*1e-6 << "ms";
+	}
+*/
+
 	// *** render boxes
+	m_startTimer.recordTimestamp();
 	SHADER(0)->bind();
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
 	m_boxObject.render(); // render the boxes
@@ -150,8 +166,15 @@ void SceneView::paintGL() {
 	updateWorld2ViewMatrix();
 	renderLater();
 #endif
+	m_endTimer.recordTimestamp();
 
 	checkInput();
+//	if (m_startTimer.isResultAvailable() && m_endTimer.isResultAvailable()) {
+		GLuint64 startT = m_startTimer.waitForResult();
+		GLuint64 endT = m_endTimer.waitForResult();
+
+		qDebug() << "Frame time: " << (endT - startT)*1e-6 << "ms";
+//	}
 }
 
 

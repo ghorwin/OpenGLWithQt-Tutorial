@@ -13,6 +13,7 @@ License    : BSD License,
 #define SCENEVIEW_H
 
 #include <QMatrix4x4>
+#include <QOpenGLTimerQuery>
 
 #include "OpenGLWindow.h"
 #include "ShaderProgram.h"
@@ -72,6 +73,11 @@ private:
 
 	BoxObject					m_boxObject;
 	GridObject					m_gridObject;
+
+	QOpenGLTimerQuery			m_startTimer;
+	QOpenGLTimerQuery			m_endTimer;
+	QOpenGLTimerQuery			m_glTimerBox;
+	QOpenGLTimerQuery			m_glTimerGrid;
 };
 
 #endif // SCENEVIEW_H
