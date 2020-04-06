@@ -2,12 +2,18 @@
 
 Für das automatische Bauen von Qt (z.B. mit Jenkins oder ähnlichen Build-Systemen) bietet sich CMake an. Es geht zwar auch mit qmake, aber in diesem Tutorial soll gezeigt werden, wie man das eine CMakeLists.txt-Datei für das Bauen von Qt-Anwendungen unter Linux, MacOS und Windows konfiguriert.
 
-Im 2. Teil des Tutorials geht es dann um das Deployment, d.h. welche Dateien jeweils kopiert werden müssen. Auch dies ist nicht wirklich OpenGL-spezifisch, aber zeigt nochmal, welche OpenGL-Bibliotheken auf den jeweiligen Betriebssystemen vorausgesetzt werden können, und welche kopiert werden müssen.
+Im zweiten Teil des Tutorials geht es dann um das Deployment, d.h. welche Dateien jeweils kopiert werden müssen. Auch dies ist nicht wirklich OpenGL-spezifisch, aber zeigt nochmal, welche OpenGL-Bibliotheken auf den jeweiligen Betriebssystemen vorausgesetzt werden können, und welche kopiert werden müssen.
+
+[NOTE]
+====
+CMakeLists.txt - Dateien und entsprechende Build-Scripte liegen verschiedenen Tutorial-Quelltexten bei. Konkret beziehen sich die Beispiele unten auf den Tutorial 06 Quelltext, der im github repo liegt:  https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_06[Tutorial_06]
+====
 
 == CMakeLists.txt für OpenGL-Anwendungen
 
 Hier ist eine Beispiel-CMakeLists.txt-Datei (aus Tutorial 05), welche das mal demonstriert:
 
+[source,cmake]
 ----
 # CMakeLists.txt file for OpenGL + Qt Tutorial Series
 
@@ -37,20 +43,6 @@ set( QT_LIBRARIES
 
 # we need OpenGL
 find_package( OpenGL REQUIRED )
-
-if( APPLE )
-	find_library( IOKIT NAMES IOKit REQUIRED )
-	find_library( COREFOUNDATION NAMES CoreFoundation REQUIRED )
-	find_library( SECURITY_FRAMEWORK Security REQUIRED )
-	find_library( SYSTEM_CONFIGURATION SystemConfiguration REQUIRED )
-
-	set( APPLE_FRAMEWORKS
-		${IOKIT}
-		${SECURITY_FRAMEWORK}
-		${COREFOUNDATION}
-		${SYSTEM_CONFIGURATION}
-	)
-endif( APPLE )
 
 
 # -------------------------------------------------------------
@@ -93,6 +85,9 @@ if( WIN32 )
 					${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS} ${APP_WIN_RC}
 	)
 
+	# enable console window (to see debug/profiler messages)
+	set_target_properties( ${PROJECT_NAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE" )
+
 	# on Windows, add gdi and gdi32 for OpenGL support
 	set( WIN_FRAMEWORKS iphlpapi gdiplus gdi32 user32 ole32 )
 endif( WIN32 )
@@ -118,6 +113,21 @@ target_link_libraries( ${PROJECT_NAME}
 	${WIN_FRAMEWORKS}
 )
 ----
+
+Das Script selbst ist eigentlich nicht schwer zu verstehen (eventuell kann man mal die CMake-Syntax und Befehle auf https://cmake.org nachschlagen). Je nachdem, welche Qt-Module verwendet werden, müsste man die Sektion "Packages" noch entsprechend erweitern.
+
+[TIP]
+====
+Unter Windows lohnt es sich (zumindest während der Entwicklung), das Konsolenfenster einzublenden, damit man `qDebug()`-Ausgaben sieht. Das wird mit der Zeile:
+
+[source,cmake]
+----
+set_target_properties( ${PROJECT_NAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE" )
+----
+
+eingeschaltet.
+====
+
 
 === Erstellung
 
@@ -178,8 +188,14 @@ Alternativ kann man unter Windows CMake auch dazu benutzen, VC Projektdateien zu
 
 === Deployment 
 
+==== Windows
+
+Nachdem man unter Windows die Anwendung kompiliert hat, muss man noch 
+
+
 ==== MacOS
 
+Unter MacOS wird eine Qt Anwendung üblicherweise gegen die installierten Frameworks gebaut. Man kann sich das anschauen, wenn man mit `otool` to gelinkten Bibliotheken anschaut:
 
 ----
 > otool -L Tutorial_05.app/Contents/MacOS/Tutorial_05 
@@ -191,3 +207,4 @@ Tutorial_05.app/Contents/MacOS/Tutorial_05:
 	/usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 120.1.0)
 	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1226.10.1)
 ----
+
