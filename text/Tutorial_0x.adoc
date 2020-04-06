@@ -185,7 +185,30 @@ Alternativ kann man unter Windows CMake auch dazu benutzen, VC Projektdateien zu
 
 ==== Windows
 
-Nachdem man unter Windows die Anwendung kompiliert hat, muss man noch 
+Nachdem man unter Windows die Anwendung kompiliert hat, muss man noch die zur Verteilung benötigten DLLs zusammenstellen. Dies geht am einfachsten durch Verwendung des `windeployqt` Tools. Ein Aufruf sieht wie folgt aus:
+
+[source,batch]
+----
+:: path to Qt
+set CMAKE_PREFIX_PATH=c:\Qt\5.11.3\msvc2015_64
+
+:: copy dependencies
+%CMAKE_PREFIX_PATH%\bin\windeployqt vc_x64_deploy\Tutorial_06.exe
+----
+
+Die vom Tool ins Verzeichnis kopierten Dateien werden für die Ausführung benötigt. Es sind zumeist nicht alle Dateien notwendig, das hängt aber vom jeweiligen Programm ab. Anstelle die `redist.exe` auf dem Zielsystem auszuführen, kann man auch die benötigten VC DLLS direkt mit kopieren, also bspw. `msvcp140.dll` und `vcruntime140.dll` bei VC 2015. 
+
+Die Dateien befinden sich z.B. in:
+
+    c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\redist\x64\Microsoft.VC140.CRT
+
+Sind alle benötigten Dateien im gleichen Verzeichnis wie die `.exe`-Datei, sollte man das Programm auf anderen Windows-Rechnern starten können (als Portable-Version).
+
+[TIP]
+====
+Es bietet sich an, das Deployment nicht im Erstellungsverzeichnis durchzuführen. Die Beispielskripte `build.bat`  und  `deploy.bat` im Tutorial 06 Quelltext zeigen, wie man Erstellung und Deployment in separaten Unterverzeichnissen durchführt. Dann kann man vereinfacht auch das gesamte Deployment-Verzeichnis packen und hat sofort ein "Portable"-Release der Software.
+====
+
 
 
 ==== MacOS
