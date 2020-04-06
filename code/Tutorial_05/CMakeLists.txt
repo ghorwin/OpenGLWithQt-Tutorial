@@ -68,6 +68,9 @@ if( WIN32 )
 					${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS} ${APP_WIN_RC}
 	)
 
+	# enable console window (to see debug/profiler messages)
+	set_target_properties( ${PROJECT_NAME} PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE" )
+
 	# on Windows, add gdi and gdi32 for OpenGL support
 	set( WIN_FRAMEWORKS iphlpapi gdiplus gdi32 user32 ole32 )
 endif( WIN32 )
