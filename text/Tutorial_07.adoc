@@ -1,14 +1,151 @@
+:imagesdir: ./images
 = Tutorial 07: Markieren/Auswählen von Flächen (mit OpenMP Parallelisierung)
 
-In diesem Tutorial geht es darum, Flächen bzw. Objekte in der Scene auszuwählen. Es gibt hier 2 Techniken, die verfolgt werden sollen:
+In diesem Tutorial geht es darum, Flächen bzw. Objekte in der Scene auszuwählen.
+
+.Tutorial_07, Visualisierung eines Bildschirmstrahls
+image::Tutorial_07_RayTracking.png[Tutorial_07,pdfwidth=8cm]
+
+[NOTE]
+====
+Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_07[Tutorial_07]
+====
+
+Es gibt hier 2 Techniken, die verfolgt werden sollen:
 
 - Rendern in einen offscreen-Framenbuffer mit individuellen Farben aller anklickbaren Objekte und Identifizierung der Objekte durch Abbildung der Farben auf originale Objekte/Flächen
 - Strahlenverfolgung (Ray Picking), d.h. Bestimmung der Sichtlinie im Weltenkoordinatensystem und dann Schnittpunktberechnung aller Objekte und Sortierung nach Tiefe (aufgrund der vielen Objekte und eindeutig parallelem Algorithmus ist dies ein klassisches Anwendungsgebiet für OpenMP).
 
-Auch dieses ist ein grundlegendes 3D Grafik-Prozedere und in diesem Tutorial nur drin, um die Verwendung der Klasse `QOpenGLFrameBuffer` zu demonstrieren.
-
+Auch dieses ist ein grundlegendes 3D Grafik-Prozedere und in diesem Tutorial nur drin, um die Verwendung der Klasse `QOpenGLFrameBuffer` zu demonstrieren. Allerdings zeigt es auch die annehmlichkeiten der `QMatrix4x4`, `QVector4D` und `QVector3D` Klassen.
 
 == Option 1: Strahlenverfolgung
+
+Der Grundgedanke ist einfach: Die Mausposition im lokalen Fenster umrechnen in Weltkoordinaten und entlang dieser Linie alle Schnittpunkte mit auswählbaren Objekten finden. Das näheste Objekte zum Betrachter ist dann das ausgewählte Objekt. 
+
+Die Welt (in der perspektivischen Darstellung) hat eine _near plane_ und eine _far plane_. Alles davor und dahinter wird geklippt und nicht dargestellt. Daher kann hier auch nichts sinnvoll ausgewählt werden. Der Betrachter schaut durch die _near plane_ hindurch auf die Scene, und der Blickstrahl trifft irgendwo hinten auf die _far plane_. Da der Blickstrahl senkrecht zum Bildschirmoberfläche steht, sieht man die Linie selbst nur als Punkt.
+
+Die Berechnung ist hinreichend trivial:
+
+. Globale Mauskoordinaten (von `QCursor::pos()`) in lokale Mauskoordinaten umrechnen, mittels https://doc.qt.io/qt-5/qwidget.html#mapFromGlobal[QWindow::mapFromGlobal()]
+
+. Mausposition des lokalen Fensters in Normalized Device Coordinates (NDC) umrechnen. Dabei hilft sich vorzustellen, dass das Fenster das normalisierte x-y-Koordinatensystem beinhaltet, mit dem Mittelpunkt genau in der Mitte des Fensters und der Ausdehnung -1..1 in beide Achsen. Die z-Koordinate ist -1 für die _far plane_ und 1 für die _near plane_. W-Komponente auf 1 setzen. Wenn man also genau in die Mitte klickt, ist das 0,0 in NDC. Ganz oben links geklickt ist das -1,1 (y-Achse zeigt nach oben in NFC).
+
+. Model2Projection-Matrix (also Produkt aller Transformationsmatrizen) invertieren
+. Beide Punkte mit der inversen Matrix transformieren
+
+Fertig. Hier ist der Quelltext:
+
+.SceneView.cpp:pick()
+[source,c++]
+----
+void SceneView::pick(const QPoint & globalMousePos) {
+	// local mouse coordinates
+	QPoint localMousePos = mapFromGlobal(globalMousePos);
+	int my = localMousePos.y();
+	int mx = localMousePos.x();
+
+	// viewport dimensions
+	const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
+	qreal vpw = width()*retinaScale;
+	qreal vph = height()*retinaScale;
+
+	// invert world2view matrix, with m_worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();
+	bool invertible;
+	QMatrix4x4 projectionMatrixInverted = m_worldToView.inverted(&invertible);
+	if (!invertible) {
+		qWarning()<< "Cannot invert projection matrix.";
+		return;
+	}
+
+	// mouse position in NDC space, one point on near plane and one point on far plane
+	float halfVpw = vpw/2.0;
+	float halfVph = vph/2.0;
+	QVector4D near(
+				(mx - halfVpw) / halfVpw,
+				-1*(my - halfVph) / halfVph,
+				-1,
+				1.0);
+
+	QVector4D far(
+				near.x(),
+				near.y(),
+				1,
+				1.0);
+
+	// transform from NDC to model coordinates
+	QVector4D nearResult = projectionMatrixInverted*near;
+	QVector4D farResult = projectionMatrixInverted*far;
+	// don't forget normalization!
+	nearResult /= nearResult.w();
+	farResult /= farResult.w();
+
+	// update pick line vertices (visualize pick line)
+	m_context->makeCurrent(this);
+	m_pickLineObject.setPoints(nearResult.toVector3D(), farResult.toVector3D());
+}
+----
+
+Ganz am Ende wird noch ein neu eingeführtes OpenGL-Zeichenobjekt aktualisiert. Nach der Lektüre von _Tutorial 05_ sollte der Quelltext in `PickLineObject.*` selbsterklärend sein. Diese Objekt nutzt übrigends den gleichen Vertex- und Fragmentshader wie er für die Boxen eingesetzt wird.
+
+=== Erkennung von Mausklick-Ereignissen
+
+Bisher wurde mit dem Eingabemanager das Gedrückthalten der rechten Maustaste behandelt. Nun soll aber darauf reagiert werden, dass die linke Maustaste geklickt wurde (Linksklick=Auswahl). Das macht man am besten, indem man auf das Loslassen der Maustaste wartet. Gleichzeitig muss man sich dann aber die Position der Maus beim Loslassen merken, da die Maus ja hinterher noch bewegt werden kann.
+
+Der Eingabemanager hat ja, wie in _Tutorial 05_ erklärt, für Tasten (einschließlich Maustasten) einen Zustand "Wurde gedrückt". Den kann man nun einfach abfragen, z.B. in `SceneView::checkInput()`:
+
+.SceneView::checkInput()
+[source,c++]
+----
+void SceneView::checkInput() {
+	// this function is called whenever _any_ key/mouse event was issued
+
+    ....
+
+	// has the left mouse butten been release
+	if (m_keyboardMouseHandler.buttonReleased(Qt::LeftButton)) {
+		m_inputEventReceived = true;
+		renderLater();
+		return;
+	}
+
+    ....
+}
+----
+
+Die Funktion `KeyboardMouseHandler::buttonReleased(btn)` macht dabei nichts weiter, als zu prüfen, ob der Status der Taste auf `KeyboardMouseHandler::StateWasPressed` steht.
+
+In der selben Art und Weise, wie auf andere Tastendrücke und Mausbewegungen reagiert wurde, kann man nun die Auswahlroutine anstoßen:
+
+.SceneView::processInput()
+[source,c++]
+----
+void SceneView::processInput() {
+    ....
+    
+	// check for picking operation
+	if (m_keyboardMouseHandler.buttonReleased(Qt::LeftButton)) {
+		pick(m_keyboardMouseHandler.mouseReleasePos());
+	}
+
+	// finally, reset "WasPressed" key states
+	m_keyboardMouseHandler.clearWasPressedKeyStates();
+
+    ....
+}
+----
+
+Wichtig ist hier vielleicht nur, dass man abschließend auch die Flags der Maustasten zurücksetzt.
+
+Mit dem derzeitigen Quelltextstand kann man nun wild in der Scene herumklicken, wobei man natürlich erstmal nichts sieht. Erst bei Bewegung in der Scene wird die nun visualisierte Sichtgerade erkennbar - bis zum nächsten Linksklick.
+
+=== Finden von angeklickten Objekten
+
+Die zweite, auch nicht sonderlich komplizierte Aufgabe besteht darin, alle Objekte zu finden, die von der Sichtlinie geschnitten werden. Wenn es sich hierbei um Flächen handelt, ist das Mathematik aus dem Tafelwerk (siehe https://de.wikipedia.org/wiki/Schnittpunkt#Schnittpunkt_einer_Geraden_mit_einer_Ebene[Wikipedia]).
+
+
+
+
+
 
 
 == Option 2: Falschfarbenrendering
