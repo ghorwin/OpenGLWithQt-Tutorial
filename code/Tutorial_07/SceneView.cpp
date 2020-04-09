@@ -400,5 +400,6 @@ void SceneView::selectNearestObject(const QVector3D & nearPoint, const QVector3D
 					   << p.m_objectId <<  ", Face #" << p.m_faceId << ", z = " << p.m_z << ") after "
 					   << pickTimer.elapsed() << " ms";
 
+	// Mind: OpenGL-context must be current when we call this function!
 	m_boxObject.highlight(p.m_objectId, p.m_faceId);
 }
