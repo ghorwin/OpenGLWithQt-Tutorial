@@ -48,6 +48,7 @@ SOURCES += \
 		OpenGLException.cpp \
 		OpenGLWindow.cpp \
 		PickLineObject.cpp \
+		PickObject.cpp \
 		SceneView.cpp \
 		ShaderProgram.cpp \
 		TestDialog.cpp \
@@ -64,6 +65,7 @@ HEADERS += \
 	OpenGLException.h \
 	OpenGLWindow.h \
 	PickLineObject.h \
+	PickObject.h \
 	SceneView.h \
 	ShaderProgram.h \
 	TestDialog.h \

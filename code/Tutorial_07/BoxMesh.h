@@ -60,8 +60,22 @@ public:
 	static const unsigned int VertexCount = 6*4;  // 6 faces, 4 vertexes each (because each may have different number of colors)
 	static const unsigned int IndexCount = 6*2*3; // 6 faces, 2 triangles each, 3 indexes per triangle
 
+	/*! Tests if line in space, defined through starting point p1 and distance/direction d intersects the plane
+		with index planeIdx.
+	*/
+	bool intersects(unsigned int planeIdx, const QVector3D & p1, const QVector3D & d, float & z) const;
+
 private:
+	struct Rect {
+		Rect(){}
+		Rect(QVector3D a, QVector3D b, QVector3D d);
+		QVector3D m_normal;	// normalized
+		QVector3D m_offset;
+		QVector3D m_a;
+		QVector3D m_b;
+	};
 	std::vector<QVector3D>	m_vertices;
+	std::vector<Rect>		m_planeInfo; // populated in copy2Buffer
 	std::vector<QColor>		m_colors;	// size 1 = uniform color, size 6 = face colors
 };
 

@@ -16,6 +16,7 @@ License    : BSD License,
 #include <QDateTime>
 
 #include "DebugApplication.h"
+#include "PickObject.h"
 
 #define SHADER(x) m_shaderPrograms[x].shaderProgram()
 
@@ -228,8 +229,8 @@ void SceneView::pick(const QPoint & globalMousePos) {
 
 	// viewport dimensions
 	const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
-	qreal vpw = width()*retinaScale;
-	qreal vph = height()*retinaScale;
+	qreal halfVpw = width()*retinaScale/2;
+	qreal halfVph = height()*retinaScale/2;
 
 	// invert world2view matrix, with m_worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();
 	bool invertible;
@@ -240,8 +241,6 @@ void SceneView::pick(const QPoint & globalMousePos) {
 	}
 
 	// mouse position in NDC space, one point on near plane and one point on far plane
-	float halfVpw = vpw/2.0;
-	float halfVph = vph/2.0;
 	QVector4D near(
 				(mx - halfVpw) / halfVpw,
 				-1*(my - halfVph) / halfVph,
@@ -264,6 +263,9 @@ void SceneView::pick(const QPoint & globalMousePos) {
 	// update pick line vertices (visualize pick line)
 	m_context->makeCurrent(this);
 	m_pickLineObject.setPoints(nearResult.toVector3D(), farResult.toVector3D());
+
+	// now do the actual picking - for now we implement a selection
+	selectNearestObject(nearResult.toVector3D(), farResult.toVector3D());
 }
 
 
@@ -367,11 +369,20 @@ void SceneView::processInput() {
 }
 
 
-
 void SceneView::updateWorld2ViewMatrix() {
 	// transformation steps:
 	//   model space -> transform -> world space
 	//   world space -> camera/eye -> camera view
 	//   camera view -> projection -> normalized device coordinates (NDC)
 	m_worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();
+}
+
+
+void SceneView::selectNearestObject(const QVector3D & nearPoint, const QVector3D & farPoint) {
+	// compute view direction
+	QVector3D d = farPoint - nearPoint;
+
+	// now process all objects and request list of pick objects
+	PickObject p(-10000000.f, 0);
+	m_boxObject.pick(nearPoint, d, p);
 }

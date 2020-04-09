@@ -1,4 +1,8 @@
+:math:
 :imagesdir: ./images
+:imagesoutdir: generated_images
+:stem: latexmath
+
 = Tutorial 07: Markieren/Auswählen von Flächen (mit OpenMP Parallelisierung)
 
 In diesem Tutorial geht es darum, Flächen bzw. Objekte in der Scene auszuwählen.
@@ -26,9 +30,9 @@ Die Welt (in der perspektivischen Darstellung) hat eine _near plane_ und eine _f
 
 Die Berechnung ist hinreichend trivial:
 
-. Globale Mauskoordinaten (von `QCursor::pos()`) in lokale Mauskoordinaten umrechnen, mittels https://doc.qt.io/qt-5/qwidget.html#mapFromGlobal[QWindow::mapFromGlobal()]
+. Globale Mauskoordinaten von `QCursor::pos()` in lokale Mauskoordinaten umrechnen (mittels https://doc.qt.io/qt-5/qwidget.html#mapFromGlobal[QWindow::mapFromGlobal()] )
 
-. Mausposition des lokalen Fensters in Normalized Device Coordinates (NDC) umrechnen. Dabei hilft sich vorzustellen, dass das Fenster das normalisierte x-y-Koordinatensystem beinhaltet, mit dem Mittelpunkt genau in der Mitte des Fensters und der Ausdehnung -1..1 in beide Achsen. Die z-Koordinate ist -1 für die _far plane_ und 1 für die _near plane_. W-Komponente auf 1 setzen. Wenn man also genau in die Mitte klickt, ist das 0,0 in NDC. Ganz oben links geklickt ist das -1,1 (y-Achse zeigt nach oben in NFC).
+. Mausposition des lokalen Fensters in Normalized Device Coordinates (NDC) umrechnen. Dabei hilft sich vorzustellen, dass das Fenster das normalisierte x-y-Koordinatensystem beinhaltet, mit dem Mittelpunkt genau in der Mitte des Fensters und der Ausdehnung -1..1 in beide Achsen. Wenn man also genau in die Mitte klickt, ist das 0,0 in NDC. Ganz oben links geklickt ist das -1,1 (y-Achse zeigt nach oben in NFC). Die z-Koordinate ist -1 für die _far plane_ und 1 für die _near plane_. W-Komponente auf 1 setzen.
 
 . Model2Projection-Matrix (also Produkt aller Transformationsmatrizen) invertieren
 . Beide Punkte mit der inversen Matrix transformieren
@@ -140,8 +144,81 @@ Mit dem derzeitigen Quelltextstand kann man nun wild in der Scene herumklicken, 
 
 === Finden von angeklickten Objekten
 
-Die zweite, auch nicht sonderlich komplizierte Aufgabe besteht darin, alle Objekte zu finden, die von der Sichtlinie geschnitten werden. Wenn es sich hierbei um Flächen handelt, ist das Mathematik aus dem Tafelwerk (siehe https://de.wikipedia.org/wiki/Schnittpunkt#Schnittpunkt_einer_Geraden_mit_einer_Ebene[Wikipedia]).
+Die zweite, auch nicht sonderlich komplizierte Aufgabe besteht darin, alle Objekte zu finden, die von der Sichtlinie geschnitten werden. Wenn es sich hierbei um Flächen handelt, ist das recht einfache Mathematik aus dem Tafelwerk (siehe https://de.wikipedia.org/wiki/Analytische_Geometrie[Wikipedia]).
 
+====
+
+*Mathematische Grundlagen*
+
+Ich schreibe die Mathematik hier nochmal kurz auf (aber nur um zu testen, wie man mit Asciidoctor ordentliche Gleichungen hinbekommt :-) )
+
+Ebenengleichung in Normalenform, mit *a* als Bezugspunkt der Ebene und *n* als Normalenvektor:
+
+[latexmath] 
+++++
+(\boldsymbol{x}-\boldsymbol{a}) \cdot \boldsymbol{n} = 0
+++++
+
+Geradengleichung, mit *d* als Richtung und *s* als Startpunkt:
+
+[latexmath] 
+++++
+\boldsymbol{x} = \boldsymbol{s} + t \, \boldsymbol{d} 
+++++
+
+Einsetzen und Ausmultiplizieren ergibt:
+
+[latexmath] 
+++++
+t_0 = \frac{\left( \boldsymbol{a} - \boldsymbol{s}\right) \cdot \boldsymbol{n}}{\boldsymbol{d} \cdot \boldsymbol{n}}
+++++
+
+Falls der Richtungsvektor der Geraden *d* und der Normalenvektor *n* senkrecht aufeinanderstehen wird der Nenner zu 0, d.h. die Gerade liegt parallel zur Ebene (entweder neben oder in der Ebene, ist uns aber hier egal).
+
+
+Ob eine begrenzte _Fläche_ von der _Strecke_ (unserer Sichtlinie) geschnitten wird, hängt von der Lage des Schnittpunkts ab.
+
+Wird die Sichtlinie durch den Start- und Endpunkt *p1* und *p2* (near und far-Punkte) definiert, und damit *s* = *p1* und *d* = *p2* - *p1*, dann muss t zwischen 0 und 1 liegen (Bedingung 1).
+
+Der berechnete Schnittpunkt
+
+[latexmath] 
+++++
+\boldsymbol{x_0} = \boldsymbol{s} + t_0 \, \boldsymbol{d} 
+++++
+
+liegt in der Ebene. Man kann nun die Ebenengleichung in Parameterform schreiben und die Parameter für den Schnittpunkt bestimmen. Wiederum definieren wir die Ebene über die Eckpunkte, hier *a*, *b* und *c*:
+
+[latexmath] 
+++++
+\boldsymbol{x} = \boldsymbol{a} + r\, (\boldsymbol{b} - \boldsymbol{a}) + s\, (\boldsymbol{c} - \boldsymbol{a})
+++++
+
+Der Normalenvektor für die Schnittpunktberechnung oben ist dann:
+
+[latexmath] 
+++++
+\boldsymbol{n} = (\boldsymbol{b} - \boldsymbol{a}) \times (\boldsymbol{c} - \boldsymbol{a})
+++++
+
+Nach Einsetzen und Auflösen nach _r_ und _s_ kann man prüfen, ob sowohl _r_ als auch _s_ zwischen 0 und 1 liegen (Bedingung 2).
+====
+
+Nachdem nun die Mathematik klar ist, hier nochmal die Zusammenfassung des Angeklickt-Prüf-Algorithmus:
+
+- (Vorberechnung: Normalenvektor)
+- Prüfung ob Sichtgeradenvektor und Normalenvektor der Ebene zueinander zeigen (Skalarprodukt der Vektoren liefert (absoluten) Winkel < 90°) (damit ist auch der Fall "Gerade liegt parallel zur Ebene" ausgeschlossen)
+- Berechnung Schnittpunkt (Geradenfaktor _t_) und Test, ob im Interval [ 0..1]
+- Berechnung Punkt in Ebene (Faktoren _r_ und _s_) und Test, ob im Interval [0..1]
+
+[NOTE]
+====
+Falls statt einer rechteckigen Ebene ein Dreieck getestet wird, so muss bei der Schnittpunktprüfung gelten: 
+
+latexmath:[r \ge 0], latexmath:[s \ge 0] und latexmath:[r + s \le 1]
+====
+
+Falls die Ebene 
 
 
 
@@ -152,7 +229,7 @@ Die zweite, auch nicht sonderlich komplizierte Aufgabe besteht darin, alle Objek
 
 Technisch gibt es eine Einschränkung: es stehen *256^4 - 1* Farben stehen zur Verfügung (rgba) für ebenso viele Elemente. Reicht das nicht aus, muss entweder gefiltert werden (d.h. nur die _prinzipiell_ sichtbaren Objekte bekommen eine Nummer/Farbe), oder man benutzt Ray-Tracking.
 
-Die zahlreichen Tutorials in diesem Bereich verwenden die folgende Technik:
+Die zahlreichen Tutorials zum Thema _Picking_ verwenden die folgende Technik:
 
 - Schleife über alle anklickbaren Elemente
 
@@ -163,7 +240,7 @@ Die zahlreichen Tutorials in diesem Bereich verwenden die folgende Technik:
 
 Unnötig zu erwähnen, dass alleine die Vielzahl an `glDrawXXX` Calls problematisch ist. Außerdem ist es je anch Anwendung nicht notwendig, dieses Prozedere bei _jedem_ Mausklick zu wiederholen.
 
-=== Optimierungsidee für quasi-statische Scenen
+=== Optimierungsidee für quasi-statische Szenen
 
 Nehmen wir mal an, es handelt sich um ein Programm mit vorwiegend nicht-animierten Szenen (Zielvorgabe dieses Tutorials). Dann könnte man die Falschfarbenberechnung stets kurz nach dem Abschluss der Kamerabewegung machen (d.h. mit kleiner Zeitverzögerung), und das resultierende Falschfarbenbild im CPU-Speicher vorhalten. Wenn man nun mit der Maus klickt, hat man sofort den Farbwert unter dem Mauscursor zur Hand. Man könnte auch viele Klicks abfragen, ohne die GPU zu beschäftigen.
 

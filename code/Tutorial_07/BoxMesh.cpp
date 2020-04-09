@@ -10,6 +10,7 @@ License    : BSD License,
 ************************************************************************************/
 
 #include "BoxMesh.h"
+#include "PickObject.h"
 
 void copyPlane2Buffer(Vertex * & vertexBuffer, GLuint * & elementBuffer, unsigned int & elementStartIndex,
 					  const Vertex & a, const Vertex & b, const Vertex & c, const Vertex & d);
@@ -34,6 +35,12 @@ BoxMesh::BoxMesh(float width, float height, float depth, QColor boxColor) {
 void BoxMesh::transform(const QMatrix4x4 & transform) {
 	for (QVector3D & v : m_vertices)
 		v = transform*v;
+}
+
+
+bool BoxMesh::intersects(unsigned int planeIdx, const QVector3D & p1, const QVector3D & d, float & z) const {
+	const Rect & p = m_planeInfo[planeIdx];
+	return intersectsPlane(p.m_a, p.m_b, p.m_normal, p.m_offset, p1, d, z);
 }
 
 
@@ -99,8 +106,33 @@ void BoxMesh::copy2Buffer(Vertex *& vertexBuffer, GLuint *& elementBuffer, unsig
 			Vertex(m_vertices[6], cols[5]),
 			Vertex(m_vertices[7], cols[5])
 		);
+
+	// compute all face normals
+	std::vector<Rect> & planeInfo = const_cast<std::vector<Rect> &>(m_planeInfo);
+	planeInfo.resize(6);
+	// front plane: a, b, c, d, vertexes (0, 1, 2, 3)
+	planeInfo[0] = Rect(m_vertices[0], m_vertices[1], m_vertices[3]);
+	// right plane: b=1, f=5, g=6, c=2, vertexes
+	planeInfo[1] = Rect(m_vertices[1], m_vertices[5], m_vertices[2]);
+	// back plane: g=5, e=4, h=7, g=6
+	planeInfo[2] = Rect(m_vertices[5], m_vertices[4], m_vertices[6]);
+	// left plane: 4,0,3,7
+	planeInfo[3] = Rect(m_vertices[4], m_vertices[0], m_vertices[7]);
+	// bottom plane: 4,5,1,0
+	planeInfo[4] = Rect(m_vertices[4], m_vertices[5], m_vertices[0]);
+	// top plane: 3,2,6,7
+	planeInfo[5] = Rect(m_vertices[3], m_vertices[2], m_vertices[7]);
 }
 
+
+BoxMesh::Rect::Rect(QVector3D a, QVector3D b, QVector3D d) {
+	m_a = b-a;
+	m_b = d-a;
+	m_normal = QVector3D::crossProduct(m_a, m_b);
+	Q_ASSERT(m_normal.length() != 0.f);
+	m_normal.normalize();
+	m_offset = a;
+}
 
 void copyPlane2Buffer(Vertex * & vertexBuffer, GLuint * & elementBuffer, unsigned int & elementStartIndex,
 					  const Vertex & a, const Vertex & b, const Vertex & c, const Vertex & d)

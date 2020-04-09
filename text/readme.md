@@ -16,6 +16,7 @@ See: _https://asciidoctor.org_
 
 # Install rouge syntax highlighter extension
 > sudo gem install asciidoctor-rouge
+> sudo gem install asciidoctor-mathematical
 ```
 
 ## Generating Documentation
