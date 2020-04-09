@@ -31,8 +31,8 @@ BoxObject::BoxObject() :
 
 	// create 'some' other boxes
 
-	const int BoxGenCount = 1000;
-	const int GridDim = 50; // must be an int, or you have to use a cast below
+	const int BoxGenCount = 000000;
+	const int GridDim = 100; // must be an int, or you have to use a cast below
 
 	// initialize grid (block count)
 	int boxPerCells[GridDim][GridDim];
@@ -125,31 +125,26 @@ void BoxObject::render() {
 }
 
 
-void BoxObject::pick(const QVector3D & p1, const QVector3D & d, PickObject & closestObject) const {
-
-	std::vector<PickObject> closestObjects;
-	closestObjects.push_back(PickObject(-10000000.f, 0)); // should be far enough away in the back
-
+void BoxObject::pick(const QVector3D & p1, const QVector3D & d, PickObject & po) const {
 	// now process all box objects
-	for (int i=0; i<static_cast<int>(m_boxes.size()); ++i) {	// need int here for OpenMP and VC
-		const int threadNum = 0;
-		PickObject & po = closestObjects[threadNum];
+	for (unsigned int i=0; i<m_boxes.size(); ++i) {
 		const BoxMesh & bm = m_boxes[i];
 		for (unsigned int j=0; j<6; ++j) {
 			float z;
 			// is intersection point closes to viewer than previous intersection points?
 			if (bm.intersects(j, p1, d, z)) {
-				qDebug() << QString("Plane %1 of box %2 intersects line at z = %3").arg(j).arg(i).arg(z);
+//				qDebug() << QString("Plane %1 of box %2 intersects line at z = %3").arg(j).arg(i).arg(z);
 				if (z > po.m_z) {
 					po.m_z = z;
 					po.m_objectId = i;
-					po.m_faceID = j;
+					po.m_faceId = j;
 				}
 			}
 		}
 	}
-	qDebug() << QString("Plane %1 of box %2 is closest with z = %3").arg(closestObjects[0].m_faceID).arg(closestObjects[0].m_objectId).arg(closestObjects[0].m_z);
-
-
 }
 
+
+void BoxObject::highlight(unsigned int boxId, unsigned int faceId) {
+
+}

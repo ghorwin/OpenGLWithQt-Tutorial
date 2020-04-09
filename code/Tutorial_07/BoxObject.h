@@ -38,9 +38,12 @@ public:
 
 	/*! Thread-save pick function.
 		Checks if any of the box object surfaces is hit by the ray defined by "p1 + d [0..1]" and
-		stores data in closestObject.
+		stores data in po (pick object).
 	*/
-	void pick(const QVector3D & p1, const QVector3D & d, PickObject & closestObject) const;
+	void pick(const QVector3D & p1, const QVector3D & d, PickObject & po) const;
+
+	/*! Changes color of box and face to show that the box was clicked on. */
+	void highlight(unsigned int boxId, unsigned int faceId);
 
 	std::vector<BoxMesh>		m_boxes;
 

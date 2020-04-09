@@ -379,10 +379,26 @@ void SceneView::updateWorld2ViewMatrix() {
 
 
 void SceneView::selectNearestObject(const QVector3D & nearPoint, const QVector3D & farPoint) {
+	QElapsedTimer pickTimer;
+	pickTimer.start();
+
 	// compute view direction
 	QVector3D d = farPoint - nearPoint;
 
-	// now process all objects and request list of pick objects
-	PickObject p(-10000000.f, 0);
+	// create pick object
+	PickObject p(-10000000.f, std::numeric_limits<unsigned int>::max());
+
+	// now process all objects and update p to hold the closest hit
 	m_boxObject.pick(nearPoint, d, p);
+	// ... other objects
+
+	// any object accepted a pick?
+	if (p.m_objectId == std::numeric_limits<unsigned int>::max())
+		return; // nothing selected
+
+	qDebug().nospace() << "Pick successful (Box #"
+					   << p.m_objectId <<  ", Face #" << p.m_faceId << ", z = " << p.m_z << ") after "
+					   << pickTimer.elapsed() << " ms";
+
+	m_boxObject.highlight(p.m_objectId, p.m_faceId);
 }

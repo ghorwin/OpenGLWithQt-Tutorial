@@ -17,7 +17,7 @@ bool solve(double a, double b, double c,  double d,  double e,  double f, double
 }
 
 
-bool intersectsPlane(const QVector3D & a,
+bool intersectsRect(const QVector3D & a,
 				const QVector3D & b,
 				const QVector3D & normal,
 				const QVector3D & offset,
@@ -40,7 +40,7 @@ bool intersectsPlane(const QVector3D & a,
 	// now determine location on plane
 	QVector3D x0 = p1 + t*d;
 
-	QVector3D rhs = x0 - offset; // right hand side of equation system:  a * x  +  b * y = (x - o)
+	QVector3D rhs = x0 - offset; // right hand side of equation system:  a * x  +  b * y = (x - offset)
 
 	// we have three possible ways to get the intersection point, try them all until we succeed
 	double x,y;

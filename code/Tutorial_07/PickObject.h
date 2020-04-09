@@ -5,17 +5,17 @@
 
 struct PickObject {
 	PickObject(float z, unsigned int id) :
-		m_z(z), m_objectId(id), m_faceID(0)
+		m_z(z), m_objectId(id), m_faceId(0)
 	{
 	}
 	PickObject(float z, unsigned int id, unsigned int faceId) :
-		m_z(z), m_objectId(id), m_faceID(faceId)
+		m_z(z), m_objectId(id), m_faceId(faceId)
 	{
 	}
 
 	float m_z; // the depths of the intersection point
 	unsigned int m_objectId; // the object clicked on
-	unsigned int m_faceID; // the actual triangle/plane clicked on
+	unsigned int m_faceId; // the actual triangle/plane clicked on
 };
 
 
@@ -23,7 +23,7 @@ struct PickObject {
 	p = x * a  +  y * b. Returns true if intersection is found, and returns
 	the z-component of intersection point.
 */
-bool intersectsPlane(const QVector3D & a,
+bool intersectsRect(const QVector3D & a,
 				const QVector3D & b,
 				const QVector3D & normal,
 				const QVector3D & offset,

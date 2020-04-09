@@ -3,7 +3,7 @@
 :imagesoutdir: generated_images
 :stem: latexmath
 
-= Tutorial 07: Markieren/Auswählen von Flächen (mit OpenMP Parallelisierung)
+= Tutorial 07: Markieren/Auswählen von Flächen
 
 In diesem Tutorial geht es darum, Flächen bzw. Objekte in der Scene auszuwählen.
 
@@ -18,7 +18,7 @@ Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin
 Es gibt hier 2 Techniken, die verfolgt werden sollen:
 
 - Rendern in einen offscreen-Framenbuffer mit individuellen Farben aller anklickbaren Objekte und Identifizierung der Objekte durch Abbildung der Farben auf originale Objekte/Flächen
-- Strahlenverfolgung (Ray Picking), d.h. Bestimmung der Sichtlinie im Weltenkoordinatensystem und dann Schnittpunktberechnung aller Objekte und Sortierung nach Tiefe (aufgrund der vielen Objekte und eindeutig parallelem Algorithmus ist dies ein klassisches Anwendungsgebiet für OpenMP).
+- Strahlenverfolgung (Ray Picking), d.h. Bestimmung der Sichtlinie im Weltenkoordinatensystem und dann Schnittpunktberechnung aller Objekte und Sortierung nach Tiefe.
 
 Auch dieses ist ein grundlegendes 3D Grafik-Prozedere und in diesem Tutorial nur drin, um die Verwendung der Klasse `QOpenGLFrameBuffer` zu demonstrieren. Allerdings zeigt es auch die annehmlichkeiten der `QMatrix4x4`, `QVector4D` und `QVector3D` Klassen.
 
@@ -173,12 +173,19 @@ Einsetzen und Ausmultiplizieren ergibt:
 t_0 = \frac{\left( \boldsymbol{a} - \boldsymbol{s}\right) \cdot \boldsymbol{n}}{\boldsymbol{d} \cdot \boldsymbol{n}}
 ++++
 
-Falls der Richtungsvektor der Geraden *d* und der Normalenvektor *n* senkrecht aufeinanderstehen wird der Nenner zu 0, d.h. die Gerade liegt parallel zur Ebene (entweder neben oder in der Ebene, ist uns aber hier egal).
+Falls der Richtungsvektor der Geraden *d* und der Normalenvektor *n* senkrecht aufeinanderstehen wird der Nenner zu 0, d.h. die Gerade liegt parallel zur Ebene (entweder neben oder in der Ebene, ist uns aber hier egal). Dann soll es keinen Schnittpunkt geben. 
 
+Auch wenn Normalenvektor und Sichtgeradenvektor in die gleiche Richtung zeigen, soll kein Schnittpunkt berechnet werden (man würde ja sonst auf die Rückseite einer Fläche klicken).
+
+Damit hätte man das erste Prüfkriterium (Bedingung 1):
+[latexmath] 
+++++
+\boldsymbol{d} \cdot \boldsymbol{n} < 0
+++++
 
 Ob eine begrenzte _Fläche_ von der _Strecke_ (unserer Sichtlinie) geschnitten wird, hängt von der Lage des Schnittpunkts ab.
 
-Wird die Sichtlinie durch den Start- und Endpunkt *p1* und *p2* (near und far-Punkte) definiert, und damit *s* = *p1* und *d* = *p2* - *p1*, dann muss t zwischen 0 und 1 liegen (Bedingung 1).
+Wird die Sichtlinie durch den Start- und Endpunkt *p1* und *p2* (near und far-Punkte) definiert, und damit *s* = *p1* und *d* = *p2* - *p1*, dann muss t zwischen 0 und 1 liegen (Bedingung 2).
 
 Der berechnete Schnittpunkt
 
@@ -201,12 +208,12 @@ Der Normalenvektor für die Schnittpunktberechnung oben ist dann:
 \boldsymbol{n} = (\boldsymbol{b} - \boldsymbol{a}) \times (\boldsymbol{c} - \boldsymbol{a})
 ++++
 
-Nach Einsetzen und Auflösen nach _r_ und _s_ kann man prüfen, ob sowohl _r_ als auch _s_ zwischen 0 und 1 liegen (Bedingung 2).
+Nach Einsetzen und Auflösen nach _r_ und _s_ kann man prüfen, ob sowohl _r_ als auch _s_ zwischen 0 und 1 liegen (Bedingung 3).
 ====
 
 Nachdem nun die Mathematik klar ist, hier nochmal die Zusammenfassung des Angeklickt-Prüf-Algorithmus:
 
-- (Vorberechnung: Normalenvektor)
+- (Vorberechnung: Normalenvektoren, Seitenvektoren der Flächen)
 - Prüfung ob Sichtgeradenvektor und Normalenvektor der Ebene zueinander zeigen (Skalarprodukt der Vektoren liefert (absoluten) Winkel < 90°) (damit ist auch der Fall "Gerade liegt parallel zur Ebene" ausgeschlossen)
 - Berechnung Schnittpunkt (Geradenfaktor _t_) und Test, ob im Interval [ 0..1]
 - Berechnung Punkt in Ebene (Faktoren _r_ und _s_) und Test, ob im Interval [0..1]
@@ -218,9 +225,198 @@ Falls statt einer rechteckigen Ebene ein Dreieck getestet wird, so muss bei der 
 latexmath:[r \ge 0], latexmath:[s \ge 0] und latexmath:[r + s \le 1]
 ====
 
-Falls die Ebene 
+=== Die pick-Implementierung
+
+Die Funktion `pick()` oben wird um den Aufruf der eigentlichen Auswahl-/Markierfunktion erweitert:
+
+.SceneView.cpp::pick()
+[source,c++]
+----
+void SceneView::pick(const QPoint & globalMousePos) {
+    ....
+
+	// now do the actual picking - for now we implement a selection
+	selectNearestObject(nearResult.toVector3D(), farResult.toVector3D());
+}
+----
+
+Die Funktion `selectNearestObject()` wird mit Start- und Endpunkt der Sichtlinie aufgerufen und ist selbst auch recht kompakt:
+
+.SceneView.cpp::selectNearestObject()
+[source,c++]
+----
+void SceneView::selectNearestObject(const QVector3D & nearPoint, const QVector3D & farPoint) {
+	QElapsedTimer pickTimer;
+	pickTimer.start();
+
+	// compute view direction
+	QVector3D d = farPoint - nearPoint;
+
+	// create pick object
+	PickObject p(-10000000.f, std::numeric_limits<unsigned int>::max());
+
+	// now process all objects and update p to hold the closest hit
+	m_boxObject.pick(nearPoint, d, p);
+	// ... other objects
+
+	// any object accepted a pick?
+	if (p.m_objectId == std::numeric_limits<unsigned int>::max())
+		return; // nothing selected
+
+	qDebug().nospace() << "Pick successful (Box #"
+					   << p.m_objectId <<  ", Face #" << p.m_faceId << ", z = " << p.m_z << ") after "
+					   << pickTimer.elapsed() << " ms";
+
+	m_boxObject.highlight(p.m_objectId, p.m_faceId);
+}
+----
+
+Zum Testen der Performance hab ich in die Funktion einen Timer reingelegt (siehe Kapitel _Picking Performance_ unten). Den Timer und die `qDebug()`-Ausgabe kann man aber getrost rauswerfen.
+
+In der Funktion wird zuerst der Linienvektor *d* berechnet. Dann wird ein `PickObject` (eine Struktur mit Infos über angeklickte Objekte) erstellt und deren z-Wert ganz weit hinten initialisiert. Dann geht man alle Zeichenobjekte durch (bzw. alle Datenstrukturen, die Modellgeometrien enthalten) und testet alle enthaltenen Flächen auf Kollision mit dem Sichtstrahl. In diesem Tutorial gibt es nur ein Zeichenobjekt (`m_boxObject`), aber das Schema ist klar.
+
+Hinterher kann man über Vergleich der Objekt-ID mit dem Initialisierungswert (hier größter `unsigned int`) prüfen, ob überhaupt eine Fläche getroffen wurde.
+
+Und zuletzt kann man durch Aufruf der Funktion `BoxObject::highlight()` noch das angeklickte Objekt hervorheben (das wird hier nur gemacht, um dabei die stückweise Aktualisierung eines Vertexpuffers zu demonstrieren).
+
+Die ganze Arbeit der Kollisionsprüfung erfolgt und `BoxObject::pick()` und davon aufgerufenen Funktionen:
+
+.BoxObject.cpp::pick()
+[source,c++]
+----
+void BoxObject::pick(const QVector3D & p1, const QVector3D & d, PickObject & po) const {
+	// now process all box objects
+	for (unsigned int i=0; i<m_boxes.size(); ++i) {
+		const BoxMesh & bm = m_boxes[i];
+		for (unsigned int j=0; j<6; ++j) {
+			float z;
+			// is intersection point closes to viewer than previous intersection points?
+			if (bm.intersects(j, p1, d, z)) {
+				if (z > po.m_z) {
+					po.m_z = z;
+					po.m_objectId = i;
+					po.m_faceId = j;
+				}
+			}
+		}
+	}
+}
+----
+
+In dieser Funktion wird letztlich jede Box einzeln geprüft, und in jeder Box jede einzelne Fläche. Der eigentliche Schnittpunkt-Test erfolgt in der Funktion `BoxMesh::intersects()`.  Wurde ein Schnittpunkte gefunden, aktualisiert man die `PickObject` Struktur, aber nur, wenn das Objekt dichter am Betrachter liegt (größerer z-Wert).
+
+.BoxMesh.cpp::intersects()
+[source,c++]
+----
+bool BoxMesh::intersects(unsigned int planeIdx, const QVector3D & p1, const QVector3D & d, float & z) const {
+	const Rect & p = m_planeInfo[planeIdx];
+	return intersectsRect(p.m_a, p.m_b, p.m_normal, p.m_offset, p1, d, z);
+}
+----
+
+Hier wird die objektunabhängige Schnittpunkt-Testfunktion `intersectsRect` aufgerufen, und dieser Funktion die für den mathematischen Algorithmus oben benötigten Parameter der aktuell gewählten Seite (mit Index `planeIdx`) übergeben. Das sind die Parameter der Ebenegleichung (*a*, *b*, *n*, *offset*) und die Parameter der Sichtline *p1* und *d*. Die z-Koordinate des gefundenen Schnittpunkts wird im Falle eines Treffers in das Argument *z* eingetragen.
+
+Die Parameter der Seitenfläche werden bei Übertragung der Boxobjekt-Koordinante in den Vertexpuffer aktualisiert (dann sind die Vertexkoordinaten des Boxobjekts bereits transformiert).
+
+Der oben beschriebene mathematische Algorithmus zur Schnittpunkterkennung steckt nun in der Funktion `intersectsRect()`:
 
 
+.PickObject.cpp:intersectsRect()
+[source,c++]
+----
+bool intersectsRect(const QVector3D & a,
+				const QVector3D & b,
+				const QVector3D & normal,
+				const QVector3D & offset,
+				const QVector3D & p1,
+				const QVector3D & d,
+				float & z)
+{
+	// first the normal test
+	double angle = QVector3D::dotProduct(d, normal)/qAbs(d.length());
+	if (angle >= 0)
+		return false; // same direction, no intersection possible
+
+	// intersection point on line
+	double t = QVector3D::dotProduct(offset - p1, normal) / QVector3D::dotProduct(d, normal);
+	// outside viewing range?
+	if (t < 0 || t > 1)
+		return false;
+	QVector3D x0 = p1 + t*d;
+
+	// now determine location on plane
+	QVector3D rhs = x0 - offset; // right hand side of equation system:  a * x  +  b * y = (x - offset)
+
+	// we have three possible ways to get the intersection point, try them all until we succeed
+	double x,y;
+	// rows 1 and 2
+	if (solve(a.x(), a.y(), b.x(), b.y(), rhs.x(), rhs.y(), x, y)) {
+		if (x > 0 && x < 1 && y > 0 && y < 1)   { z = x0.z(); return true; }
+		else			                        return false;
+	}
+	// rows 1 and 3
+	if (solve(a.x(), a.z(), b.x(), b.z(), rhs.x(), rhs.z(), x, y)) {
+		if (x > 0 && x < 1 && y > 0 && y < 1)   { z = x0.z(); return true; }
+		else			                        return false;
+	}
+	// rows 2 and 3
+	if (solve(a.y(), a.z(), b.y(), b.z(), rhs.y(), rhs.z(), x, y)) {
+		if (x > 0 && x < 1 && y > 0 && y < 1)   { z = x0.z(); return true; }
+		else			                        return false;
+	}
+
+	return false;
+}
+----
+
+Im Prinzip ist das 1-zu-1 der Algorithmus oben, mit der Prüfung der 3 Bedingungen. Bei der Berechnung der Parameter der Ebenengleichungen gibt es letztlich 3 Variante, wobei durchaus 2 davon je nach Lage der Ebene und Sichtlinie fehlschlagen können.
+
+[NOTE]
+====
+Liegt beispielsweise eine Fläche in der x-y Ebene, d.h. z = 0 und Normalenvektor = [0,0,1]. Dann wären z.B. *a* = [4,0,0] und *b* = [0,2,0]. Die Ebene wird von einem Sichtstrahl durchstoßen, mit *d* = [-1,-1,-1]. 
+
+Die Gleichungssysteme 2 und 3 sind damit nicht lösbar, da die Determinante jeweils zu 0 wird. Ähnliches kann für andere Ebenenausrichtungen passieren, weswegen alle 3 Kombinationen getestet werden müssen.
+
+Man kann das bei der Box und den 6 Seiten sehr schön sehen: 
+
+- Vorne und Hinten benötigen Gleichungssystem 1 
+- Links und Rechts benötigen Gleichungssystem 3
+- Oben und Unten benötigen Gleichungssystem 2
+====
+
+Die Lösungsfunktion ist einfach eine Implementierung der Cramerschen Regel (https://de.wikipedia.org/wiki/Cramersche_Regel):
+
+.PickObject.cpp:solve()
+[source,c++]
+----
+/* Solves equation system with Cramer's rule:
+	 a x + c y = e
+	 b x + d y = f
+*/
+bool solve(double a, double b, double c, double d, double e, double f, double & x, double & y) {
+	double det = a*d - b*c;
+	if (det == 0.)
+		return false;
+
+	x = (e*d - c*f)/det;
+	y = (a*f - e*b)/det;
+	return true;
+}
+----
+
+=== Picking Performance
+
+Anhand der möglicherweise vielen Flächen in einer komplexen Szene mag man auf die Idee kommen, dass die CPU-basierte Schnittpunktberechnung zu langsam wäre. Machen wir mal den Test:
+
+1 Mio Boxen (`BoxObject.cpp:Zeile 34`), macht 6 Mio Flächen. Im Debug Modus dauert die Schnittpunktberechnung mit _allen_ Flächen nach obigem Algorithmus insgesamt ca. 240 ms. Da lohnt es sich nicht, irgendwelche Performanceoptimierungen zu untersuchen (wie BSD- oder Octrees zur Partitionierung des Raumes etc., was man so in anderen Texten dazu findet).
+
+=== Einfärben ausgewählter Objekte
+
+Ist nun Objekt und Seite identifiziert, so möchte man das jeweilige Objekt vielleicht hervorheben. Dafür müssen die entsprechenden Vertex-Farbeigenschaften geändert werden.
+
+Also, ist z.B. Box #15 und deren Fläche #3 angeklickt worden:
+
+TODO:
 
 
 
@@ -251,9 +447,11 @@ Ohne die kleine "mit etwas Verzögerung zeichnen" Optimierung sieht der Algorith
 - Falls Scenensicht bewegt: zeichnen der Scene in einen Framebuffer, wobei hier der Vertexshader die Farben der Flächen aus einem separaten Farbpuffer holt - dies erlaubt weiterhin die Verwendung von Indexlisten und Vertexarrays
 - Zeichnen der Scene wie gehabt
 
-Wir brauchen dafür also:
+Wir bräuchten dafür also:
 - ein weiteres ShaderProgramm, welches die Koordinaten aus dem Vertexarray (mit interleaved Storage) liest, aber die Falsch-Farben aus einem _separaten Puffer_ holt
 - einen Framebuffer, in den die Falschfarbendarstellung kopiert wird
 - eine Möglichkeit, die Farbwerte des Puffers im CPU-Speicher abzulegen
 - eine Abfrage der Farbwerte und Identifikation des angeklickten Elements
 
+
+Hmm, wenn ich so darüber nachdenke, dass wir bereits einen funktionierenden und ausreichend schnellen Pickingalgorithmus oben haben, will man sich diesen Aufwand eigentlich nicht machen. Daher lass ich das jetzt mal bleiben und würde das Thema "Falschfarbenrendering" in einem späteren Tutorial zum Zweck der Sichtfaktorberechnung wieder ausbuddeln.
