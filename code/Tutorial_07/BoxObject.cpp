@@ -31,7 +31,7 @@ BoxObject::BoxObject() :
 
 	// create 'some' other boxes
 
-	const int BoxGenCount = 000000;
+	const int BoxGenCount = 50;
 	const int GridDim = 100; // must be an int, or you have to use a cast below
 
 	// initialize grid (block count)
@@ -146,5 +146,32 @@ void BoxObject::pick(const QVector3D & p1, const QVector3D & d, PickObject & po)
 
 
 void BoxObject::highlight(unsigned int boxId, unsigned int faceId) {
+	// we change the color of all vertexes of the selected box to lightgray
+	// and the vertex colors of the selected plane/face to light blue
 
+	std::vector<QColor> faceCols(6);
+	for (unsigned int i=0; i<6; ++i) {
+		if (i == faceId)
+			faceCols[i] = QColor("#b40808");
+		else
+			faceCols[i] = QColor("#f3f3f3");
+	}
+	m_boxes[boxId].setFaceColors(faceCols);
+
+	// then we update the respective portion of the vertexbuffer memory
+	Vertex * vertexBuffer = m_vertexBufferData.data();
+	unsigned int vertexCount = 0;
+	GLuint * elementBuffer = m_elementBufferData.data();
+	// advance pointers to position of the box
+
+	vertexBuffer += boxId*6*4; // 6 planes, with 4 vertexes each
+	elementBuffer += boxId*6*6; // 6 planes, with 2 triangles with 3 indexes each
+	vertexCount += boxId*6*4;
+	m_boxes[boxId].copy2Buffer(vertexBuffer, elementBuffer, vertexCount);
+
+	// and now update the entire vertex buffer
+	m_vbo.bind();
+	int vertexMemSize = m_vertexBufferData.size()*sizeof(Vertex);
+	m_vbo.allocate(m_vertexBufferData.data(), vertexMemSize);
+	m_vbo.release();
 }
