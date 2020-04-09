@@ -20,7 +20,8 @@ License    : BSD License,
 #define SHADER(x) m_shaderPrograms[x].shaderProgram()
 
 SceneView::SceneView() :
-	m_inputEventReceived(false)
+	m_inputEventReceived(false),
+	m_texture(nullptr)
 {
 	// tell keyboard handler to monitor certain keys
 	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_W);
@@ -34,7 +35,7 @@ SceneView::SceneView() :
 	// *** create scene (no OpenGL calls are being issued below, just the data structures are created.
 
 	// Shaderprogram #0 : regular geometry (painting triangles via element index)
-	ShaderProgram blocks(":/shaders/withWorldAndCamera.vert",":/shaders/simple.frag");
+	ShaderProgram blocks(":/shaders/withTexture.vert",":/shaders/texture.frag");
 	blocks.m_uniformNames.append("worldToView");
 	m_shaderPrograms.append( blocks );
 
@@ -48,11 +49,15 @@ SceneView::SceneView() :
 	// *** initialize camera placement and model placement in the world
 
 	// move camera a little back and up
-	m_camera.translate(-50,100,150);
+	m_camera.translate(-5,10,15);
 	// look slightly down
 	m_camera.rotate(-30, m_camera.right());
 	// look slightly right
 	m_camera.rotate(-25, QVector3D(0.0f, 1.0f, 0.0f));
+
+	// *** initialize textures
+
+	m_texture = new QOpenGLTexture(QOpenGLTexture::Target2D);
 }
 
 
@@ -67,6 +72,8 @@ SceneView::~SceneView() {
 		m_gridObject.destroy();
 
 		m_gpuTimers.destroy();
+		m_texture->destroy();
+		delete m_texture;
 	}
 }
 
@@ -82,6 +89,14 @@ void SceneView::initializeGL() {
 		glEnable(GL_CULL_FACE);
 		// enable depth testing, important for the grid and for the drawing order of several objects
 		glEnable(GL_DEPTH_TEST);
+
+		// textures
+		m_texture->create();
+		m_texture->setMinificationFilter(QOpenGLTexture::NearestMipMapLinear);
+		m_texture->setMagnificationFilter(QOpenGLTexture::NearestMipMapLinear);
+		QImage img(":/textures/brickwall.jpg");
+		m_texture->setData(img);
+		m_texture->allocateStorage();
 
 		// initialize drawable objects
 		m_boxObject.create(SHADER(0));
@@ -143,6 +158,7 @@ void SceneView::paintGL() {
 	// *** render boxes
 	SHADER(0)->bind();
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
+	m_texture->bind();
 
 	m_gpuTimers.recordSample(); // render boxes
 	m_boxObject.render();

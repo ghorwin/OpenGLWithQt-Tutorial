@@ -15,6 +15,7 @@ License    : BSD License,
 #include <QMatrix4x4>
 #include <QOpenGLTimeMonitor>
 #include <QElapsedTimer>
+#include <QOpenGLTexture>
 
 #include "OpenGLWindow.h"
 #include "ShaderProgram.h"
@@ -74,6 +75,7 @@ private:
 
 	BoxObject					m_boxObject;
 	GridObject					m_gridObject;
+	QOpenGLTexture				*m_texture;
 
 	QOpenGLTimeMonitor			m_gpuTimers;
 	QElapsedTimer				m_cpuTimer;

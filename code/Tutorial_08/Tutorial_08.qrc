@@ -8,5 +8,6 @@
         <file>shaders/withTexture.vert</file>
         <file>textures/brickwall.jpg</file>
         <file>textures/tiles.jpg</file>
+        <file>textures/plaster.jpg</file>
     </qresource>
 </RCC>

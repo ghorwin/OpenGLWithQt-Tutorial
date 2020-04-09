@@ -18,13 +18,14 @@ License    : BSD License,
 /*! A container class to store data (coordinates, normals, textures, colors) of a vertex, used for interleaved
 	storage. Expand this class as needed.
 
-	Memory layout (each char is a byte): xxxxyyyyzzzzrrrrggggbbbb = 6*4 = 24 Bytes
+	Memory layout (each char is a byte): xxxxyyyyzzzzrrrrggggbbbbiiiijjjj = 8*4 = 32 Bytes
 
 	You can define a vector<Vertex> and use this directly as input to the vertex buffer.
 
 	Mind implicit padding by compiler! Hence, for allocation use:
 	- sizeof(Vertex) as stride
 	- offsetof(Vertex, r) as start offset for the color
+	- offsetof(Vertex, i) as start offset for the texture coordinates
 
 	This will only become important, if mixed data types are used in the struct.
 	Read http://www.catb.org/esr/structure-packing/ for an in-depth explanation.
@@ -37,12 +38,26 @@ struct Vertex {
 		z(float(coords.z())),
 		r(float(col.redF())),
 		g(float(col.greenF())),
-		b(float(col.blueF()))
+		b(float(col.blueF())),
+		texi(0),
+		texj(0)
+	{
+	}
+	Vertex(const QVector3D & coords, const QColor & col, float textureX, float textureY) :
+		x(float(coords.x())),
+		y(float(coords.y())),
+		z(float(coords.z())),
+		r(float(col.redF())),
+		g(float(col.greenF())),
+		b(float(col.blueF())),
+		texi(textureX),
+		texj(textureY)
 	{
 	}
 
 	float x,y,z;
 	float r,g,b;
+	float texi,texj;
 };
 
 #endif // VERTEX_H

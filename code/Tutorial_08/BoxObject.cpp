@@ -29,7 +29,7 @@ BoxObject::BoxObject() :
 
 	// create 'some' other boxes
 
-	const int BoxGenCount = 10000;
+	const int BoxGenCount = 0;
 	const int GridDim = 50; // must be an int, or you have to use a cast below
 
 	// initialize grid (block count)
@@ -96,6 +96,9 @@ void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
 	// index 1 = color
 	shaderProgramm->enableAttributeArray(1); // array with index/id 1
 	shaderProgramm->setAttributeBuffer(1, GL_FLOAT, offsetof(Vertex, r), 3, sizeof(Vertex));
+	// index 2 = texture
+	shaderProgramm->enableAttributeArray(2); // array with index/id 1
+	shaderProgramm->setAttributeBuffer(2, GL_FLOAT, offsetof(Vertex, texi), 2, sizeof(Vertex));
 
 	// Release (unbind) all
 	m_vao.release();
