@@ -15,12 +15,10 @@ image::Tutorial_07_RayTracking.png[Tutorial_07,pdfwidth=8cm]
 Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_07[Tutorial_07]
 ====
 
-Es gibt hier 2 Techniken, die verfolgt werden sollen:
+Es gibt für das Markieren/Auswählen von Objekten und Flächen eigentlich nur grundlegende Techniken:
 
-- Rendern in einen offscreen-Framenbuffer mit individuellen Farben aller anklickbaren Objekte und Identifizierung der Objekte durch Abbildung der Farben auf originale Objekte/Flächen
 - Strahlenverfolgung (Ray Picking), d.h. Bestimmung der Sichtlinie im Weltenkoordinatensystem und dann Schnittpunktberechnung aller Objekte und Sortierung nach Tiefe.
-
-Auch dieses ist ein grundlegendes 3D Grafik-Prozedere und in diesem Tutorial nur drin, um die Verwendung der Klasse `QOpenGLFrameBuffer` zu demonstrieren. Allerdings zeigt es auch die annehmlichkeiten der `QMatrix4x4`, `QVector4D` und `QVector3D` Klassen.
+- Rendern in einen offscreen-Framenbuffer mit individuellen Farben aller anklickbaren Objekte und Identifizierung der Objekte durch Abbildung der Farben auf originale Objekte/Flächen.
 
 == Option 1: Strahlenverfolgung
 
@@ -267,6 +265,7 @@ void SceneView::selectNearestObject(const QVector3D & nearPoint, const QVector3D
 					   << p.m_objectId <<  ", Face #" << p.m_faceId << ", z = " << p.m_z << ") after "
 					   << pickTimer.elapsed() << " ms";
 
+	// Mind: OpenGL-context must be current when we call this function!
 	m_boxObject.highlight(p.m_objectId, p.m_faceId);
 }
 ----
@@ -277,7 +276,7 @@ In der Funktion wird zuerst der Linienvektor *d* berechnet. Dann wird ein `PickO
 
 Hinterher kann man über Vergleich der Objekt-ID mit dem Initialisierungswert (hier größter `unsigned int`) prüfen, ob überhaupt eine Fläche getroffen wurde.
 
-Und zuletzt kann man durch Aufruf der Funktion `BoxObject::highlight()` noch das angeklickte Objekt hervorheben (das wird hier nur gemacht, um dabei die stückweise Aktualisierung eines Vertexpuffers zu demonstrieren).
+Und zuletzt kann man durch Aufruf der Funktion `BoxObject::highlight()` noch das angeklickte Objekt hervorheben (siehe Abschnitt _Einfärben ausgewählter Objekte_ weiter unten).
 
 Die ganze Arbeit der Kollisionsprüfung erfolgt und `BoxObject::pick()` und davon aufgerufenen Funktionen:
 
@@ -414,11 +413,70 @@ Anhand der möglicherweise vielen Flächen in einer komplexen Szene mag man auf 
 
 Ist nun Objekt und Seite identifiziert, so möchte man das jeweilige Objekt vielleicht hervorheben. Dafür müssen die entsprechenden Vertex-Farbeigenschaften geändert werden.
 
-Also, ist z.B. Box #15 und deren Fläche #3 angeklickt worden:
+Auch dies ist wieder nicht übermäßig kompliziert, da die Datenstrukturen in _Tutorial 05_ bereits in geeigneter Form angelegt wurden, als hätte man geahnt, dass man sowas mal brauchen würde :-):
 
-TODO:
+.BoxObject:highlight()
+[source,c++]
+----
+void BoxObject::highlight(unsigned int boxId, unsigned int faceId) {
+	// we change the color of all vertexes of the selected box to lightgray
+	// and the vertex colors of the selected plane/face to light blue
 
+	std::vector<QColor> faceCols(6);
+	for (unsigned int i=0; i<6; ++i) {
+		if (i == faceId)			faceCols[i] = QColor("#b40808");
+		else			            faceCols[i] = QColor("#f3f3f3");
+	}
+	m_boxes[boxId].setFaceColors(faceCols);
 
+	// then we update the respective portion of the vertexbuffer memory
+	Vertex * vertexBuffer = m_vertexBufferData.data();
+	unsigned int vertexCount = 0;
+	GLuint * elementBuffer = m_elementBufferData.data();
+	// advance pointers to position of the box
+
+	vertexBuffer += boxId*6*4; // 6 planes, with 4 vertexes each
+	elementBuffer += boxId*6*6; // 6 planes, with 2 triangles with 3 indexes each
+	vertexCount += boxId*6*4;
+	m_boxes[boxId].copy2Buffer(vertexBuffer, elementBuffer, vertexCount);
+
+	// and now update the entire vertex buffer
+	m_vbo.bind();
+	m_vbo.allocate(m_vertexBufferData.data(), m_vertexBufferData.size()*sizeof(Vertex));
+	m_vbo.release();
+}
+----
+
+Am Ende der Funktion wird der gesamte Vertexpuffer in die Grafikkarte kopiert. Bei größeren Objekten (> 1 Mio Elemente) kann das dann schonmal etwas dauern. Daher gibt es auch die Funktion `QOpenGLBuffer::write()`, welche nur einen Teil des Puffers ersetzt. Dann müsste die Funktion so angepasst werden:
+
+[source,c++]
+----
+void BoxObject::highlight(unsigned int boxId, unsigned int faceId) {
+    ....
+
+	// and now update the respective portion of the vertex buffer
+	m_vbo.bind();
+	m_vbo.write(boxId*6*4*sizeof(Vertex), m_vertexBufferData.data() + boxId*6*4, 6*4*sizeof(Vertex));
+	m_vbo.release();
+}
+----
+
+Die Funktion `QOpenGLBuffer::write()` ruft intern `glBufferSubData(GL_ARRAY_BUFFER, offset, count, data)` auf. Wichtig ist hier das Verständnis der Parameter der Funktion `QOpenGLBuffer::write(int offset, const void *data, int count)`:
+
+- _offset_ - Byte offset 
+- _data_ - Zeiger auf die Daten, die hineinkopiert werden sollen (das Offset wird hier nicht angewendet!)
+- _count_ - Anzahl der Bytes zum kopieren
+
+Man darf also nicht den Fehler machen, und `m_vertexBufferData.data()` als zweites Argument übergeben, sondern muss auch hier den Zeiger auf den Beginn des modifizierten Bereiches vorrücken `m_vertexBufferData.data() + boxId*6*4`.
+
+Was bringt die Änderung? Bei 1 Mio Boxen dauert die Variante mit `allocate()` ca. 160 ms (Debugmodus), mit `write()` deutlich weniger als 1 ms. 
+
+Natürlich sollte man sich die markierten Boxen merken, sodass man die Markierung hinterher wieder entfernen kann. Das sollte selbst aber nicht übermäßig kompliziert sein.
+
+[TIP]
+====
+Ähnlich, wie hier die Farben in den Vertexdaten aktualisiert wurden, kann man auch geometrische Objekte verschieben. Also bei Mausbewegung (und bspw. gedrückter linker Maustaste) die Vertexkoordinaten des markierten Objekts anpassen, den Vertexpuffer aktualisiern und siehe da - Objekte werden verschoben.
+====
 
 
 == Option 2: Falschfarbenrendering

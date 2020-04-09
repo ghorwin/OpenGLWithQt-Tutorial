@@ -13,6 +13,7 @@ License    : BSD License,
 
 #include <QVector3D>
 #include <QOpenGLShaderProgram>
+#include <QElapsedTimer>
 
 #include "PickObject.h"
 
@@ -31,7 +32,7 @@ BoxObject::BoxObject() :
 
 	// create 'some' other boxes
 
-	const int BoxGenCount = 50;
+	const int BoxGenCount = 10000;
 	const int GridDim = 100; // must be an int, or you have to use a cast below
 
 	// initialize grid (block count)
@@ -158,20 +159,21 @@ void BoxObject::highlight(unsigned int boxId, unsigned int faceId) {
 	}
 	m_boxes[boxId].setFaceColors(faceCols);
 
+	// advance the pointers and vertex numbers to the respected box position/numbering
+	Vertex * vertexBuffer = m_vertexBufferData.data() + boxId*6*4; // 6 planes, with 4 vertexes each
+	unsigned int vertexCount = boxId*6*4;
+	GLuint * elementBuffer = m_elementBufferData.data() + boxId*6*6; // 6 planes, with 2 triangles with 3 indexes each
 	// then we update the respective portion of the vertexbuffer memory
-	Vertex * vertexBuffer = m_vertexBufferData.data();
-	unsigned int vertexCount = 0;
-	GLuint * elementBuffer = m_elementBufferData.data();
-	// advance pointers to position of the box
-
-	vertexBuffer += boxId*6*4; // 6 planes, with 4 vertexes each
-	elementBuffer += boxId*6*6; // 6 planes, with 2 triangles with 3 indexes each
-	vertexCount += boxId*6*4;
 	m_boxes[boxId].copy2Buffer(vertexBuffer, elementBuffer, vertexCount);
 
+	QElapsedTimer t;
+	t.start();
 	// and now update the entire vertex buffer
 	m_vbo.bind();
-	int vertexMemSize = m_vertexBufferData.size()*sizeof(Vertex);
-	m_vbo.allocate(m_vertexBufferData.data(), vertexMemSize);
+	// only update the modified portion of the data
+	m_vbo.write(boxId*6*4*sizeof(Vertex), m_vertexBufferData.data() + boxId*6*4, 6*4*sizeof(Vertex));
+	// alternatively use the call below, which (re-) copies the entire buffer, which can be slow
+	// m_vbo.allocate(m_vertexBufferData.data(), m_vertexBufferData.size()*sizeof(Vertex));
 	m_vbo.release();
+	qDebug() << t.elapsed();
 }

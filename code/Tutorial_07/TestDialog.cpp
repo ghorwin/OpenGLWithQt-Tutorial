@@ -61,7 +61,8 @@ TestDialog::TestDialog() :
 	QLabel * navigationInfo = new QLabel(this);
 	navigationInfo->setWordWrap(true);
 	navigationInfo->setText("Hold right mouse button for free mouse look and to navigate "
-							"with keys WASDQE. Hold shift to slow down. Use scroll-wheel to move quickly forward and backward.");
+							"with keys WASDQE. Hold shift to slow down. Use scroll-wheel to move quickly forward and backward. "
+							"Use left-click to select objects.");
 	hlay->addWidget(navigationInfo);
 
 	QPushButton * closeBtn = new QPushButton(tr("Close"), this);

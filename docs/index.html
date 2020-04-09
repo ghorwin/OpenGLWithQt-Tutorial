@@ -73,8 +73,8 @@ table {
 <div class="details">
 <span id="author" class="author">Andreas Nicolai</span><br>
 <span id="email" class="email"><a href="mailto:andreas.nicolai@tu-dresden.de">andreas.nicolai@tu-dresden.de</a></span><br>
-<span id="revnumber">version 0.5.0,</span>
-<span id="revdate">März 2020</span>
+<span id="revnumber">version 0.7.0,</span>
+<span id="revdate">April 2020</span>
 </div>
 <div id="toc" class="toc2">
 <div id="toctitle">Inhaltsverzeichnis</div>
@@ -213,12 +213,20 @@ table {
 </li>
 </ul>
 </li>
-<li><a href="#_tutorial_07_markierenauswählen_von_flächen_mit_openmp_parallelisierung">7. Tutorial 07: Markieren/Auswählen von Flächen (mit OpenMP Parallelisierung)</a>
+<li><a href="#_tutorial_07_markierenauswählen_von_flächen">7. Tutorial 07: Markieren/Auswählen von Flächen</a>
 <ul class="sectlevel2">
-<li><a href="#_option_1_strahlenverfolgung">7.1. Option 1: Strahlenverfolgung</a></li>
+<li><a href="#_option_1_strahlenverfolgung">7.1. Option 1: Strahlenverfolgung</a>
+<ul class="sectlevel3">
+<li><a href="#_erkennung_von_mausklick_ereignissen">7.1.1. Erkennung von Mausklick-Ereignissen</a></li>
+<li><a href="#_finden_von_angeklickten_objekten">7.1.2. Finden von angeklickten Objekten</a></li>
+<li><a href="#_die_pick_implementierung">7.1.3. Die pick-Implementierung</a></li>
+<li><a href="#_picking_performance">7.1.4. Picking Performance</a></li>
+<li><a href="#_einfärben_ausgewählter_objekte">7.1.5. Einfärben ausgewählter Objekte</a></li>
+</ul>
+</li>
 <li><a href="#_option_2_falschfarbenrendering">7.2. Option 2: Falschfarbenrendering</a>
 <ul class="sectlevel3">
-<li><a href="#_optimierungsidee_für_quasi_statische_scenen">7.2.1. Optimierungsidee für quasi-statische Scenen</a></li>
+<li><a href="#_optimierungsidee_für_quasi_statische_szenen">7.2.1. Optimierungsidee für quasi-statische Szenen</a></li>
 </ul>
 </li>
 </ul>
@@ -5500,27 +5508,625 @@ int main(int argc, char **argv) {
 </div>
 </div>
 <div class="sect1">
-<h2 id="_tutorial_07_markierenauswählen_von_flächen_mit_openmp_parallelisierung">7. Tutorial 07: Markieren/Auswählen von Flächen (mit OpenMP Parallelisierung)</h2>
+<h2 id="_tutorial_07_markierenauswählen_von_flächen">7. Tutorial 07: Markieren/Auswählen von Flächen</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>In diesem Tutorial geht es darum, Flächen bzw. Objekte in der Scene auszuwählen. Es gibt hier 2 Techniken, die verfolgt werden sollen:</p>
+<p>In diesem Tutorial geht es darum, Flächen bzw. Objekte in der Scene auszuwählen.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/Tutorial_07_RayTracking.png" alt="Tutorial_07">
+</div>
+<div class="title">Figure 12. Tutorial_07, Visualisierung eines Bildschirmstrahls</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Quelltext für dieses Tutorial liegt im github repo:  <a href="https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_07">Tutorial_07</a></p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Es gibt für das Markieren/Auswählen von Objekten und Flächen eigentlich nur grundlegende Techniken:</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>Rendern in einen offscreen-Framenbuffer mit individuellen Farben aller anklickbaren Objekte und Identifizierung der Objekte durch Abbildung der Farben auf originale Objekte/Flächen</p>
+<p>Strahlenverfolgung (Ray Picking), d.h. Bestimmung der Sichtlinie im Weltenkoordinatensystem und dann Schnittpunktberechnung aller Objekte und Sortierung nach Tiefe.</p>
 </li>
 <li>
-<p>Strahlenverfolgung (Ray Picking), d.h. Bestimmung der Sichtlinie im Weltenkoordinatensystem und dann Schnittpunktberechnung aller Objekte und Sortierung nach Tiefe (aufgrund der vielen Objekte und eindeutig parallelem Algorithmus ist dies ein klassisches Anwendungsgebiet für OpenMP).</p>
+<p>Rendern in einen offscreen-Framenbuffer mit individuellen Farben aller anklickbaren Objekte und Identifizierung der Objekte durch Abbildung der Farben auf originale Objekte/Flächen.</p>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="_option_1_strahlenverfolgung">7.1. Option 1: Strahlenverfolgung</h3>
+<div class="paragraph">
+<p>Der Grundgedanke ist einfach: Die Mausposition im lokalen Fenster umrechnen in Weltkoordinaten und entlang dieser Linie alle Schnittpunkte mit auswählbaren Objekten finden. Das näheste Objekte zum Betrachter ist dann das ausgewählte Objekt.</p>
+</div>
+<div class="paragraph">
+<p>Die Welt (in der perspektivischen Darstellung) hat eine <em>near plane</em> und eine <em>far plane</em>. Alles davor und dahinter wird geklippt und nicht dargestellt. Daher kann hier auch nichts sinnvoll ausgewählt werden. Der Betrachter schaut durch die <em>near plane</em> hindurch auf die Scene, und der Blickstrahl trifft irgendwo hinten auf die <em>far plane</em>. Da der Blickstrahl senkrecht zum Bildschirmoberfläche steht, sieht man die Linie selbst nur als Punkt.</p>
+</div>
+<div class="paragraph">
+<p>Die Berechnung ist hinreichend trivial:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Globale Mauskoordinaten von <code>QCursor::pos()</code> in lokale Mauskoordinaten umrechnen (mittels <a href="https://doc.qt.io/qt-5/qwidget.html#mapFromGlobal">QWindow::mapFromGlobal()</a> )</p>
+</li>
+<li>
+<p>Mausposition des lokalen Fensters in Normalized Device Coordinates (NDC) umrechnen. Dabei hilft sich vorzustellen, dass das Fenster das normalisierte x-y-Koordinatensystem beinhaltet, mit dem Mittelpunkt genau in der Mitte des Fensters und der Ausdehnung -1..1 in beide Achsen. Wenn man also genau in die Mitte klickt, ist das 0,0 in NDC. Ganz oben links geklickt ist das -1,1 (y-Achse zeigt nach oben in NFC). Die z-Koordinate ist -1 für die <em>far plane</em> und 1 für die <em>near plane</em>. W-Komponente auf 1 setzen.</p>
+</li>
+<li>
+<p>Model2Projection-Matrix (also Produkt aller Transformationsmatrizen) invertieren</p>
+</li>
+<li>
+<p>Beide Punkte mit der inversen Matrix transformieren</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>Fertig. Hier ist der Quelltext:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp:pick()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">pick</span><span class="p">(</span><span class="k">const</span> <span class="n">QPoint</span> <span class="o">&amp;</span> <span class="n">globalMousePos</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// local mouse coordinates</span>
+	<span class="n">QPoint</span> <span class="n">localMousePos</span> <span class="o">=</span> <span class="n">mapFromGlobal</span><span class="p">(</span><span class="n">globalMousePos</span><span class="p">);</span>
+	<span class="kt">int</span> <span class="n">my</span> <span class="o">=</span> <span class="n">localMousePos</span><span class="p">.</span><span class="n">y</span><span class="p">();</span>
+	<span class="kt">int</span> <span class="n">mx</span> <span class="o">=</span> <span class="n">localMousePos</span><span class="p">.</span><span class="n">x</span><span class="p">();</span>
+
+	<span class="c1">// viewport dimensions</span>
+	<span class="k">const</span> <span class="n">qreal</span> <span class="n">retinaScale</span> <span class="o">=</span> <span class="n">devicePixelRatio</span><span class="p">();</span> <span class="c1">// needed for Macs with retina display</span>
+	<span class="n">qreal</span> <span class="n">vpw</span> <span class="o">=</span> <span class="n">width</span><span class="p">()</span><span class="o">*</span><span class="n">retinaScale</span><span class="p">;</span>
+	<span class="n">qreal</span> <span class="n">vph</span> <span class="o">=</span> <span class="n">height</span><span class="p">()</span><span class="o">*</span><span class="n">retinaScale</span><span class="p">;</span>
+
+	<span class="c1">// invert world2view matrix, with m_worldToView = m_projection * m_camera.toMatrix() * m_transform.toMatrix();</span>
+	<span class="kt">bool</span> <span class="n">invertible</span><span class="p">;</span>
+	<span class="n">QMatrix4x4</span> <span class="n">projectionMatrixInverted</span> <span class="o">=</span> <span class="n">m_worldToView</span><span class="p">.</span><span class="n">inverted</span><span class="p">(</span><span class="o">&amp;</span><span class="n">invertible</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">invertible</span><span class="p">)</span> <span class="p">{</span>
+		<span class="n">qWarning</span><span class="p">()</span><span class="o">&lt;&lt;</span> <span class="s">"Cannot invert projection matrix."</span><span class="p">;</span>
+		<span class="k">return</span><span class="p">;</span>
+	<span class="p">}</span>
+
+	<span class="c1">// mouse position in NDC space, one point on near plane and one point on far plane</span>
+	<span class="kt">float</span> <span class="n">halfVpw</span> <span class="o">=</span> <span class="n">vpw</span><span class="o">/</span><span class="mf">2.0</span><span class="p">;</span>
+	<span class="kt">float</span> <span class="n">halfVph</span> <span class="o">=</span> <span class="n">vph</span><span class="o">/</span><span class="mf">2.0</span><span class="p">;</span>
+	<span class="n">QVector4D</span> <span class="n">near</span><span class="p">(</span>
+				<span class="p">(</span><span class="n">mx</span> <span class="o">-</span> <span class="n">halfVpw</span><span class="p">)</span> <span class="o">/</span> <span class="n">halfVpw</span><span class="p">,</span>
+				<span class="o">-</span><span class="mi">1</span><span class="o">*</span><span class="p">(</span><span class="n">my</span> <span class="o">-</span> <span class="n">halfVph</span><span class="p">)</span> <span class="o">/</span> <span class="n">halfVph</span><span class="p">,</span>
+				<span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+				<span class="mf">1.0</span><span class="p">);</span>
+
+	<span class="n">QVector4D</span> <span class="n">far</span><span class="p">(</span>
+				<span class="n">near</span><span class="p">.</span><span class="n">x</span><span class="p">(),</span>
+				<span class="n">near</span><span class="p">.</span><span class="n">y</span><span class="p">(),</span>
+				<span class="mi">1</span><span class="p">,</span>
+				<span class="mf">1.0</span><span class="p">);</span>
+
+	<span class="c1">// transform from NDC to model coordinates</span>
+	<span class="n">QVector4D</span> <span class="n">nearResult</span> <span class="o">=</span> <span class="n">projectionMatrixInverted</span><span class="o">*</span><span class="n">near</span><span class="p">;</span>
+	<span class="n">QVector4D</span> <span class="n">farResult</span> <span class="o">=</span> <span class="n">projectionMatrixInverted</span><span class="o">*</span><span class="n">far</span><span class="p">;</span>
+	<span class="c1">// don't forget normalization!</span>
+	<span class="n">nearResult</span> <span class="o">/=</span> <span class="n">nearResult</span><span class="p">.</span><span class="n">w</span><span class="p">();</span>
+	<span class="n">farResult</span> <span class="o">/=</span> <span class="n">farResult</span><span class="p">.</span><span class="n">w</span><span class="p">();</span>
+
+	<span class="c1">// update pick line vertices (visualize pick line)</span>
+	<span class="n">m_context</span><span class="o">-&gt;</span><span class="n">makeCurrent</span><span class="p">(</span><span class="k">this</span><span class="p">);</span>
+	<span class="n">m_pickLineObject</span><span class="p">.</span><span class="n">setPoints</span><span class="p">(</span><span class="n">nearResult</span><span class="p">.</span><span class="n">toVector3D</span><span class="p">(),</span> <span class="n">farResult</span><span class="p">.</span><span class="n">toVector3D</span><span class="p">());</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Ganz am Ende wird noch ein neu eingeführtes OpenGL-Zeichenobjekt aktualisiert. Nach der Lektüre von <em>Tutorial 05</em> sollte der Quelltext in <code>PickLineObject.*</code> selbsterklärend sein. Diese Objekt nutzt übrigends den gleichen Vertex- und Fragmentshader wie er für die Boxen eingesetzt wird.</p>
+</div>
+<div class="sect3">
+<h4 id="_erkennung_von_mausklick_ereignissen">7.1.1. Erkennung von Mausklick-Ereignissen</h4>
+<div class="paragraph">
+<p>Bisher wurde mit dem Eingabemanager das Gedrückthalten der rechten Maustaste behandelt. Nun soll aber darauf reagiert werden, dass die linke Maustaste geklickt wurde (Linksklick=Auswahl). Das macht man am besten, indem man auf das Loslassen der Maustaste wartet. Gleichzeitig muss man sich dann aber die Position der Maus beim Loslassen merken, da die Maus ja hinterher noch bewegt werden kann.</p>
+</div>
+<div class="paragraph">
+<p>Der Eingabemanager hat ja, wie in <em>Tutorial 05</em> erklärt, für Tasten (einschließlich Maustasten) einen Zustand "Wurde gedrückt". Den kann man nun einfach abfragen, z.B. in <code>SceneView::checkInput()</code>:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView::checkInput()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">checkInput</span><span class="p">()</span> <span class="p">{</span>
+	<span class="c1">// this function is called whenever _any_ key/mouse event was issued</span>
+
+    <span class="p">....</span>
+
+	<span class="c1">// has the left mouse butten been release</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">buttonReleased</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">LeftButton</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">m_inputEventReceived</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+		<span class="n">renderLater</span><span class="p">();</span>
+		<span class="k">return</span><span class="p">;</span>
+	<span class="p">}</span>
+
+    <span class="p">....</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Funktion <code>KeyboardMouseHandler::buttonReleased(btn)</code> macht dabei nichts weiter, als zu prüfen, ob der Status der Taste auf <code>KeyboardMouseHandler::StateWasPressed</code> steht.</p>
+</div>
+<div class="paragraph">
+<p>In der selben Art und Weise, wie auf andere Tastendrücke und Mausbewegungen reagiert wurde, kann man nun die Auswahlroutine anstoßen:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView::processInput()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">processInput</span><span class="p">()</span> <span class="p">{</span>
+    <span class="p">....</span>
+
+	<span class="c1">// check for picking operation</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">buttonReleased</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">LeftButton</span><span class="p">))</span> <span class="p">{</span>
+		<span class="n">pick</span><span class="p">(</span><span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">mouseReleasePos</span><span class="p">());</span>
+	<span class="p">}</span>
+
+	<span class="c1">// finally, reset "WasPressed" key states</span>
+	<span class="n">m_keyboardMouseHandler</span><span class="p">.</span><span class="n">clearWasPressedKeyStates</span><span class="p">();</span>
+
+    <span class="p">....</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Wichtig ist hier vielleicht nur, dass man abschließend auch die Flags der Maustasten zurücksetzt.</p>
+</div>
+<div class="paragraph">
+<p>Mit dem derzeitigen Quelltextstand kann man nun wild in der Scene herumklicken, wobei man natürlich erstmal nichts sieht. Erst bei Bewegung in der Scene wird die nun visualisierte Sichtgerade erkennbar - bis zum nächsten Linksklick.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_finden_von_angeklickten_objekten">7.1.2. Finden von angeklickten Objekten</h4>
+<div class="paragraph">
+<p>Die zweite, auch nicht sonderlich komplizierte Aufgabe besteht darin, alle Objekte zu finden, die von der Sichtlinie geschnitten werden. Wenn es sich hierbei um Flächen handelt, ist das recht einfache Mathematik aus dem Tafelwerk (siehe <a href="https://de.wikipedia.org/wiki/Analytische_Geometrie">Wikipedia</a>).</p>
+</div>
+<div class="exampleblock">
+<div class="content">
+<div class="paragraph">
+<p><strong>Mathematische Grundlagen</strong></p>
+</div>
+<div class="paragraph">
+<p>Ich schreibe die Mathematik hier nochmal kurz auf (aber nur um zu testen, wie man mit Asciidoctor ordentliche Gleichungen hinbekommt :-) )</p>
+</div>
+<div class="paragraph">
+<p>Ebenengleichung in Normalenform, mit <strong>a</strong> als Bezugspunkt der Ebene und <strong>n</strong> als Normalenvektor:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[(\boldsymbol{x}-\boldsymbol{a}) \cdot \boldsymbol{n} = 0\]
+</div>
+</div>
+<div class="paragraph">
+<p>Geradengleichung, mit <strong>d</strong> als Richtung und <strong>s</strong> als Startpunkt:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[\boldsymbol{x} = \boldsymbol{s} + t \, \boldsymbol{d}\]
+</div>
+</div>
+<div class="paragraph">
+<p>Einsetzen und Ausmultiplizieren ergibt:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[t_0 = \frac{\left( \boldsymbol{a} - \boldsymbol{s}\right) \cdot \boldsymbol{n}}{\boldsymbol{d} \cdot \boldsymbol{n}}\]
+</div>
+</div>
+<div class="paragraph">
+<p>Falls der Richtungsvektor der Geraden <strong>d</strong> und der Normalenvektor <strong>n</strong> senkrecht aufeinanderstehen wird der Nenner zu 0, d.h. die Gerade liegt parallel zur Ebene (entweder neben oder in der Ebene, ist uns aber hier egal). Dann soll es keinen Schnittpunkt geben.</p>
+</div>
+<div class="paragraph">
+<p>Auch wenn Normalenvektor und Sichtgeradenvektor in die gleiche Richtung zeigen, soll kein Schnittpunkt berechnet werden (man würde ja sonst auf die Rückseite einer Fläche klicken).</p>
+</div>
+<div class="paragraph">
+<p>Damit hätte man das erste Prüfkriterium (Bedingung 1):</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[\boldsymbol{d} \cdot \boldsymbol{n} &lt; 0\]
+</div>
+</div>
+<div class="paragraph">
+<p>Ob eine begrenzte <em>Fläche</em> von der <em>Strecke</em> (unserer Sichtlinie) geschnitten wird, hängt von der Lage des Schnittpunkts ab.</p>
+</div>
+<div class="paragraph">
+<p>Wird die Sichtlinie durch den Start- und Endpunkt <strong>p1</strong> und <strong>p2</strong> (near und far-Punkte) definiert, und damit <strong>s</strong> = <strong>p1</strong> und <strong>d</strong> = <strong>p2</strong> - <strong>p1</strong>, dann muss t zwischen 0 und 1 liegen (Bedingung 2).</p>
+</div>
+<div class="paragraph">
+<p>Der berechnete Schnittpunkt</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[\boldsymbol{x_0} = \boldsymbol{s} + t_0 \, \boldsymbol{d}\]
+</div>
+</div>
+<div class="paragraph">
+<p>liegt in der Ebene. Man kann nun die Ebenengleichung in Parameterform schreiben und die Parameter für den Schnittpunkt bestimmen. Wiederum definieren wir die Ebene über die Eckpunkte, hier <strong>a</strong>, <strong>b</strong> und <strong>c</strong>:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[\boldsymbol{x} = \boldsymbol{a} + r\, (\boldsymbol{b} - \boldsymbol{a}) + s\, (\boldsymbol{c} - \boldsymbol{a})\]
+</div>
+</div>
+<div class="paragraph">
+<p>Der Normalenvektor für die Schnittpunktberechnung oben ist dann:</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[\boldsymbol{n} = (\boldsymbol{b} - \boldsymbol{a}) \times (\boldsymbol{c} - \boldsymbol{a})\]
+</div>
+</div>
+<div class="paragraph">
+<p>Nach Einsetzen und Auflösen nach <em>r</em> und <em>s</em> kann man prüfen, ob sowohl <em>r</em> als auch <em>s</em> zwischen 0 und 1 liegen (Bedingung 3).</p>
+</div>
+</div>
+</div>
+<div class="paragraph">
+<p>Nachdem nun die Mathematik klar ist, hier nochmal die Zusammenfassung des Angeklickt-Prüf-Algorithmus:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>(Vorberechnung: Normalenvektoren, Seitenvektoren der Flächen)</p>
+</li>
+<li>
+<p>Prüfung ob Sichtgeradenvektor und Normalenvektor der Ebene zueinander zeigen (Skalarprodukt der Vektoren liefert (absoluten) Winkel &lt; 90°) (damit ist auch der Fall "Gerade liegt parallel zur Ebene" ausgeschlossen)</p>
+</li>
+<li>
+<p>Berechnung Schnittpunkt (Geradenfaktor <em>t</em>) und Test, ob im Interval [ 0..1]</p>
+</li>
+<li>
+<p>Berechnung Punkt in Ebene (Faktoren <em>r</em> und <em>s</em>) und Test, ob im Interval [0..1]</p>
+</li>
+</ul>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Falls statt einer rechteckigen Ebene ein Dreieck getestet wird, so muss bei der Schnittpunktprüfung gelten:</p>
+</div>
+<div class="paragraph">
+<p>\(r \ge 0\), \(s \ge 0\) und \(r + s \le 1\)</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_die_pick_implementierung">7.1.3. Die pick-Implementierung</h4>
+<div class="paragraph">
+<p>Die Funktion <code>pick()</code> oben wird um den Aufruf der eigentlichen Auswahl-/Markierfunktion erweitert:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp::pick()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">pick</span><span class="p">(</span><span class="k">const</span> <span class="n">QPoint</span> <span class="o">&amp;</span> <span class="n">globalMousePos</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">....</span>
+
+	<span class="c1">// now do the actual picking - for now we implement a selection</span>
+	<span class="n">selectNearestObject</span><span class="p">(</span><span class="n">nearResult</span><span class="p">.</span><span class="n">toVector3D</span><span class="p">(),</span> <span class="n">farResult</span><span class="p">.</span><span class="n">toVector3D</span><span class="p">());</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Funktion <code>selectNearestObject()</code> wird mit Start- und Endpunkt der Sichtlinie aufgerufen und ist selbst auch recht kompakt:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp::selectNearestObject()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">SceneView</span><span class="o">::</span><span class="n">selectNearestObject</span><span class="p">(</span><span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">nearPoint</span><span class="p">,</span> <span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">farPoint</span><span class="p">)</span> <span class="p">{</span>
+	<span class="n">QElapsedTimer</span> <span class="n">pickTimer</span><span class="p">;</span>
+	<span class="n">pickTimer</span><span class="p">.</span><span class="n">start</span><span class="p">();</span>
+
+	<span class="c1">// compute view direction</span>
+	<span class="n">QVector3D</span> <span class="n">d</span> <span class="o">=</span> <span class="n">farPoint</span> <span class="o">-</span> <span class="n">nearPoint</span><span class="p">;</span>
+
+	<span class="c1">// create pick object</span>
+	<span class="n">PickObject</span> <span class="n">p</span><span class="p">(</span><span class="o">-</span><span class="mf">10000000.</span><span class="n">f</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">numeric_limits</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">max</span><span class="p">());</span>
+
+	<span class="c1">// now process all objects and update p to hold the closest hit</span>
+	<span class="n">m_boxObject</span><span class="p">.</span><span class="n">pick</span><span class="p">(</span><span class="n">nearPoint</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">p</span><span class="p">);</span>
+	<span class="c1">// ... other objects</span>
+
+	<span class="c1">// any object accepted a pick?</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">m_objectId</span> <span class="o">==</span> <span class="n">std</span><span class="o">::</span><span class="n">numeric_limits</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">max</span><span class="p">())</span>
+		<span class="k">return</span><span class="p">;</span> <span class="c1">// nothing selected</span>
+
+	<span class="n">qDebug</span><span class="p">().</span><span class="n">nospace</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Pick successful (Box #"</span>
+					   <span class="o">&lt;&lt;</span> <span class="n">p</span><span class="p">.</span><span class="n">m_objectId</span> <span class="o">&lt;&lt;</span>  <span class="s">", Face #"</span> <span class="o">&lt;&lt;</span> <span class="n">p</span><span class="p">.</span><span class="n">m_faceId</span> <span class="o">&lt;&lt;</span> <span class="s">", z = "</span> <span class="o">&lt;&lt;</span> <span class="n">p</span><span class="p">.</span><span class="n">m_z</span> <span class="o">&lt;&lt;</span> <span class="s">") after "</span>
+					   <span class="o">&lt;&lt;</span> <span class="n">pickTimer</span><span class="p">.</span><span class="n">elapsed</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">" ms"</span><span class="p">;</span>
+
+	<span class="c1">// Mind: OpenGL-context must be current when we call this function!</span>
+	<span class="n">m_boxObject</span><span class="p">.</span><span class="n">highlight</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">m_objectId</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">m_faceId</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Zum Testen der Performance hab ich in die Funktion einen Timer reingelegt (siehe Kapitel <em>Picking Performance</em> unten). Den Timer und die <code>qDebug()</code>-Ausgabe kann man aber getrost rauswerfen.</p>
+</div>
+<div class="paragraph">
+<p>In der Funktion wird zuerst der Linienvektor <strong>d</strong> berechnet. Dann wird ein <code>PickObject</code> (eine Struktur mit Infos über angeklickte Objekte) erstellt und deren z-Wert ganz weit hinten initialisiert. Dann geht man alle Zeichenobjekte durch (bzw. alle Datenstrukturen, die Modellgeometrien enthalten) und testet alle enthaltenen Flächen auf Kollision mit dem Sichtstrahl. In diesem Tutorial gibt es nur ein Zeichenobjekt (<code>m_boxObject</code>), aber das Schema ist klar.</p>
+</div>
+<div class="paragraph">
+<p>Hinterher kann man über Vergleich der Objekt-ID mit dem Initialisierungswert (hier größter <code>unsigned int</code>) prüfen, ob überhaupt eine Fläche getroffen wurde.</p>
+</div>
+<div class="paragraph">
+<p>Und zuletzt kann man durch Aufruf der Funktion <code>BoxObject::highlight()</code> noch das angeklickte Objekt hervorheben (siehe Abschnitt <em>Einfärben ausgewählter Objekte</em> weiter unten).</p>
+</div>
+<div class="paragraph">
+<p>Die ganze Arbeit der Kollisionsprüfung erfolgt und <code>BoxObject::pick()</code> und davon aufgerufenen Funktionen:</p>
+</div>
+<div class="listingblock">
+<div class="title">BoxObject.cpp::pick()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">BoxObject</span><span class="o">::</span><span class="n">pick</span><span class="p">(</span><span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">p1</span><span class="p">,</span> <span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">d</span><span class="p">,</span> <span class="n">PickObject</span> <span class="o">&amp;</span> <span class="n">po</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+	<span class="c1">// now process all box objects</span>
+	<span class="k">for</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">m_boxes</span><span class="p">.</span><span class="n">size</span><span class="p">();</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+		<span class="k">const</span> <span class="n">BoxMesh</span> <span class="o">&amp;</span> <span class="n">bm</span> <span class="o">=</span> <span class="n">m_boxes</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+		<span class="k">for</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">j</span><span class="o">&lt;</span><span class="mi">6</span><span class="p">;</span> <span class="o">++</span><span class="n">j</span><span class="p">)</span> <span class="p">{</span>
+			<span class="kt">float</span> <span class="n">z</span><span class="p">;</span>
+			<span class="c1">// is intersection point closes to viewer than previous intersection points?</span>
+			<span class="k">if</span> <span class="p">(</span><span class="n">bm</span><span class="p">.</span><span class="n">intersects</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">p1</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">z</span><span class="p">))</span> <span class="p">{</span>
+				<span class="k">if</span> <span class="p">(</span><span class="n">z</span> <span class="o">&gt;</span> <span class="n">po</span><span class="p">.</span><span class="n">m_z</span><span class="p">)</span> <span class="p">{</span>
+					<span class="n">po</span><span class="p">.</span><span class="n">m_z</span> <span class="o">=</span> <span class="n">z</span><span class="p">;</span>
+					<span class="n">po</span><span class="p">.</span><span class="n">m_objectId</span> <span class="o">=</span> <span class="n">i</span><span class="p">;</span>
+					<span class="n">po</span><span class="p">.</span><span class="n">m_faceId</span> <span class="o">=</span> <span class="n">j</span><span class="p">;</span>
+				<span class="p">}</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+	<span class="p">}</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In dieser Funktion wird letztlich jede Box einzeln geprüft, und in jeder Box jede einzelne Fläche. Der eigentliche Schnittpunkt-Test erfolgt in der Funktion <code>BoxMesh::intersects()</code>.  Wurde ein Schnittpunkte gefunden, aktualisiert man die <code>PickObject</code> Struktur, aber nur, wenn das Objekt dichter am Betrachter liegt (größerer z-Wert).</p>
+</div>
+<div class="listingblock">
+<div class="title">BoxMesh.cpp::intersects()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">bool</span> <span class="n">BoxMesh</span><span class="o">::</span><span class="n">intersects</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">planeIdx</span><span class="p">,</span> <span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">p1</span><span class="p">,</span> <span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">d</span><span class="p">,</span> <span class="kt">float</span> <span class="o">&amp;</span> <span class="n">z</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+	<span class="k">const</span> <span class="n">Rect</span> <span class="o">&amp;</span> <span class="n">p</span> <span class="o">=</span> <span class="n">m_planeInfo</span><span class="p">[</span><span class="n">planeIdx</span><span class="p">];</span>
+	<span class="k">return</span> <span class="n">intersectsRect</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">m_a</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">m_b</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">m_normal</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">m_offset</span><span class="p">,</span> <span class="n">p1</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">z</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Hier wird die objektunabhängige Schnittpunkt-Testfunktion <code>intersectsRect</code> aufgerufen, und dieser Funktion die für den mathematischen Algorithmus oben benötigten Parameter der aktuell gewählten Seite (mit Index <code>planeIdx</code>) übergeben. Das sind die Parameter der Ebenegleichung (<strong>a</strong>, <strong>b</strong>, <strong>n</strong>, <strong>offset</strong>) und die Parameter der Sichtline <strong>p1</strong> und <strong>d</strong>. Die z-Koordinate des gefundenen Schnittpunkts wird im Falle eines Treffers in das Argument <strong>z</strong> eingetragen.</p>
+</div>
+<div class="paragraph">
+<p>Die Parameter der Seitenfläche werden bei Übertragung der Boxobjekt-Koordinante in den Vertexpuffer aktualisiert (dann sind die Vertexkoordinaten des Boxobjekts bereits transformiert).</p>
+</div>
+<div class="paragraph">
+<p>Der oben beschriebene mathematische Algorithmus zur Schnittpunkterkennung steckt nun in der Funktion <code>intersectsRect()</code>:</p>
+</div>
+<div class="listingblock">
+<div class="title">PickObject.cpp:intersectsRect()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">bool</span> <span class="nf">intersectsRect</span><span class="p">(</span><span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">a</span><span class="p">,</span>
+				<span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">b</span><span class="p">,</span>
+				<span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">normal</span><span class="p">,</span>
+				<span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">offset</span><span class="p">,</span>
+				<span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">p1</span><span class="p">,</span>
+				<span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">d</span><span class="p">,</span>
+				<span class="kt">float</span> <span class="o">&amp;</span> <span class="n">z</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="c1">// first the normal test</span>
+	<span class="kt">double</span> <span class="n">angle</span> <span class="o">=</span> <span class="n">QVector3D</span><span class="o">::</span><span class="n">dotProduct</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">normal</span><span class="p">)</span><span class="o">/</span><span class="n">qAbs</span><span class="p">(</span><span class="n">d</span><span class="p">.</span><span class="n">length</span><span class="p">());</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">angle</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+		<span class="k">return</span> <span class="nb">false</span><span class="p">;</span> <span class="c1">// same direction, no intersection possible</span>
+
+	<span class="c1">// intersection point on line</span>
+	<span class="kt">double</span> <span class="n">t</span> <span class="o">=</span> <span class="n">QVector3D</span><span class="o">::</span><span class="n">dotProduct</span><span class="p">(</span><span class="n">offset</span> <span class="o">-</span> <span class="n">p1</span><span class="p">,</span> <span class="n">normal</span><span class="p">)</span> <span class="o">/</span> <span class="n">QVector3D</span><span class="o">::</span><span class="n">dotProduct</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">normal</span><span class="p">);</span>
+	<span class="c1">// outside viewing range?</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">t</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="o">||</span> <span class="n">t</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
+		<span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+	<span class="n">QVector3D</span> <span class="n">x0</span> <span class="o">=</span> <span class="n">p1</span> <span class="o">+</span> <span class="n">t</span><span class="o">*</span><span class="n">d</span><span class="p">;</span>
+
+	<span class="c1">// now determine location on plane</span>
+	<span class="n">QVector3D</span> <span class="n">rhs</span> <span class="o">=</span> <span class="n">x0</span> <span class="o">-</span> <span class="n">offset</span><span class="p">;</span> <span class="c1">// right hand side of equation system:  a * x  +  b * y = (x - offset)</span>
+
+	<span class="c1">// we have three possible ways to get the intersection point, try them all until we succeed</span>
+	<span class="kt">double</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">;</span>
+	<span class="c1">// rows 1 and 2</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">solve</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">a</span><span class="p">.</span><span class="n">y</span><span class="p">(),</span> <span class="n">b</span><span class="p">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">b</span><span class="p">.</span><span class="n">y</span><span class="p">(),</span> <span class="n">rhs</span><span class="p">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">rhs</span><span class="p">.</span><span class="n">y</span><span class="p">(),</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span>   <span class="p">{</span> <span class="n">z</span> <span class="o">=</span> <span class="n">x0</span><span class="p">.</span><span class="n">z</span><span class="p">();</span> <span class="k">return</span> <span class="nb">true</span><span class="p">;</span> <span class="p">}</span>
+		<span class="k">else</span>			                        <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+	<span class="p">}</span>
+	<span class="c1">// rows 1 and 3</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">solve</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">a</span><span class="p">.</span><span class="n">z</span><span class="p">(),</span> <span class="n">b</span><span class="p">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="p">(),</span> <span class="n">rhs</span><span class="p">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">rhs</span><span class="p">.</span><span class="n">z</span><span class="p">(),</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span>   <span class="p">{</span> <span class="n">z</span> <span class="o">=</span> <span class="n">x0</span><span class="p">.</span><span class="n">z</span><span class="p">();</span> <span class="k">return</span> <span class="nb">true</span><span class="p">;</span> <span class="p">}</span>
+		<span class="k">else</span>			                        <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+	<span class="p">}</span>
+	<span class="c1">// rows 2 and 3</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">solve</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">y</span><span class="p">(),</span> <span class="n">a</span><span class="p">.</span><span class="n">z</span><span class="p">(),</span> <span class="n">b</span><span class="p">.</span><span class="n">y</span><span class="p">(),</span> <span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="p">(),</span> <span class="n">rhs</span><span class="p">.</span><span class="n">y</span><span class="p">(),</span> <span class="n">rhs</span><span class="p">.</span><span class="n">z</span><span class="p">(),</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span>   <span class="p">{</span> <span class="n">z</span> <span class="o">=</span> <span class="n">x0</span><span class="p">.</span><span class="n">z</span><span class="p">();</span> <span class="k">return</span> <span class="nb">true</span><span class="p">;</span> <span class="p">}</span>
+		<span class="k">else</span>			                        <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+	<span class="p">}</span>
+
+	<span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Im Prinzip ist das 1-zu-1 der Algorithmus oben, mit der Prüfung der 3 Bedingungen. Bei der Berechnung der Parameter der Ebenengleichungen gibt es letztlich 3 Variante, wobei durchaus 2 davon je nach Lage der Ebene und Sichtlinie fehlschlagen können.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Liegt beispielsweise eine Fläche in der x-y Ebene, d.h. z = 0 und Normalenvektor = [0,0,1]. Dann wären z.B. <strong>a</strong> = [4,0,0] und <strong>b</strong> = [0,2,0]. Die Ebene wird von einem Sichtstrahl durchstoßen, mit <strong>d</strong> = [-1,-1,-1].</p>
+</div>
+<div class="paragraph">
+<p>Die Gleichungssysteme 2 und 3 sind damit nicht lösbar, da die Determinante jeweils zu 0 wird. Ähnliches kann für andere Ebenenausrichtungen passieren, weswegen alle 3 Kombinationen getestet werden müssen.</p>
+</div>
+<div class="paragraph">
+<p>Man kann das bei der Box und den 6 Seiten sehr schön sehen:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>Vorne und Hinten benötigen Gleichungssystem 1</p>
+</li>
+<li>
+<p>Links und Rechts benötigen Gleichungssystem 3</p>
+</li>
+<li>
+<p>Oben und Unten benötigen Gleichungssystem 2</p>
+</li>
+</ul>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Die Lösungsfunktion ist einfach eine Implementierung der Cramerschen Regel (<a href="https://de.wikipedia.org/wiki/Cramersche_Regel" class="bare">https://de.wikipedia.org/wiki/Cramersche_Regel</a>):</p>
+</div>
+<div class="listingblock">
+<div class="title">PickObject.cpp:solve()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="cm">/* Solves equation system with Cramer's rule:
+	 a x + c y = e
+	 b x + d y = f
+*/</span>
+<span class="kt">bool</span> <span class="nf">solve</span><span class="p">(</span><span class="kt">double</span> <span class="n">a</span><span class="p">,</span> <span class="kt">double</span> <span class="n">b</span><span class="p">,</span> <span class="kt">double</span> <span class="n">c</span><span class="p">,</span> <span class="kt">double</span> <span class="n">d</span><span class="p">,</span> <span class="kt">double</span> <span class="n">e</span><span class="p">,</span> <span class="kt">double</span> <span class="n">f</span><span class="p">,</span> <span class="kt">double</span> <span class="o">&amp;</span> <span class="n">x</span><span class="p">,</span> <span class="kt">double</span> <span class="o">&amp;</span> <span class="n">y</span><span class="p">)</span> <span class="p">{</span>
+	<span class="kt">double</span> <span class="n">det</span> <span class="o">=</span> <span class="n">a</span><span class="o">*</span><span class="n">d</span> <span class="o">-</span> <span class="n">b</span><span class="o">*</span><span class="n">c</span><span class="p">;</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">det</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">)</span>
+		<span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+
+	<span class="n">x</span> <span class="o">=</span> <span class="p">(</span><span class="n">e</span><span class="o">*</span><span class="n">d</span> <span class="o">-</span> <span class="n">c</span><span class="o">*</span><span class="n">f</span><span class="p">)</span><span class="o">/</span><span class="n">det</span><span class="p">;</span>
+	<span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="n">a</span><span class="o">*</span><span class="n">f</span> <span class="o">-</span> <span class="n">e</span><span class="o">*</span><span class="n">b</span><span class="p">)</span><span class="o">/</span><span class="n">det</span><span class="p">;</span>
+	<span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_picking_performance">7.1.4. Picking Performance</h4>
+<div class="paragraph">
+<p>Anhand der möglicherweise vielen Flächen in einer komplexen Szene mag man auf die Idee kommen, dass die CPU-basierte Schnittpunktberechnung zu langsam wäre. Machen wir mal den Test:</p>
+</div>
+<div class="paragraph">
+<p>1 Mio Boxen (<code>BoxObject.cpp:Zeile 34</code>), macht 6 Mio Flächen. Im Debug Modus dauert die Schnittpunktberechnung mit <em>allen</em> Flächen nach obigem Algorithmus insgesamt ca. 240 ms. Da lohnt es sich nicht, irgendwelche Performanceoptimierungen zu untersuchen (wie BSD- oder Octrees zur Partitionierung des Raumes etc., was man so in anderen Texten dazu findet).</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_einfärben_ausgewählter_objekte">7.1.5. Einfärben ausgewählter Objekte</h4>
+<div class="paragraph">
+<p>Ist nun Objekt und Seite identifiziert, so möchte man das jeweilige Objekt vielleicht hervorheben. Dafür müssen die entsprechenden Vertex-Farbeigenschaften geändert werden.</p>
+</div>
+<div class="paragraph">
+<p>Auch dies ist wieder nicht übermäßig kompliziert, da die Datenstrukturen in <em>Tutorial 05</em> bereits in geeigneter Form angelegt wurden, als hätte man geahnt, dass man sowas mal brauchen würde :-):</p>
+</div>
+<div class="listingblock">
+<div class="title">BoxObject:highlight()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">BoxObject</span><span class="o">::</span><span class="n">highlight</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">boxId</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">faceId</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// we change the color of all vertexes of the selected box to lightgray</span>
+	<span class="c1">// and the vertex colors of the selected plane/face to light blue</span>
+
+	<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">QColor</span><span class="o">&gt;</span> <span class="n">faceCols</span><span class="p">(</span><span class="mi">6</span><span class="p">);</span>
+	<span class="k">for</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="mi">6</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">==</span> <span class="n">faceId</span><span class="p">)</span>			<span class="n">faceCols</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">QColor</span><span class="p">(</span><span class="s">"#b40808"</span><span class="p">);</span>
+		<span class="k">else</span>			            <span class="n">faceCols</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">QColor</span><span class="p">(</span><span class="s">"#f3f3f3"</span><span class="p">);</span>
+	<span class="p">}</span>
+	<span class="n">m_boxes</span><span class="p">[</span><span class="n">boxId</span><span class="p">].</span><span class="n">setFaceColors</span><span class="p">(</span><span class="n">faceCols</span><span class="p">);</span>
+
+	<span class="c1">// then we update the respective portion of the vertexbuffer memory</span>
+	<span class="n">Vertex</span> <span class="o">*</span> <span class="n">vertexBuffer</span> <span class="o">=</span> <span class="n">m_vertexBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">();</span>
+	<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">vertexCount</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+	<span class="n">GLuint</span> <span class="o">*</span> <span class="n">elementBuffer</span> <span class="o">=</span> <span class="n">m_elementBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">();</span>
+	<span class="c1">// advance pointers to position of the box</span>
+
+	<span class="n">vertexBuffer</span> <span class="o">+=</span> <span class="n">boxId</span><span class="o">*</span><span class="mi">6</span><span class="o">*</span><span class="mi">4</span><span class="p">;</span> <span class="c1">// 6 planes, with 4 vertexes each</span>
+	<span class="n">elementBuffer</span> <span class="o">+=</span> <span class="n">boxId</span><span class="o">*</span><span class="mi">6</span><span class="o">*</span><span class="mi">6</span><span class="p">;</span> <span class="c1">// 6 planes, with 2 triangles with 3 indexes each</span>
+	<span class="n">vertexCount</span> <span class="o">+=</span> <span class="n">boxId</span><span class="o">*</span><span class="mi">6</span><span class="o">*</span><span class="mi">4</span><span class="p">;</span>
+	<span class="n">m_boxes</span><span class="p">[</span><span class="n">boxId</span><span class="p">].</span><span class="n">copy2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">vertexCount</span><span class="p">);</span>
+
+	<span class="c1">// and now update the entire vertex buffer</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">m_vertexBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">(),</span> <span class="n">m_vertexBufferData</span><span class="p">.</span><span class="n">size</span><span class="p">()</span><span class="o">*</span><span class="k">sizeof</span><span class="p">(</span><span class="n">Vertex</span><span class="p">));</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Am Ende der Funktion wird der gesamte Vertexpuffer in die Grafikkarte kopiert. Bei größeren Objekten (&gt; 1 Mio Elemente) kann das dann schonmal etwas dauern. Daher gibt es auch die Funktion <code>QOpenGLBuffer::write()</code>, welche nur einen Teil des Puffers ersetzt. Dann müsste die Funktion so angepasst werden:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">BoxObject</span><span class="o">::</span><span class="n">highlight</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">boxId</span><span class="p">,</span> <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">faceId</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">....</span>
+
+	<span class="c1">// and now update the respective portion of the vertex buffer</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">write</span><span class="p">(</span><span class="n">boxId</span><span class="o">*</span><span class="mi">6</span><span class="o">*</span><span class="mi">4</span><span class="o">*</span><span class="k">sizeof</span><span class="p">(</span><span class="n">Vertex</span><span class="p">),</span> <span class="n">m_vertexBufferData</span><span class="p">.</span><span class="n">data</span><span class="p">()</span> <span class="o">+</span> <span class="n">boxId</span><span class="o">*</span><span class="mi">6</span><span class="o">*</span><span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="o">*</span><span class="mi">4</span><span class="o">*</span><span class="k">sizeof</span><span class="p">(</span><span class="n">Vertex</span><span class="p">));</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Funktion <code>QOpenGLBuffer::write()</code> ruft intern <code>glBufferSubData(GL_ARRAY_BUFFER, offset, count, data)</code> auf. Wichtig ist hier das Verständnis der Parameter der Funktion <code>QOpenGLBuffer::write(int offset, const void *data, int count)</code>:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><em>offset</em> - Byte offset</p>
+</li>
+<li>
+<p><em>data</em> - Zeiger auf die Daten, die hineinkopiert werden sollen (das Offset wird hier nicht angewendet!)</p>
+</li>
+<li>
+<p><em>count</em> - Anzahl der Bytes zum kopieren</p>
 </li>
 </ul>
 </div>
 <div class="paragraph">
-<p>Auch dieses ist ein grundlegendes 3D Grafik-Prozedere und in diesem Tutorial nur drin, um die Verwendung der Klasse <code>QOpenGLFrameBuffer</code> zu demonstrieren.</p>
+<p>Man darf also nicht den Fehler machen, und <code>m_vertexBufferData.data()</code> als zweites Argument übergeben, sondern muss auch hier den Zeiger auf den Beginn des modifizierten Bereiches vorrücken <code>m_vertexBufferData.data() + boxId*6*4</code>.</p>
 </div>
-<div class="sect2">
-<h3 id="_option_1_strahlenverfolgung">7.1. Option 1: Strahlenverfolgung</h3>
-
+<div class="paragraph">
+<p>Was bringt die Änderung? Bei 1 Mio Boxen dauert die Variante mit <code>allocate()</code> ca. 160 ms (Debugmodus), mit <code>write()</code> deutlich weniger als 1 ms.</p>
+</div>
+<div class="paragraph">
+<p>Natürlich sollte man sich die markierten Boxen merken, sodass man die Markierung hinterher wieder entfernen kann. Das sollte selbst aber nicht übermäßig kompliziert sein.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Ähnlich, wie hier die Farben in den Vertexdaten aktualisiert wurden, kann man auch geometrische Objekte verschieben. Also bei Mausbewegung (und bspw. gedrückter linker Maustaste) die Vertexkoordinaten des markierten Objekts anpassen, den Vertexpuffer aktualisiern und siehe da - Objekte werden verschoben.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
 </div>
 <div class="sect2">
 <h3 id="_option_2_falschfarbenrendering">7.2. Option 2: Falschfarbenrendering</h3>
@@ -5528,7 +6134,7 @@ int main(int argc, char **argv) {
 <p>Technisch gibt es eine Einschränkung: es stehen <strong>256^4 - 1</strong> Farben stehen zur Verfügung (rgba) für ebenso viele Elemente. Reicht das nicht aus, muss entweder gefiltert werden (d.h. nur die <em>prinzipiell</em> sichtbaren Objekte bekommen eine Nummer/Farbe), oder man benutzt Ray-Tracking.</p>
 </div>
 <div class="paragraph">
-<p>Die zahlreichen Tutorials in diesem Bereich verwenden die folgende Technik:</p>
+<p>Die zahlreichen Tutorials zum Thema <em>Picking</em> verwenden die folgende Technik:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -5554,7 +6160,7 @@ int main(int argc, char **argv) {
 <p>Unnötig zu erwähnen, dass alleine die Vielzahl an <code>glDrawXXX</code> Calls problematisch ist. Außerdem ist es je anch Anwendung nicht notwendig, dieses Prozedere bei <em>jedem</em> Mausklick zu wiederholen.</p>
 </div>
 <div class="sect3">
-<h4 id="_optimierungsidee_für_quasi_statische_scenen">7.2.1. Optimierungsidee für quasi-statische Scenen</h4>
+<h4 id="_optimierungsidee_für_quasi_statische_szenen">7.2.1. Optimierungsidee für quasi-statische Szenen</h4>
 <div class="paragraph">
 <p>Nehmen wir mal an, es handelt sich um ein Programm mit vorwiegend nicht-animierten Szenen (Zielvorgabe dieses Tutorials). Dann könnte man die Falschfarbenberechnung stets kurz nach dem Abschluss der Kamerabewegung machen (d.h. mit kleiner Zeitverzögerung), und das resultierende Falschfarbenbild im CPU-Speicher vorhalten. Wenn man nun mit der Maus klickt, hat man sofort den Farbwert unter dem Mauscursor zur Hand. Man könnte auch viele Klicks abfragen, ohne die GPU zu beschäftigen.</p>
 </div>
@@ -5575,11 +6181,14 @@ int main(int argc, char **argv) {
 </ul>
 </div>
 <div class="paragraph">
-<p>Wir brauchen dafür also:
+<p>Wir bräuchten dafür also:
 - ein weiteres ShaderProgramm, welches die Koordinaten aus dem Vertexarray (mit interleaved Storage) liest, aber die Falsch-Farben aus einem <em>separaten Puffer</em> holt
 - einen Framebuffer, in den die Falschfarbendarstellung kopiert wird
 - eine Möglichkeit, die Farbwerte des Puffers im CPU-Speicher abzulegen
 - eine Abfrage der Farbwerte und Identifikation des angeklickten Elements</p>
+</div>
+<div class="paragraph">
+<p>Hmm, wenn ich so darüber nachdenke, dass wir bereits einen funktionierenden und ausreichend schnellen Pickingalgorithmus oben haben, will man sich diesen Aufwand eigentlich nicht machen. Daher lass ich das jetzt mal bleiben und würde das Thema "Falschfarbenrendering" in einem späteren Tutorial zum Zweck der Sichtfaktorberechnung wieder ausbuddeln.</p>
 </div>
 </div>
 </div>
@@ -5623,7 +6232,21 @@ int main(int argc, char **argv) {
 <p>Für das automatische Bauen von Qt (z.B. mit Jenkins oder ähnlichen Build-Systemen) bietet sich CMake an. Es geht zwar auch mit qmake, aber in diesem Tutorial soll gezeigt werden, wie man das eine CMakeLists.txt-Datei für das Bauen von Qt-Anwendungen unter Linux, MacOS und Windows konfiguriert.</p>
 </div>
 <div class="paragraph">
-<p>Im 2. Teil des Tutorials geht es dann um das Deployment, d.h. welche Dateien jeweils kopiert werden müssen. Auch dies ist nicht wirklich OpenGL-spezifisch, aber zeigt nochmal, welche OpenGL-Bibliotheken auf den jeweiligen Betriebssystemen vorausgesetzt werden können, und welche kopiert werden müssen.</p>
+<p>Im zweiten Teil des Tutorials geht es dann um das Deployment, d.h. welche Dateien jeweils kopiert werden müssen. Auch dies ist nicht wirklich OpenGL-spezifisch, aber zeigt nochmal, welche OpenGL-Bibliotheken auf den jeweiligen Betriebssystemen vorausgesetzt werden können, und welche kopiert werden müssen.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>CMakeLists.txt - Dateien und entsprechende Build-Scripte liegen verschiedenen Tutorial-Quelltexten bei. Konkret beziehen sich die Beispiele unten auf den Tutorial 06 Quelltext, der im github repo liegt:  <a href="https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_06">Tutorial_06</a></p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="sect2">
 <h3 id="_cmakelists_txt_für_opengl_anwendungen">10.1. CMakeLists.txt für OpenGL-Anwendungen</h3>
@@ -5632,115 +6255,124 @@ int main(int argc, char **argv) {
 </div>
 <div class="listingblock">
 <div class="content">
-<pre># CMakeLists.txt file for OpenGL + Qt Tutorial Series
+<pre class="rouge highlight"><code data-lang="cmake"><span class="c1"># CMakeLists.txt file for OpenGL + Qt Tutorial Series</span>
 
-# The project name
-project( Tutorial_05 )
+<span class="c1"># The project name</span>
+<span class="nb">project</span><span class="p">(</span> Tutorial_06 <span class="p">)</span>
 
-# Require a fairly recent cmake version
-cmake_minimum_required( VERSION 2.8.12 )
+<span class="c1"># Require a fairly recent cmake version</span>
+<span class="nb">cmake_minimum_required</span><span class="p">(</span> VERSION 2.8.12 <span class="p">)</span>
 
-# Set default build type
-if (NOT CMAKE_BUILD_TYPE)
-	set( CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
-		"Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel." FORCE)
-endif (NOT CMAKE_BUILD_TYPE)
+<span class="c1"># Set default build type</span>
+<span class="nb">if</span> <span class="p">(</span>NOT CMAKE_BUILD_TYPE<span class="p">)</span>
+	<span class="nb">set</span><span class="p">(</span> CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
+		<span class="s2">"Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel."</span> FORCE<span class="p">)</span>
+<span class="nb">endif</span> <span class="p">(</span>NOT CMAKE_BUILD_TYPE<span class="p">)</span>
 
-# -------------------------------------------------------------
-# Packages
-# -------------------------------------------------------------
+<span class="c1"># -------------------------------------------------------------</span>
+<span class="c1"># Packages</span>
+<span class="c1"># -------------------------------------------------------------</span>
 
-# Test for Qt5 modules
-find_package(Qt5Widgets REQUIRED)
+<span class="c1"># Test for Qt5 modules</span>
+<span class="nb">find_package</span><span class="p">(</span>Qt5Widgets REQUIRED<span class="p">)</span>
 
-# set corresponding libraries
-set( QT_LIBRARIES
+<span class="c1"># set corresponding libraries</span>
+<span class="nb">set</span><span class="p">(</span> QT_LIBRARIES
 	Qt5::Widgets
-)
+<span class="p">)</span>
 
-# we need OpenGL
-find_package( OpenGL REQUIRED )
-
-if( APPLE )
-	find_library( IOKIT NAMES IOKit REQUIRED )
-	find_library( COREFOUNDATION NAMES CoreFoundation REQUIRED )
-	find_library( SECURITY_FRAMEWORK Security REQUIRED )
-	find_library( SYSTEM_CONFIGURATION SystemConfiguration REQUIRED )
-
-	set( APPLE_FRAMEWORKS
-		${IOKIT}
-		${SECURITY_FRAMEWORK}
-		${COREFOUNDATION}
-		${SYSTEM_CONFIGURATION}
-	)
-endif( APPLE )
+<span class="c1"># we need OpenGL</span>
+<span class="nb">find_package</span><span class="p">(</span> OpenGL REQUIRED <span class="p">)</span>
 
 
-# -------------------------------------------------------------
-# Application
-# -------------------------------------------------------------
+<span class="c1"># -------------------------------------------------------------</span>
+<span class="c1"># Application</span>
+<span class="c1"># -------------------------------------------------------------</span>
 
-# automatically add CMAKE_CURRENT_SOURCE_DIR and CMAKE_CURRENT_BINARY_DIR to the include directories in every processed CMakeLists.txt
-set( CMAKE_INCLUDE_CURRENT_DIR ON )
+<span class="c1"># automatically add CMAKE_CURRENT_SOURCE_DIR and CMAKE_CURRENT_BINARY_DIR to the include directories in every processed CMakeLists.txt</span>
+<span class="nb">set</span><span class="p">(</span> CMAKE_INCLUDE_CURRENT_DIR ON <span class="p">)</span>
 
-include_directories(
-	${PROJECT_SOURCE_DIR}		# needed so that ui-generated header files find our own headers
-	${Qt5Widgets_INCLUDE_DIRS}
-)
+<span class="nb">include_directories</span><span class="p">(</span>
+	<span class="si">${</span><span class="nv">PROJECT_SOURCE_DIR</span><span class="si">}</span>		<span class="c1"># needed so that ui-generated header files find our own headers</span>
+	<span class="si">${</span><span class="nv">Qt5Widgets_INCLUDE_DIRS</span><span class="si">}</span>
+<span class="p">)</span>
 
-# collect a list of all designer ui files
-file( GLOB APP_UIS ${PROJECT_SOURCE_DIR}/*.ui )
+<span class="c1"># collect a list of all designer ui files</span>
+<span class="nb">file</span><span class="p">(</span> GLOB APP_UIS <span class="si">${</span><span class="nv">PROJECT_SOURCE_DIR</span><span class="si">}</span>/*.ui <span class="p">)</span>
 
-# collect a list of all header files (to be used in MOC compiler)
-file( GLOB APP_HDRS ${PROJECT_SOURCE_DIR}/*.h )
+<span class="c1"># collect a list of all header files (to be used in MOC compiler)</span>
+<span class="nb">file</span><span class="p">(</span> GLOB APP_HDRS <span class="si">${</span><span class="nv">PROJECT_SOURCE_DIR</span><span class="si">}</span>/*.h <span class="p">)</span>
 
-# collect a list of all source files in this directory
-file( GLOB APP_SRCS ${PROJECT_SOURCE_DIR}/*.cpp )
+<span class="c1"># collect a list of all source files in this directory</span>
+<span class="nb">file</span><span class="p">(</span> GLOB APP_SRCS <span class="si">${</span><span class="nv">PROJECT_SOURCE_DIR</span><span class="si">}</span>/*.cpp <span class="p">)</span>
 
-# collect the Qt resource files (*.qrc)
-file( GLOB APP_QRCS ${PROJECT_SOURCE_DIR}/*.qrc )
+<span class="c1"># collect the Qt resource files (*.qrc)</span>
+<span class="nb">file</span><span class="p">(</span> GLOB APP_QRCS <span class="si">${</span><span class="nv">PROJECT_SOURCE_DIR</span><span class="si">}</span>/*.qrc <span class="p">)</span>
 
-# look for Windows rc file
-file( GLOB APP_WIN_RC ${PROJECT_SOURCE_DIR}/*.rc )
+<span class="c1"># look for Windows rc file</span>
+<span class="nb">file</span><span class="p">(</span> GLOB APP_WIN_RC <span class="si">${</span><span class="nv">PROJECT_SOURCE_DIR</span><span class="si">}</span>/*.rc <span class="p">)</span>
 
-# look for Apple icns file
-file( GLOB APP_MACOS_ICNS ${PROJECT_SOURCE_DIR}/*.icns )
+<span class="c1"># look for Apple icns file</span>
+<span class="nb">file</span><span class="p">(</span> GLOB APP_MACOS_ICNS <span class="si">${</span><span class="nv">PROJECT_SOURCE_DIR</span><span class="si">}</span>/*.icns <span class="p">)</span>
 
-qt5_wrap_ui( APP_UI_SRCS ${APP_UIS} )
-qt5_add_resources( APP_RC_SRCS ${APP_QRCS} )
-qt5_wrap_cpp( APP_MOC_SRCS ${APP_HDRS} )
+<span class="nf">qt5_wrap_ui</span><span class="p">(</span> APP_UI_SRCS <span class="si">${</span><span class="nv">APP_UIS</span><span class="si">}</span> <span class="p">)</span>
+<span class="nf">qt5_add_resources</span><span class="p">(</span> APP_RC_SRCS <span class="si">${</span><span class="nv">APP_QRCS</span><span class="si">}</span> <span class="p">)</span>
+<span class="nf">qt5_wrap_cpp</span><span class="p">(</span> APP_MOC_SRCS <span class="si">${</span><span class="nv">APP_HDRS</span><span class="si">}</span> <span class="p">)</span>
 
-# build application executable for the different platforms
-if( WIN32 )
-	add_executable( ${PROJECT_NAME} WIN32
-					${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS} ${APP_WIN_RC}
-	)
+<span class="c1"># build application executable for the different platforms</span>
+<span class="nb">if</span><span class="p">(</span> WIN32 <span class="p">)</span>
+	<span class="nb">add_executable</span><span class="p">(</span> <span class="si">${</span><span class="nv">PROJECT_NAME</span><span class="si">}</span> WIN32
+					<span class="si">${</span><span class="nv">APP_SRCS</span><span class="si">}</span> <span class="si">${</span><span class="nv">APP_MOC_SRCS</span><span class="si">}</span> <span class="si">${</span><span class="nv">APP_RC_SRCS</span><span class="si">}</span> <span class="si">${</span><span class="nv">APP_UI_SRCS</span><span class="si">}</span> <span class="si">${</span><span class="nv">APP_WIN_RC</span><span class="si">}</span>
+	<span class="p">)</span>
 
-	# on Windows, add gdi and gdi32 for OpenGL support
-	set( WIN_FRAMEWORKS iphlpapi gdiplus gdi32 user32 ole32 )
-endif( WIN32 )
+	<span class="c1"># enable console window (to see debug/profiler messages)</span>
+	<span class="nb">set_target_properties</span><span class="p">(</span> <span class="si">${</span><span class="nv">PROJECT_NAME</span><span class="si">}</span> PROPERTIES LINK_FLAGS <span class="s2">"/SUBSYSTEM:CONSOLE"</span> <span class="p">)</span>
+<span class="nb">endif</span><span class="p">(</span> WIN32 <span class="p">)</span>
 
-if( UNIX )
-	if( APPLE )
-		add_executable( ${PROJECT_NAME} MACOSX_BUNDLE
-						${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS} ${APP_MACOS_ICNS}
-		)
-	else( APPLE )
-		add_executable( ${PROJECT_NAME}
-						${APP_SRCS} ${APP_MOC_SRCS} ${APP_RC_SRCS} ${APP_UI_SRCS}
-		)
-	endif( APPLE )
-endif( UNIX )
+<span class="nb">if</span><span class="p">(</span> UNIX <span class="p">)</span>
+	<span class="nb">if</span><span class="p">(</span> APPLE <span class="p">)</span>
+		<span class="nb">add_executable</span><span class="p">(</span> <span class="si">${</span><span class="nv">PROJECT_NAME</span><span class="si">}</span> MACOSX_BUNDLE
+						<span class="si">${</span><span class="nv">APP_SRCS</span><span class="si">}</span> <span class="si">${</span><span class="nv">APP_MOC_SRCS</span><span class="si">}</span> <span class="si">${</span><span class="nv">APP_RC_SRCS</span><span class="si">}</span> <span class="si">${</span><span class="nv">APP_UI_SRCS</span><span class="si">}</span> <span class="si">${</span><span class="nv">APP_MACOS_ICNS</span><span class="si">}</span>
+		<span class="p">)</span>
+	<span class="nb">else</span><span class="p">(</span> APPLE <span class="p">)</span>
+		<span class="nb">add_executable</span><span class="p">(</span> <span class="si">${</span><span class="nv">PROJECT_NAME</span><span class="si">}</span>
+						<span class="si">${</span><span class="nv">APP_SRCS</span><span class="si">}</span> <span class="si">${</span><span class="nv">APP_MOC_SRCS</span><span class="si">}</span> <span class="si">${</span><span class="nv">APP_RC_SRCS</span><span class="si">}</span> <span class="si">${</span><span class="nv">APP_UI_SRCS</span><span class="si">}</span>
+		<span class="p">)</span>
+	<span class="nb">endif</span><span class="p">(</span> APPLE <span class="p">)</span>
+<span class="nb">endif</span><span class="p">(</span> UNIX <span class="p">)</span>
 
 
-# link libraries
-target_link_libraries( ${PROJECT_NAME}
-	${QT_LIBRARIES}
-	${OPENGL_LIBRARIES}
-	${APPLE_FRAMEWORKS}
-	${WIN_FRAMEWORKS}
-)</pre>
+<span class="c1"># link libraries</span>
+<span class="nb">target_link_libraries</span><span class="p">(</span> <span class="si">${</span><span class="nv">PROJECT_NAME</span><span class="si">}</span>
+	<span class="si">${</span><span class="nv">QT_LIBRARIES</span><span class="si">}</span>
+	<span class="si">${</span><span class="nv">OPENGL_LIBRARIES</span><span class="si">}</span>
+<span class="p">)</span></code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>Das Script selbst ist eigentlich nicht schwer zu verstehen (eventuell kann man mal die CMake-Syntax und Befehle auf <a href="https://cmake.org" class="bare">https://cmake.org</a> nachschlagen). Je nachdem, welche Qt-Module verwendet werden, müsste man die Sektion "Packages" noch entsprechend erweitern.</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Unter Windows lohnt es sich (zumindest während der Entwicklung), das Konsolenfenster einzublenden, damit man <code>qDebug()</code>-Ausgaben sieht. Das wird mit der Zeile:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="cmake"><span class="nb">set_target_properties</span><span class="p">(</span> <span class="si">${</span><span class="nv">PROJECT_NAME</span><span class="si">}</span> PROPERTIES LINK_FLAGS <span class="s2">"/SUBSYSTEM:CONSOLE"</span> <span class="p">)</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>eingeschaltet.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="sect3">
 <h4 id="_erstellung">10.1.1. Erstellung</h4>
@@ -5811,7 +6443,53 @@ make <span class="nt">-j4</span></code></pre>
 <div class="sect3">
 <h4 id="_deployment">10.1.2. Deployment</h4>
 <div class="sect4">
+<h5 id="_windows_2">Windows</h5>
+<div class="paragraph">
+<p>Nachdem man unter Windows die Anwendung kompiliert hat, muss man noch die zur Verteilung benötigten DLLs zusammenstellen. Dies geht am einfachsten durch Verwendung des <code>windeployqt</code> Tools. Ein Aufruf sieht wie folgt aus:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="batch"><span class="c">:: path to Qt</span>
+<span class="kd">set</span> <span class="kd">CMAKE_PREFIX_PATH</span><span class="o">=</span><span class="kd">c</span>:\Qt\5.11.3\msvc2015_64
+
+<span class="c">:: copy dependencies</span>
+<span class="nv">%CMAKE_PREFIX_PATH%</span>\bin\windeployqt <span class="kd">vc_x64_deploy</span>\Tutorial_06.exe</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die vom Tool ins Verzeichnis kopierten Dateien werden für die Ausführung benötigt. Es sind zumeist nicht alle Dateien notwendig, das hängt aber vom jeweiligen Programm ab. Anstelle die <code>redist.exe</code> auf dem Zielsystem auszuführen, kann man auch die benötigten VC DLLS direkt mit kopieren, also bspw. <code>msvcp140.dll</code> und <code>vcruntime140.dll</code> bei VC 2015.</p>
+</div>
+<div class="paragraph">
+<p>Die Dateien befinden sich z.B. in:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>c:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\redist\x64\Microsoft.VC140.CRT</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Sind alle benötigten Dateien im gleichen Verzeichnis wie die <code>.exe</code>-Datei, sollte man das Programm auf anderen Windows-Rechnern starten können (als Portable-Version).</p>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Es bietet sich an, das Deployment nicht im Erstellungsverzeichnis durchzuführen. Die Beispielskripte <code>build.bat</code>  und  <code>deploy.bat</code> im Tutorial 06 Quelltext zeigen, wie man Erstellung und Deployment in separaten Unterverzeichnissen durchführt. Dann kann man vereinfacht auch das gesamte Deployment-Verzeichnis packen und hat sofort ein "Portable"-Release der Software.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect4">
 <h5 id="_macos_2">MacOS</h5>
+<div class="paragraph">
+<p>Unter MacOS wird eine Qt Anwendung üblicherweise gegen die installierten Frameworks gebaut. Man kann sich das anschauen, wenn man mit <code>otool</code> to gelinkten Bibliotheken anschaut:</p>
+</div>
 <div class="listingblock">
 <div class="content">
 <pre>&gt; otool -L Tutorial_05.app/Contents/MacOS/Tutorial_05
@@ -5832,8 +6510,8 @@ Tutorial_05.app/Contents/MacOS/Tutorial_05:
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 0.5.0<br>
-Last updated 2020-04-05 09:39:09 +0200
+Version 0.7.0<br>
+Last updated 2020-04-09 18:14:15 +0200
 </div>
 </div>
 <style>
@@ -6047,5 +6725,29 @@ pre.rouge {
   background-color: #f8f8f8;
 }
 </style>
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  messageStyle: "none",
+  tex2jax: {
+    inlineMath: [["\\(", "\\)"]],
+    displayMath: [["\\[", "\\]"]],
+    ignoreClass: "nostem|nolatexmath"
+  },
+  asciimath2jax: {
+    delimiters: [["\\$", "\\$"]],
+    ignoreClass: "nostem|noasciimath"
+  },
+  TeX: { equationNumbers: { autoNumber: "none" } }
+})
+MathJax.Hub.Register.StartupHook("AsciiMath Jax Ready", function () {
+  MathJax.InputJax.AsciiMath.postfilterHooks.Add(function (data, node) {
+    if ((node = data.script.parentNode) && (node = node.parentNode) && node.classList.contains('stemblock')) {
+      data.math.root.display = "block"
+    }
+    return data
+  })
+})
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_HTMLorMML"></script>
 </body>
 </html>

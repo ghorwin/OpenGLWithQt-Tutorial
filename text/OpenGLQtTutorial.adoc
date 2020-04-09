@@ -1,7 +1,7 @@
 OpenGL + Qt Tutorial
 ====================
 Andreas Nicolai <andreas.nicolai@tu-dresden.de>
-v0.5.0, März 2020
+v0.7.0, April 2020
 :Author Initials: AN
 :toc: left
 :toclevels: 3

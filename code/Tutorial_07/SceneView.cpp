@@ -49,11 +49,11 @@ SceneView::SceneView() :
 	// *** initialize camera placement and model placement in the world
 
 	// move camera a little back (mind: positive z) and look straight ahead
-	m_camera.translate(0,3,5);
-	// look straight ahead
-//	m_camera.rotate(-30, m_camera.right());
-	// look slightly right
-//	m_camera.rotate(0, QVector3D(0.0f, 1.0f, 0.0f));
+	m_camera.translate(0,17,50);
+	// look slightly down
+	m_camera.rotate(-5, m_camera.right());
+	// look slightly left
+	m_camera.rotate(-10, QVector3D(0.0f, 1.0f, 0.0f));
 }
 
 
