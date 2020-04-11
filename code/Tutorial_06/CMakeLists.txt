@@ -24,6 +24,7 @@ set( QT_LIBRARIES
 	Qt5::Widgets
 )
 
+set(OpenGL_GL_PREFERENCE GLVND CACHE STRING "OpenGL Library Preference")
 # we need OpenGL
 find_package( OpenGL REQUIRED )
 
