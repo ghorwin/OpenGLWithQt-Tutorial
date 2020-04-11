@@ -20,7 +20,8 @@ License    : BSD License,
 #define SHADER(x) m_shaderPrograms[x].shaderProgram()
 
 SceneView::SceneView() :
-	m_inputEventReceived(false)
+	m_inputEventReceived(false),
+	m_gpuTimers(this)
 {
 	// tell keyboard handler to monitor certain keys
 	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_W);
@@ -59,11 +60,9 @@ SceneView::SceneView() :
 	m_camera.rotate(-25, QVector3D(0.0f, 1.0f, 0.0f));
 }
 
-
-void SceneView::openGLCleanup() {
+SceneView::~SceneView() {
 	if (m_context) {
-		if (!m_context->makeCurrent(this))
-			qDebug() << "Cannot make OpenGL context current!";
+		m_context->makeCurrent(this);
 
 		for (ShaderProgram & p : m_shaderPrograms)
 			p.destroy();
@@ -73,9 +72,6 @@ void SceneView::openGLCleanup() {
 
 		m_gpuTimers.destroy();
 
-		for (QOpenGLTexture* t : m_textures)
-			t->destroy();
-		qDeleteAll(m_textures);
 	}
 }
 
@@ -249,6 +245,19 @@ void SceneView::mouseMoveEvent(QMouseEvent * /*event*/) {
 void SceneView::wheelEvent(QWheelEvent *event) {
 	m_keyboardMouseHandler.wheelEvent(event);
 	checkInput();
+}
+
+bool SceneView::event(QEvent *e) {
+	if (e->type() == QEvent::Close) {
+		if (m_context != nullptr) {
+			if (m_context->makeCurrent(this))
+				qDebug() << "Cannot make context current.";
+			for (QOpenGLTexture* t : m_textures)
+				t->destroy();
+			qDeleteAll(m_textures);
+		}
+	}
+	return OpenGLWindow::event(e);
 }
 
 
