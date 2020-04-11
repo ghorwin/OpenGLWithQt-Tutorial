@@ -62,7 +62,7 @@ struct Vertex {
 	float x,y,z;
 	float r,g,b;
 	float texi,texj;
-	GLint texID;
+	float texID;
 };
 
 #endif // VERTEX_H

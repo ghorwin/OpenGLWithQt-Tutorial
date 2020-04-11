@@ -54,26 +54,26 @@ void BoxMesh::copy2Buffer(Vertex *& vertexBuffer, GLuint *& elementBuffer, unsig
 	// front plane: a, b, c, d, vertexes (0, 1, 2, 3)
 	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
 			Vertex(m_vertices[0], cols[0], 0, 0),
-			Vertex(m_vertices[1], cols[0], 2, 0),
-			Vertex(m_vertices[2], cols[0], 2, 1),
+			Vertex(m_vertices[1], cols[0], 1, 0),
+			Vertex(m_vertices[2], cols[0], 1, 1),
 			Vertex(m_vertices[3], cols[0], 0, 1)
 		);
 
 	// right plane: b=1, f=5, g=6, c=2, vertexes
 	// Mind: colors are numbered up
 	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
-			Vertex(m_vertices[1], cols[1], 0, 0, 1),
-			Vertex(m_vertices[5], cols[1], 2, 0, 1),
-			Vertex(m_vertices[6], cols[1], 2, 1, 1),
-			Vertex(m_vertices[2], cols[1], 0, 1, 1)
+			Vertex(m_vertices[1], cols[1], 0, 0),
+			Vertex(m_vertices[5], cols[1], 1, 0),
+			Vertex(m_vertices[6], cols[1], 1, 1),
+			Vertex(m_vertices[2], cols[1], 0, 1)
 		);
 
 	// back plane: g=5, e=4, h=7, g=6
 	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
 			Vertex(m_vertices[5], cols[2], 0, 0, 1),
-			Vertex(m_vertices[4], cols[2], 4, 0, 1),
-			Vertex(m_vertices[7], cols[2], 4, 2, 1),
-			Vertex(m_vertices[6], cols[2], 0, 2, 1)
+			Vertex(m_vertices[4], cols[2], 1, 0, 1),
+			Vertex(m_vertices[7], cols[2], 1, 1, 1),
+			Vertex(m_vertices[6], cols[2], 0, 1, 1)
 		);
 
 	// left plane: 4,0,3,7
@@ -95,9 +95,9 @@ void BoxMesh::copy2Buffer(Vertex *& vertexBuffer, GLuint *& elementBuffer, unsig
 	// top plane: 3,2,6,7
 	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
 			Vertex(m_vertices[3], cols[5], 0, 0, 2),
-			Vertex(m_vertices[2], cols[5], 1, 0, 2),
-			Vertex(m_vertices[6], cols[5], 1, 1, 2),
-			Vertex(m_vertices[7], cols[5], 0, 1, 2)
+			Vertex(m_vertices[2], cols[5], 2, 0, 2),
+			Vertex(m_vertices[6], cols[5], 2, 2, 2),
+			Vertex(m_vertices[7], cols[5], 0, 2, 2)
 		);
 }
 

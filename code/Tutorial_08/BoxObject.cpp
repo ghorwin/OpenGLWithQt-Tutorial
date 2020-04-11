@@ -99,15 +99,16 @@ void BoxObject::create(QOpenGLShaderProgram * shaderProgramm, QOpenGLFunctions *
 	shaderProgramm->setAttributeBuffer(1, GL_FLOAT, offsetof(Vertex, r), 3, sizeof(Vertex));
 	// index 2 = texture
 	shaderProgramm->enableAttributeArray(2); // array with index/id 1
-//	shaderProgramm->setAttributeBuffer(2, GL_FLOAT, offsetof(Vertex, texi), 2, sizeof(Vertex));
-	fn->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-							  reinterpret_cast<const void *>(qintptr(offsetof(Vertex, texi)) ) );
+	shaderProgramm->setAttributeBuffer(2, GL_FLOAT, offsetof(Vertex, texi), 2, sizeof(Vertex));
+//	fn->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+//							  reinterpret_cast<const void *>(qintptr(offsetof(Vertex, texi)) ) );
 
 	// index 3 = textureID
 	shaderProgramm->enableAttributeArray(3); // array with index/id 1
+	shaderProgramm->setAttributeBuffer(3, GL_FLOAT, offsetof(Vertex, texID), 1, sizeof(Vertex));
 	// shaderProgramm->setAttributeBuffer(3, GL_INT, offsetof(Vertex, texID), 1, sizeof(Vertex));
-	fn->glVertexAttribPointer(3, 1, GL_INT, GL_FALSE, sizeof(Vertex),
-							  reinterpret_cast<const void *>(qintptr(offsetof(Vertex, texID)) ) );
+//	fn->glVertexAttribPointer(3, 1, GL_INT, GL_FALSE, sizeof(Vertex),
+//							  reinterpret_cast<const void *>(qintptr(offsetof(Vertex, texID)) ) );
 
 	// Release (unbind) all
 	m_vao.release();
