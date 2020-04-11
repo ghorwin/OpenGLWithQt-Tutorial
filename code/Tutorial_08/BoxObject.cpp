@@ -30,8 +30,11 @@ BoxObject::BoxObject() :
 
 	// create 'some' other boxes
 
-	const int BoxGenCount = 0;
-	const int GridDim = 50; // must be an int, or you have to use a cast below
+	const int BoxGenCount = 10000;
+	const int GridDim = 100; // must be an int, or you have to use a cast below
+
+	const float GRID_SPACING_XZ = 5;
+	const float GRID_SPACING_Y = 2.5;
 
 	// initialize grid (block count)
 	int boxPerCells[GridDim][GridDim];
@@ -44,10 +47,12 @@ BoxObject::BoxObject() :
 		int xGrid = qrand()*double(GridDim)/RAND_MAX;
 		int zGrid = qrand()*double(GridDim)/RAND_MAX;
 		int boxCount = boxPerCells[xGrid][zGrid]++;
-		float boxHeight = 4.5;
-		BoxMesh b(4,boxHeight,3);
+		float boxHeight = 2.5;
+		BoxMesh b(4,boxHeight,5);
 		b.setFaceColors({Qt::blue, Qt::red, Qt::yellow, Qt::green, Qt::magenta, Qt::darkCyan});
-		trans.setTranslation((-GridDim/2+xGrid)*5, boxCount*5 + 0.5*boxHeight, (-GridDim/2 + zGrid)*5);
+		trans.setTranslation((-GridDim/2+xGrid)*GRID_SPACING_XZ,
+							 boxCount*GRID_SPACING_Y + 0.5*boxHeight,
+							 (-GridDim/2 + zGrid)*GRID_SPACING_XZ);
 		b.transform(trans.toMatrix());
 		m_boxes.push_back(b);
 	}

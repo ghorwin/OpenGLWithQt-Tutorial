@@ -19,19 +19,6 @@ TriangleWindow::TriangleWindow() :
 }
 
 
-TriangleWindow::~TriangleWindow() {
-	// resource cleanup
-
-	// since we release resources related to an OpenGL context,
-	// we make this context current before cleaning up our resources
-	m_context->makeCurrent(this);
-
-	m_vao.destroy();
-	m_vertexBufferObject.destroy();
-	delete m_program;
-}
-
-
 void TriangleWindow::initialize() {
 	// this function is called once, when the window is first shown, i.e. when
 	// the the window content is first rendered
@@ -113,4 +100,21 @@ void TriangleWindow::render() {
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	// finally release VAO again (not really necessary, just for completeness)
 	m_vao.release();
+}
+
+
+bool TriangleWindow::event(QEvent *ev) {
+	if (ev->type() == QEvent::Close) {
+		// resource cleanup
+
+		// since we release resources related to an OpenGL context,
+		// we make this context current before cleaning up our resources
+		bool success = m_context->makeCurrent(this);
+		qDebug() << success;
+
+		m_vao.destroy();
+		m_vertexBufferObject.destroy();
+		delete m_program;
+	}
+	return OpenGLWindow::event(ev);
 }

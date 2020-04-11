@@ -1,4 +1,21 @@
-= Texturen mit QOpenGLTexture
+:math:
+:imagesdir: ./images
+
+= Tutorial 08: Texturen mit QOpenGLTexture
+
+In diesem Tutorial geht es um Texturen, und die Qt-Klassen `QOpenGLTexture`.
+
+.Tutorial_08, Texturen
+image::Tutorial_08_Textures.png[Tutorial_08,pdfwidth=8cm]
+
+[NOTE]
+====
+Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_08[Tutorial_08]
+====
+
+
+
+
 
 Natives OpenGL:
 
@@ -19,3 +36,18 @@ glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 ----
 
+
+[CAUTION]
+====
+`texture2D` im Fragmentshader nicht mehr benutzen (deprecated).
+====
+
+
+Initialisierung:
+
+----
+texture->setData(img);
+texture->allocate(); --> 
+
++++ [APISource:ErrorType] GL_INVALID_OPERATION error generated. Texture is immutable.
+----
