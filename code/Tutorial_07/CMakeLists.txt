@@ -25,6 +25,7 @@ set( QT_LIBRARIES
 )
 
 # we need OpenGL
+set(OpenGL_GL_PREFERENCE GLVND CACHE STRING "OpenGL Library Preference")
 find_package( OpenGL REQUIRED )
 
 
