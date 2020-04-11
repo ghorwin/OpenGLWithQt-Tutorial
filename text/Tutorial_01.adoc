@@ -241,12 +241,10 @@ Das konkrete Renderfenster heißt in diesem Beispiel `TriangleWindow` mit der He
 class TriangleWindow : public OpenGLWindow {
 public:
 	TriangleWindow();
+	~TriangleWindow() Q_DECL_OVERRIDE;
 
 	void initialize() Q_DECL_OVERRIDE;
 	void render() Q_DECL_OVERRIDE;
-
-protected:
-	virtual bool event(QEvent *ev) Q_DECL_OVERRIDE;
 
 private:
 	// Wraps an OpenGL VertexArrayObject (VAO)
@@ -550,31 +548,19 @@ Ist also ziemlich ähnlich.
 
 === Resourcenfreigabe
 
-Bleibt noch das Aufräumen der reservierten Resourcen. Hierbei gibt es zu beachten, dass der QOpenGLContext, welche in der Initialisierung für diese Anwendung neu erstellt wurde, nur während der Event-Loop auf der "Surface" arbeiten kann (die Details dazu sind leider nicht genau dokumentiert, aber wenn man nach Ende der Event-Loop im Destruktor der Klasse 
-
+Bleibt noch das Aufräumen der reservierten Resourcen im Destructor.
 [source,c++]
 ----
-m_context->makeCurrent(this);
-----
+TriangleWindow::~TriangleWindow() {
+	// resource cleanup
 
-aufruft, schlägt dieser Aufruf fehl. Alle weiteren Funktionsaufrufe, welche einen gültigen OpenGLContext verlangen, schlagen daraufhin fehl (manche geben eine `qWarning()` aus). Daher muss man die OpenGL-Resourcen beim Schließen des Fensters aber noch in der Ereignisschleife aufräumen. Daher überlädt man am Besten die Funktion `event()`:
+	// since we release resources related to an OpenGL context,
+	// we make this context current before cleaning up our resources
+	m_context->makeCurrent(this);
 
-[source,c++]
-----
-bool TriangleWindow::event(QEvent *ev) {
-	if (ev->type() == QEvent::Close) {
-		// resource cleanup
-
-		// since we release resources related to an OpenGL context,
-		// we make this context current before cleaning up our resources
-		bool success = m_context->makeCurrent(this);
-		qDebug() << success;
-
-		m_vao.destroy();
-		m_vertexBufferObject.destroy();
-		delete m_program;
-	}
-	return OpenGLWindow::event(ev);
+	m_vao.destroy();
+	m_vertexBufferObject.destroy();
+	delete m_program;
 }
 ----
 Da einige Resourcen dem OpenGL-Kontext des aktuellen Fenster gehören, sollte man vorher den OpenGL-Kontext "aktuell" setzen (`m_context->makeCurrent(this);`), damit diese Resourcen sicher freigegeben werden können.

@@ -25,14 +25,10 @@ License    : BSD License,
 class TriangleWindow : public OpenGLWindow {
 public:
 	TriangleWindow();
+	~TriangleWindow() Q_DECL_OVERRIDE;
 
 	void initialize() Q_DECL_OVERRIDE;
 	void render() Q_DECL_OVERRIDE;
-
-protected:
-
-	// overloaded to catch close events
-	virtual bool event(QEvent *ev) Q_DECL_OVERRIDE;
 
 private:
 	// Wraps an OpenGL VertexArrayObject (VAO)
