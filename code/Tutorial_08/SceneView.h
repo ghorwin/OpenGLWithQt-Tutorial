@@ -31,7 +31,8 @@ License    : BSD License,
 class SceneView : public OpenGLWindow {
 public:
 	SceneView();
-	virtual ~SceneView() override;
+
+	void openGLCleanup();
 
 protected:
 	void initializeGL() override;
@@ -58,6 +59,7 @@ private:
 	/*! Compines camera matrix and project matrix to form the world2view matrix. */
 	void updateWorld2ViewMatrix();
 
+
 	/*! If set to true, an input event was received, which will be evaluated at next repaint. */
 	bool						m_inputEventReceived;
 
@@ -75,7 +77,7 @@ private:
 
 	BoxObject					m_boxObject;
 	GridObject					m_gridObject;
-	QOpenGLTexture				*m_texture;
+	QList<QOpenGLTexture*>		m_textures;
 
 	QOpenGLTimeMonitor			m_gpuTimers;
 	QElapsedTimer				m_cpuTimer;

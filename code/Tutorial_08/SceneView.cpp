@@ -20,8 +20,7 @@ License    : BSD License,
 #define SHADER(x) m_shaderPrograms[x].shaderProgram()
 
 SceneView::SceneView() :
-	m_inputEventReceived(false),
-	m_texture(nullptr)
+	m_inputEventReceived(false)
 {
 	// tell keyboard handler to monitor certain keys
 	m_keyboardMouseHandler.addRecognizedKey(Qt::Key_W);
@@ -37,6 +36,10 @@ SceneView::SceneView() :
 	// Shaderprogram #0 : regular geometry (painting triangles via element index)
 	ShaderProgram blocks(":/shaders/withTexture.vert",":/shaders/texture.frag");
 	blocks.m_uniformNames.append("worldToView");
+	// we use three textures, which are identified by names "texture1", "texture2" etc.
+	blocks.m_uniformNames.append("brickTexture");
+	blocks.m_uniformNames.append("plasterTexture");
+	blocks.m_uniformNames.append("rooftiles");
 	m_shaderPrograms.append( blocks );
 
 	// Shaderprogram #1 : grid (painting grid lines)
@@ -54,16 +57,13 @@ SceneView::SceneView() :
 	m_camera.rotate(-30, m_camera.right());
 	// look slightly right
 	m_camera.rotate(-25, QVector3D(0.0f, 1.0f, 0.0f));
-
-	// *** initialize textures
-
-	m_texture = new QOpenGLTexture(QOpenGLTexture::Target2D);
 }
 
 
-SceneView::~SceneView() {
+void SceneView::openGLCleanup() {
 	if (m_context) {
-		m_context->makeCurrent(this);
+		if (!m_context->makeCurrent(this))
+			qDebug() << "Cannot make OpenGL context current!";
 
 		for (ShaderProgram & p : m_shaderPrograms)
 			p.destroy();
@@ -72,8 +72,10 @@ SceneView::~SceneView() {
 		m_gridObject.destroy();
 
 		m_gpuTimers.destroy();
-		m_texture->destroy();
-		delete m_texture;
+
+		for (QOpenGLTexture* t : m_textures)
+			t->destroy();
+		qDeleteAll(m_textures);
 	}
 }
 
@@ -91,15 +93,36 @@ void SceneView::initializeGL() {
 		glEnable(GL_DEPTH_TEST);
 
 		// textures
-		m_texture->create();
-		m_texture->setMinificationFilter(QOpenGLTexture::NearestMipMapLinear);
-		m_texture->setMagnificationFilter(QOpenGLTexture::NearestMipMapLinear);
-		QImage img(":/textures/brickwall.jpg");
-		m_texture->setData(img);
-		m_texture->allocateStorage();
+		QStringList textureFiles = {
+			":/textures/brickwall.jpg",
+			":/textures/plaster.jpg",
+			":/textures/tiles.jpg"
+		};
+
+		// *** initialize textures
+
+		// bind shader, so that we can define texture association
+		SHADER(0)->bind();
+
+		// we have three textures
+		for (int i=0; i<3; ++i) {
+			const QString & t = textureFiles[i];
+			QOpenGLTexture * texture = new QOpenGLTexture(QOpenGLTexture::Target2D);
+			m_textures.append(texture);
+			texture->create();
+			QImage img(t);
+			texture->setData(img); // allocate() will be called internally
+			texture->setMinificationFilter(QOpenGLTexture::NearestMipMapLinear);
+			texture->setMagnificationFilter(QOpenGLTexture::Linear);
+			// tell shader to associate 'textureX' with the current texture's index
+			// Basically, this means that the texture named 'texture1' in the fragmentation shader,
+			// whose uniformIndex was stored in location m_shaderPrograms[0].m_uniformIDs[1], will
+			// now be associated with an OpenGL texture bound to index 0
+			SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[1+i],i);
+		}
 
 		// initialize drawable objects
-		m_boxObject.create(SHADER(0));
+		m_boxObject.create(SHADER(0), this);
 		m_gridObject.create(SHADER(1));
 
 		// Timer
@@ -158,7 +181,8 @@ void SceneView::paintGL() {
 	// *** render boxes
 	SHADER(0)->bind();
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
-	m_texture->bind();
+	for (int i=0; i<3; ++i)
+		m_textures[i]->bind(i); // bind texture #i to texture index i -> accessible in fragment shader through "texture1"
 
 	m_gpuTimers.recordSample(); // render boxes
 	m_boxObject.render();

@@ -44,8 +44,11 @@ void ShaderProgram::create() {
 		throw OpenGLException(QString("Shader linker error:\n%2").arg(m_program->log()), FUNC_ID);
 
 	m_uniformIDs.clear();
-	for (const QString & uniformName : m_uniformNames)
+	for (const QString & uniformName : m_uniformNames) {
 		m_uniformIDs.append( m_program->uniformLocation(uniformName));
+		if (m_uniformIDs.back() == -1)
+			throw OpenGLException(QString("Error retrieving uniform ID for uniform '%1'").arg(uniformName), FUNC_ID);
+	}
 }
 
 

@@ -29,7 +29,7 @@ public:
 	BoxObject();
 
 	/*! The function is called during OpenGL initialization, where the OpenGL context is current. */
-	void create(QOpenGLShaderProgram * shaderProgramm);
+	void create(QOpenGLShaderProgram * shaderProgramm, QOpenGLFunctions * fn);
 	void destroy();
 
 	void render();

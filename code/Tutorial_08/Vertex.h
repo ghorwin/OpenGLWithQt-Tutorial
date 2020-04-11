@@ -14,6 +14,8 @@ License    : BSD License,
 
 #include <QVector3D>
 #include <QColor>
+#include <QtGui/qopengl.h> // for GLUint
+
 
 /*! A container class to store data (coordinates, normals, textures, colors) of a vertex, used for interleaved
 	storage. Expand this class as needed.
@@ -40,10 +42,11 @@ struct Vertex {
 		g(float(col.greenF())),
 		b(float(col.blueF())),
 		texi(0),
-		texj(0)
+		texj(0),
+		texID(0)
 	{
 	}
-	Vertex(const QVector3D & coords, const QColor & col, float textureX, float textureY) :
+	Vertex(const QVector3D & coords, const QColor & col, float textureX, float textureY, GLint textureID = 0) :
 		x(float(coords.x())),
 		y(float(coords.y())),
 		z(float(coords.z())),
@@ -51,13 +54,15 @@ struct Vertex {
 		g(float(col.greenF())),
 		b(float(col.blueF())),
 		texi(textureX),
-		texj(textureY)
+		texj(textureY),
+		texID(textureID)
 	{
 	}
 
 	float x,y,z;
 	float r,g,b;
 	float texi,texj;
+	GLint texID;
 };
 
 #endif // VERTEX_H

@@ -22,6 +22,9 @@ class TestDialog : public QDialog {
 public:
 	TestDialog();
 
+protected:
+	void closeEvent(QCloseEvent *) override;
+
 private:
 	// The scene view, that shows our world and allows navigation
 	SceneView * m_sceneView;

@@ -13,6 +13,7 @@ License    : BSD License,
 
 #include <QVector3D>
 #include <QOpenGLShaderProgram>
+#include <QOpenGLFunctions>
 
 BoxObject::BoxObject() :
 	m_vbo(QOpenGLBuffer::VertexBuffer), // actually the default, so default constructor would have been enough
@@ -66,7 +67,7 @@ BoxObject::BoxObject() :
 }
 
 
-void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
+void BoxObject::create(QOpenGLShaderProgram * shaderProgramm, QOpenGLFunctions * fn) {
 	// create and bind Vertex Array Object
 	m_vao.create();
 	m_vao.bind();
@@ -98,7 +99,15 @@ void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
 	shaderProgramm->setAttributeBuffer(1, GL_FLOAT, offsetof(Vertex, r), 3, sizeof(Vertex));
 	// index 2 = texture
 	shaderProgramm->enableAttributeArray(2); // array with index/id 1
-	shaderProgramm->setAttributeBuffer(2, GL_FLOAT, offsetof(Vertex, texi), 2, sizeof(Vertex));
+//	shaderProgramm->setAttributeBuffer(2, GL_FLOAT, offsetof(Vertex, texi), 2, sizeof(Vertex));
+	fn->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+							  reinterpret_cast<const void *>(qintptr(offsetof(Vertex, texi)) ) );
+
+	// index 3 = textureID
+	shaderProgramm->enableAttributeArray(3); // array with index/id 1
+	// shaderProgramm->setAttributeBuffer(3, GL_INT, offsetof(Vertex, texID), 1, sizeof(Vertex));
+	fn->glVertexAttribPointer(3, 1, GL_INT, GL_FALSE, sizeof(Vertex),
+							  reinterpret_cast<const void *>(qintptr(offsetof(Vertex, texID)) ) );
 
 	// Release (unbind) all
 	m_vao.release();

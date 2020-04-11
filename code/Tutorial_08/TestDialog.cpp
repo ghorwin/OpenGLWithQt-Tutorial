@@ -78,3 +78,8 @@ TestDialog::TestDialog() :
 
 	container->setFocus();
 }
+
+void TestDialog::closeEvent(QCloseEvent *e) {
+	m_sceneView->openGLCleanup();
+	QDialog::closeEvent(e);
+}
