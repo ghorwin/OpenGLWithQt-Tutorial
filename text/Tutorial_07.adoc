@@ -409,6 +409,11 @@ Anhand der möglicherweise vielen Flächen in einer komplexen Szene mag man auf 
 
 1 Mio Boxen (`BoxObject.cpp:Zeile 34`), macht 6 Mio Flächen. Im Debug Modus dauert die Schnittpunktberechnung mit _allen_ Flächen nach obigem Algorithmus insgesamt ca. 240 ms. Da lohnt es sich nicht, irgendwelche Performanceoptimierungen zu untersuchen (wie BSD- oder Octrees zur Partitionierung des Raumes etc., was man so in anderen Texten dazu findet).
 
+[TIP]
+====
+Möchte man Hervorhebungen wie bei einem "mouse over"-Effekt implementieren, sollte man versuchen, die Strahlensverfolgungszeit in den Bereich < 30 ms zu bekommen, damit das bei Bildwiederholraten von 60 Hz immer noch einigermaßen flüssig aussieht. Dies kann z.B. mit OpenMP Parallelisierung erfolgen, oder durch Beschränkung des Suchraums, z.B. durch Verwendung eines dichter am Beobachter liegenden _farplane_ - Punktes (also statt z=-1 z=-0.2 oder so verwenden) - damit fallen viele Ebenen bereits bei Bedingung 2 raus und man spart deutlich Rechenzeit.
+====
+
 === Einfärben ausgewählter Objekte
 
 Ist nun Objekt und Seite identifiziert, so möchte man das jeweilige Objekt vielleicht hervorheben. Dafür müssen die entsprechenden Vertex-Farbeigenschaften geändert werden.

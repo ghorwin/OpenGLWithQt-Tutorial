@@ -3,7 +3,7 @@
 
 = Tutorial 08: Texturen mit QOpenGLTexture
 
-In diesem Tutorial geht es um Texturen, und die Qt-Klassen `QOpenGLTexture`.
+In diesem Tutorial geht es um Texturen, und die Qt-Klasse `QOpenGLTexture`.
 
 .Tutorial_08, Texturen
 image::Tutorial_08_Textures.png[Tutorial_08,pdfwidth=8cm]
