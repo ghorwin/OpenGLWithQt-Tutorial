@@ -4,7 +4,7 @@
 #
 #------------------------------------------------------------------
 
-QT       += core gui opengl widgets
+QT       += core gui widgets
 
 TARGET = Tutorial_06
 TEMPLATE = app

@@ -4,7 +4,7 @@
 #
 #------------------------------------------------------------------
 
-QT       += core gui opengl widgets
+QT       += core gui widgets
 
 TARGET = Tutorial_08
 TEMPLATE = app
@@ -18,15 +18,15 @@ DEFINES += QT_DEPRECATED_WARNINGS GL_DEBUG
 #OPTIONS += sanitize_checks
 contains( OPTIONS, sanitize_checks ) {
 
-	CONFIG(debug, debug|release) {
-		CONFIG += sanitizer
-		CONFIG += sanitize_address
-		CONFIG += sanitize_undefined
-	}
+    CONFIG(debug, debug|release) {
+        CONFIG += sanitizer
+        CONFIG += sanitize_address
+        CONFIG += sanitize_undefined
+    }
 
-	linux-g++ | linux-g++-64 | macx {
-		QMAKE_CXXFLAGS_DEBUG   *= -fsanitize=address -fno-omit-frame-pointer
-	}
+    linux-g++ | linux-g++-64 | macx {
+        QMAKE_CXXFLAGS_DEBUG   *= -fsanitize=address -fno-omit-frame-pointer
+    }
 }
 
 # You can also make your code fail to compile if you use deprecated APIs.
@@ -37,36 +37,36 @@ contains( OPTIONS, sanitize_checks ) {
 CONFIG += c++11
 
 win32 {
-	LIBS += -lopengl32
+    LIBS += -lopengl32
 }
 
 SOURCES += \
-		BoxMesh.cpp \
-		BoxObject.cpp \
-		GridObject.cpp \
-		KeyboardMouseHandler.cpp \
-		OpenGLException.cpp \
-		OpenGLWindow.cpp \
-		SceneView.cpp \
-		ShaderProgram.cpp \
-		TestDialog.cpp \
-		Transform3D.cpp \
-		main.cpp
+        BoxMesh.cpp \
+        BoxObject.cpp \
+        GridObject.cpp \
+        KeyboardMouseHandler.cpp \
+        OpenGLException.cpp \
+        OpenGLWindow.cpp \
+        SceneView.cpp \
+        ShaderProgram.cpp \
+        TestDialog.cpp \
+        Transform3D.cpp \
+        main.cpp
 
 HEADERS += \
-	BoxMesh.h \
-	BoxObject.h \
-	Camera.h \
-	DebugApplication.h \
-	GridObject.h \
-	KeyboardMouseHandler.h \
-	OpenGLException.h \
-	OpenGLWindow.h \
-	SceneView.h \
-	ShaderProgram.h \
-	TestDialog.h \
-	Transform3D.h \
-	Vertex.h
+    BoxMesh.h \
+    BoxObject.h \
+    Camera.h \
+    DebugApplication.h \
+    GridObject.h \
+    KeyboardMouseHandler.h \
+    OpenGLException.h \
+    OpenGLWindow.h \
+    SceneView.h \
+    ShaderProgram.h \
+    TestDialog.h \
+    Transform3D.h \
+    Vertex.h
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -74,4 +74,4 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 RESOURCES += \
-	Tutorial_08.qrc
+    Tutorial_08.qrc

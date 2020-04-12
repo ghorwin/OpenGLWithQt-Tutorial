@@ -4,16 +4,16 @@
 #
 #------------------------------------------------------------------
 
-QT       += core gui widgets
+QT       += core gui opengl widgets
 
-TARGET = Tutorial_05
+TARGET = Tutorial_09
 TEMPLATE = app
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings
 # depend on your compiler). Please consult the documentation of the
 # deprecated API in order to know how to port your code away from it.
-DEFINES += QT_DEPRECATED_WARNINGS
+DEFINES += QT_DEPRECATED_WARNINGS GL_DEBUG
 
 #OPTIONS += sanitize_checks
 contains( OPTIONS, sanitize_checks ) {
@@ -45,6 +45,7 @@ SOURCES += \
 		BoxObject.cpp \
 		GridObject.cpp \
 		KeyboardMouseHandler.cpp \
+		OpenGLException.cpp \
 		OpenGLWindow.cpp \
 		SceneView.cpp \
 		ShaderProgram.cpp \
@@ -56,8 +57,10 @@ HEADERS += \
 	BoxMesh.h \
 	BoxObject.h \
 	Camera.h \
+	DebugApplication.h \
 	GridObject.h \
 	KeyboardMouseHandler.h \
+	OpenGLException.h \
 	OpenGLWindow.h \
 	SceneView.h \
 	ShaderProgram.h \
@@ -71,4 +74,4 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 RESOURCES += \
-	Tutorial_05.qrc
+	Tutorial_09.qrc
