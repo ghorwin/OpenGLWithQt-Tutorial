@@ -1,6 +1,5 @@
-# OpenGLWithQt-Tutorial
-A tutorial to use OpenGL within Qt Widgets applications (including input handling and render-on-demand)
-
+# OpenGL + Qt Tutorial
+A tutorial to use OpenGL within Qt Widgets applications. A comprehensive discussion of many Qt Wrapper and convenience classes and functions to assist with OpenGL development. Includes discussion of best-practice approaches for many topics, including  input handling and battery-efficient render-on-demand.
 
 The generated documentation can be found on:
 
