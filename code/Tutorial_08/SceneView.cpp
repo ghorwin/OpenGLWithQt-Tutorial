@@ -60,6 +60,7 @@ SceneView::SceneView() :
 	m_camera.rotate(-25, QVector3D(0.0f, 1.0f, 0.0f));
 }
 
+
 SceneView::~SceneView() {
 	if (m_context) {
 		m_context->makeCurrent(this);
