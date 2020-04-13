@@ -15,12 +15,15 @@ License    : BSD License,
 #include <QMatrix4x4>
 #include <QOpenGLTimeMonitor>
 #include <QElapsedTimer>
+#include <QOpenGLFramebufferObject>
+#include <QOpenGLTexture>
 
 #include "OpenGLWindow.h"
 #include "ShaderProgram.h"
 #include "KeyboardMouseHandler.h"
 #include "GridObject.h"
 #include "BoxObject.h"
+#include "Texture2ScreenObject.h"
 #include "Camera.h"
 
 /*! The class SceneView extends the primitive OpenGLWindow
@@ -74,9 +77,15 @@ private:
 
 	BoxObject					m_boxObject;
 	GridObject					m_gridObject;
+	Texture2ScreenObject		m_texture2ScreenObject;
 
 	QOpenGLTimeMonitor			m_gpuTimers;
 	QElapsedTimer				m_cpuTimer;
+
+	QOpenGLFramebufferObject	*m_frameBufferObject;
+	unsigned int				framebuffer;
+
+	QOpenGLTexture*				m_screenTexture;
 };
 
 #endif // SCENEVIEW_H

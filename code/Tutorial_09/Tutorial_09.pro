@@ -50,6 +50,7 @@ SOURCES += \
 		SceneView.cpp \
 		ShaderProgram.cpp \
 		TestDialog.cpp \
+		Texture2ScreenObject.cpp \
 		Transform3D.cpp \
 		main.cpp
 
@@ -65,6 +66,7 @@ HEADERS += \
 	SceneView.h \
 	ShaderProgram.h \
 	TestDialog.h \
+	Texture2ScreenObject.h \
 	Transform3D.h \
 	Vertex.h
 
