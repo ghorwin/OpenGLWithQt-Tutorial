@@ -88,8 +88,6 @@ void SceneView::initializeGL() {
 
 		// tell OpenGL to show only faces whose normal vector points towards us
 		glEnable(GL_CULL_FACE);
-		// enable depth testing, important for the grid and for the drawing order of several objects
-		glEnable(GL_DEPTH_TEST);
 
 		// initialize drawable objects
 		m_boxObject.create(SHADER(0));
@@ -110,17 +108,20 @@ void SceneView::initializeGL() {
 		SHADER(2)->bind();
 		SHADER(2)->setUniformValue(m_shaderPrograms[2].m_uniformIDs[0], 0); // 'screenTexture' will be bound to index 0
 
+		const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
+		unsigned int scr_width = width() * retinaScale;
+		unsigned int scr_height = height() * retinaScale;
+		qDebug() << "Creating framebuffer with size " << scr_width << "x" << scr_height;
+
 		// Framebuffer object
 		// framebuffer configuration
 		// -------------------------
-#if 0
 		glGenFramebuffers(1, &framebuffer);
 		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 		// create a color attachment texture
-		unsigned int textureColorbuffer;
 		glGenTextures(1, &textureColorbuffer);
 		glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width(), height(), 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, scr_width, scr_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
@@ -128,13 +129,13 @@ void SceneView::initializeGL() {
 		unsigned int rbo;
 		glGenRenderbuffers(1, &rbo);
 		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width(), height()); // use a single renderbuffer object for both a depth AND stencil buffer.
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, scr_width, scr_height); // use a single renderbuffer object for both a depth AND stencil buffer.
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo); // now actually attach it
 		// now that we actually created the framebuffer and added all attachments we want to check if it is actually complete now
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			qDebug() << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << endl;
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-#endif
+
 	}
 	catch (OpenGLException & ex) {
 		throw OpenGLException(ex, "OpenGL initialization failed.", FUNC_ID);
@@ -171,13 +172,16 @@ void SceneView::paintGL() {
 	glViewport(0, 0, width() * retinaScale, height() * retinaScale);
 	qDebug() << "SceneView::paintGL(): Rendering to:" << width() << "x" << height();
 
-	// set the background color = clear color
-//	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	// Bind the framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	// enable depth testing, important for the grid and for the drawing order of several objects
+	glEnable(GL_DEPTH_TEST);
 
 	// set the background color = clear color
 	QVector3D backColor(0.1f, 0.15f, 0.3f);
 	glClearColor(0.1f, 0.15f, 0.3f, 1.0f);
+	// set the background color = clear color
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	QVector3D gridColor(0.5f, 0.5f, 0.7f);
 
@@ -214,17 +218,17 @@ void SceneView::paintGL() {
 	renderLater();
 #endif
 
-//	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	glDisable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.
-//	// clear all relevant buffers
+
+	//	// clear all relevant buffers
 	glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // set clear color to white (not really necessery actually, since we won't be able to see behind the quad anyways)
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	SHADER(2)->bind();
-	m_screenTexture->bind(0);
+	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
 	m_texture2ScreenObject.render();
-
 	checkInput();
 
 	QVector<GLuint64> intervals = m_gpuTimers.waitForIntervals();
