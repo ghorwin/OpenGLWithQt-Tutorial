@@ -12,7 +12,112 @@ image::Tutorial_09_FramebufferImageKernel.png[Tutorial_09,pdfwidth=8cm]
 Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_09[Tutorial_09]
 ====
 
+In dem Tutorial soll die Szene zunächst in einem Framebuffer gerendert werden, welche dann unter Verwendung eines Image-Postprocessing-Kernels auf den Bildschirm übertragen wird. Im Prinzip wird das Gleiche gemacht, wie in https://learnopengl.com/Advanced-OpenGL/Framebuffers (dieses Tutorial zu lesen, dürfte beim Verständnis des Quelltextes unten helfen).
 
-.. erst OpenGL Variante, dann mit `QOpenGLFrameBufferObject`
+== Initialisierung des Framebuffers
+
+Mit OpenGL muss man den Framebuffer, den Tiefen- und Ausstanzpufferanhang (__depth and stencil attachment__) erstellen, und eine Textur für die Farbwerte anhängen:
+
+[source,c++]
+----
+// framebuffer configuration
+// -------------------------
+glGenFramebuffers(1, &framebuffer);
+glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+// create a color attachment texture
+glGenTextures(1, &textureColorbuffer);
+glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, scr_width, scr_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
+// create a renderbuffer object for depth and stencil attachment (we won't be sampling these)
+glGenRenderbuffers(1, &rbo);
+glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, scr_width, scr_height); // use a single renderbuffer object for both a depth AND stencil buffer.
+glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo); // now actually attach it
+// now that we actually created the framebuffer and added all attachments we want to check if it is actually complete now
+if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	qDebug() << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << endl;
+glBindFramebuffer(GL_FRAMEBUFFER, 0);
+----
+
+Solange man nicht Spezielles machen will, können diese vielen Zeilen einfach durch:
+
+[source,c++]
+----
+m_frameBufferObject = new QOpenGLFramebufferObject(QSize(scr_width, scr_height), QOpenGLFramebufferObject::CombinedDepthStencil);
+----
+
+ersetzen.
 
 
+== Größenanpassung
+
+Wenn man die Fenstergröße verändert, muss man auch die Größe der Puffer anpassen. Dies geschieht sinnvollerweise in `resizeGL()` und sieht mit nativem OpenGL so aus:
+
+[source,c++]
+----
+// also resize the texture buffer
+glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+// actual resize operation
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, scr_width, scr_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+// actual resize operation
+glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, scr_width, scr_height); 
+----
+
+Bei Verwendung der `QOpenGLFrameBufferObject`-Klasse muss man einfach das Klassenobjekt neu erstellen:
+
+[source,c++]
+----
+delete m_frameBufferObject;
+m_frameBufferObject = new QOpenGLFramebufferObject(QSize(scr_width, scr_height), QOpenGLFramebufferObject::CombinedDepthStencil);
+----
+
+== Rendern in den Framebuffer
+
+Erst wird der Framebuffer eingebunden, mit nativem OpenGL:
+
+[source,c++]
+----
+glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+----
+
+mit `QOpenGLFrameBufferObject`:
+
+[source,c++]
+----
+m_frameBufferObject->bind();
+----
+
+Nach Rendern der Szene dann wieder zurücksetzen des normalen Renderbuffers, mit nativem OpenGL:
+
+[source,c++]
+----
+glBindFramebuffer(GL_FRAMEBUFFER, 0);
+----
+
+mit `QOpenGLFrameBufferObject`:
+
+[source,c++]
+----
+m_frameBufferObject->bindDefault();
+----
+
+und einbinden der Textur zur Verwendung mit dem ScreenFill-Shader und Rechteck. Wieder mit OpenGL:
+
+[source,c++]
+----
+glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+----
+
+und mit `QOpenGLFrameBufferObject`:
+
+[source,c++]
+----
+glBindTexture(GL_TEXTURE_2D, m_frameBufferObject->texture());
+----
+
+Das war's auch schon. Der Quelltext für _Tutorial 09_ enthält eine komplette Verwendung (und in einem früherem git Commit ist die native OpenGL-Variante drin).

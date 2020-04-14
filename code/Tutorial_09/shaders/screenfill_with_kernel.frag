@@ -6,14 +6,13 @@ in vec2 TexCoords;
 
 uniform sampler2D screenTexture;
 
-uniform float screenHeight = 1360;
-uniform float screenWidth = 2505;
-
 void main() {
   float x_offset;
   float y_offset;
-  x_offset = 1.0 / screenWidth;
-  y_offset = 1.0 / screenHeight;
+  // textureSize returns dimensions of texture, and thus screen dimension
+  x_offset = 1.0 / textureSize(screenTexture, 0).x;
+  y_offset = 1.0 / textureSize(screenTexture, 0).y;
+  // x_offset = 1 means 1 pixel in normalized coordinates
   vec2 offsets[9] = vec2[](
     vec2(-x_offset,  y_offset), // top-left
     vec2( 0.0f,    y_offset), // top-center
