@@ -85,6 +85,7 @@ private:
 	QOpenGLFramebufferObject	*m_frameBufferObject;
 	unsigned int				framebuffer;
 	unsigned int				textureColorbuffer;
+	unsigned int				rbo;
 
 	QOpenGLTexture*				m_screenTexture;
 };

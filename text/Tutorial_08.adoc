@@ -13,7 +13,7 @@ image::Tutorial_08_Textures.png[Tutorial_08,pdfwidth=8cm]
 Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_08[Tutorial_08]
 ====
 
-Die Verwendung von Texturen ist eigentlich nicht besonders schwierig und wird auch im Qt Beispiel _Cube OpenGL ES 2.0 example_  und diversen Tutorials im Internet gut erklärt.
+Die Verwendung von Texturen ist eigentlich nicht besonders schwierig und wird auch im Qt Beispiel _Cube OpenGL ES 2.0 example_  und diversen Tutorials im Internet gut erklärt (siehe auch https://learnopengl.com/Getting-started/Textures).
 
 Aber es gibt da ein paar Dinge, die nicht ganz so trivial sind:
 
@@ -22,11 +22,19 @@ Aber es gibt da ein paar Dinge, die nicht ganz so trivial sind:
 - Verwendung mehrerer Texturen im Fragment Shader und Verwendung eines `glDrawXXX`-Aufrufs für viele Flächen unterschiedlicher Texturen
 
 
+== Initialisierung von Texturen
 
-Natives OpenGL:
+wenn man eine Textur mit nativem OpenGL-Code anlegt, sieht das ungefähr so aus:
+
 
 [source,c]
 ----
+// erstelle Texturobjekt
+unsigned int texture;
+glGenTextures(1, &texture); 
+// binde Textur
+glBindTexture(GL_TEXTURE_2D, texture);  
+// setze Attribute:
 
 // Wrap style
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_MIRRORED_REPEAT);
@@ -40,7 +48,81 @@ glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+// Lade Texturdaten mittels 'stb_image.h'
+unsigned char *data = stbi_load("container.jpg", &width, &height, &nrChannels, 0);
+
+// Kopiere Daten in Texture und Erstelle Mipmap
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+glGenerateMipmap(GL_TEXTURE_2D);
 ----
+
+
+Mit `QOpenGLTexture` ist das Ganze etwas kürzer:
+
+.SceneView.cpp:initializeGL()
+[source,c++]
+----
+// erstelle Texturobjekt
+QOpenGLTexture * texture = new QOpenGLTexture(QOpenGLTexture::Target2D);
+texture->create();
+// setze Attribute
+
+// Wrap style
+texture->setWrapMode(QOpenGLTexture::ClampToBorder);
+texture->setBorderColor(Qt::red);
+
+// Texture Filtering
+texture->setMinificationFilter(QOpenGLTexture::NearestMipMapLinear);
+texture->setMagnificationFilter(QOpenGLTexture::Linear);
+
+// Lade Bild
+QImage img(":/textures/brickwall.jpg");
+// Kopiere Daten in Texture und Erstelle Mipmap
+texture->setData(img); // allocate() will be called internally
+----
+Die Mipmap-Daten werden standardmäßig beim Aufruf von `setData()` ohne weitere Parameter generiert.
+
+Beim Aufruf von `setData()` wird automatisch gleich `allocate()` aufgerufen, und die Bilddaten in die OpenGL-Textur kopiert. Ruft man hinterher nocheinmal `allocate()` auf, erhält man die Fehlermeldung:
+
+----
+GL_INVALID_OPERATION error generated. Texture is immutable.
+----
+
+[IMPORTANT]
+====
+Texturobjekte sind unveränderlich, zumindest was die Eigenschaften des eingebundenen Bildes (und der Mipmap) betrifft. Nach Aufruf von `setData()` können eigentlich nur noch Attribute geändert werden, die die Interpretation der gebundenen Daten betreffen (also Filter und Wrap-Style). Möchte man die Textur selbst ändern, heißt es Objekt zerstören und neu erstellen.
+====
+
+== Verwendung der Texture
+
+Jeder Vertex benötigt nun statt Farben (oder zusätzlich zu den Farben) noch die Texturkoordinaten. Dank der `Vertex`-Struktur (siehe _Tutorial 05_) ist die Erweiterung trivial:
+
+.Vertex.h
+[source,c++]
+----
+....
+Vertex(const QVector3D & coords, const QColor & col, float textureX, float textureY, GLint textureID = 0) :
+	x(float(coords.x())),
+	y(float(coords.y())),
+	z(float(coords.z())),
+	r(float(col.redF())),
+	g(float(col.greenF())),
+	b(float(col.blueF())),
+	texi(textureX),
+	texj(textureY),
+	texID(textureID)
+{
+}
+
+float x,y,z;
+float r,g,b;
+float texi,texj;
+float texID;
+....
+----
+
+Die Texture-ID wird später benötigt, wenn ein Shader zwischen mehreren Texturen unterscheidet.
+
 
 
 [CAUTION]
@@ -48,12 +130,3 @@ glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 `texture2D` im Fragmentshader nicht mehr benutzen (deprecated).
 ====
 
-
-Initialisierung:
-
-----
-texture->setData(img);
-texture->allocate(); --> 
-
-+++ [APISource:ErrorType] GL_INVALID_OPERATION error generated. Texture is immutable.
-----

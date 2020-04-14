@@ -1,0 +1,18 @@
+:math:
+:imagesdir: ./images
+
+= Tutorial 09: Render in eine Framebuffer und Verwendung von Kernel Effekten
+
+
+.Tutorial_09, Framebuffer mit Kernel-Effekten
+image::Tutorial_09_FramebufferImageKernel.png[Tutorial_09,pdfwidth=8cm]
+
+[NOTE]
+====
+Quelltext für dieses Tutorial liegt im github repo:  https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_09[Tutorial_09]
+====
+
+
+.. erst OpenGL Variante, dann mit `QOpenGLFrameBufferObject`
+
+

@@ -27,8 +27,9 @@ include::Tutorial_05.adoc[leveloffset=+1]
 include::Tutorial_06.adoc[leveloffset=+1]
 include::Tutorial_07.adoc[leveloffset=+1]
 include::Tutorial_08.adoc[leveloffset=+1]
+include::Tutorial_09.adoc[leveloffset=+1]
 
-== Tutorial 09: Shadowmaps/Mehrfach-Render-Passes und QOpenGLFramebufferObject
+== Tutorial 10: Shadowmaps/Mehrfach-Render-Passes und QOpenGLFramebufferObject
 
 TODO : Schattenwurf durch doppeltes Rendern (erst Kamera in Sonnenposition in Framebuffer rendern, dann diesen als Texturinput für den 2. Renderpass nehmen).
 

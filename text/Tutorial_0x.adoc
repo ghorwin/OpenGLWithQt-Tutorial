@@ -1,4 +1,4 @@
-= Tutorial 10: CMake als BuildSystem für Qt und OpenGL, und Deployment von Qt+OpenGL Anwendungen
+= Tutorial xx: CMake als BuildSystem für Qt und OpenGL, und Deployment von Qt+OpenGL Anwendungen
 
 Für das automatische Bauen von Qt (z.B. mit Jenkins oder ähnlichen Build-Systemen) bietet sich CMake an. Es geht zwar auch mit qmake, aber in diesem Tutorial soll gezeigt werden, wie man das eine CMakeLists.txt-Datei für das Bauen von Qt-Anwendungen unter Linux, MacOS und Windows konfiguriert.
 

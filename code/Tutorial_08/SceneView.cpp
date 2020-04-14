@@ -107,10 +107,14 @@ void SceneView::initializeGL() {
 			QOpenGLTexture * texture = new QOpenGLTexture(QOpenGLTexture::Target2D);
 			m_textures.append(texture);
 			texture->create();
-			QImage img(t);
-			texture->setData(img); // allocate() will be called internally
+			// texture attributes
 			texture->setMinificationFilter(QOpenGLTexture::NearestMipMapLinear);
 			texture->setMagnificationFilter(QOpenGLTexture::Linear);
+			texture->setWrapMode(QOpenGLTexture::ClampToBorder);
+			texture->setBorderColor(Qt::red);
+			QImage img(t);
+			texture->setData(img); // allocate() will be called internally
+			qDebug()<< "Texture mipmap levels: " << texture->mipLevels();
 			// tell shader to associate 'textureX' with the current texture's index
 			// Basically, this means that the texture named 'texture1' in the fragmentation shader,
 			// whose uniformIndex was stored in location m_shaderPrograms[0].m_uniformIDs[1], will

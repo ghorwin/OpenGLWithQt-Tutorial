@@ -48,8 +48,10 @@ SceneView::SceneView() :
 	m_shaderPrograms.append( grid );
 
 	// Shaderprogram #2 : copy texture to screen
-	ShaderProgram screenFill(":/shaders/screenfill.vert",":/shaders/screenfill.frag");
+	ShaderProgram screenFill(":/shaders/screenfill.vert",":/shaders/screenfill_with_kernel.frag");
 	screenFill.m_uniformNames.append("screenTexture"); // screenTexture
+	screenFill.m_uniformNames.append("screenHeight");
+	screenFill.m_uniformNames.append("screenWidth");
 	m_shaderPrograms.append( screenFill );
 
 	// *** initialize camera placement and model placement in the world
@@ -95,7 +97,7 @@ void SceneView::initializeGL() {
 		m_texture2ScreenObject.create(SHADER(2));
 
 		// Timer
-		m_gpuTimers.setSampleCount(5);
+		m_gpuTimers.setSampleCount(7);
 		m_gpuTimers.create();
 
 		// Screen texture
@@ -126,7 +128,6 @@ void SceneView::initializeGL() {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
 		// create a renderbuffer object for depth and stencil attachment (we won't be sampling these)
-		unsigned int rbo;
 		glGenRenderbuffers(1, &rbo);
 		glBindRenderbuffer(GL_RENDERBUFFER, rbo);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, scr_width, scr_height); // use a single renderbuffer object for both a depth AND stencil buffer.
@@ -135,6 +136,8 @@ void SceneView::initializeGL() {
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 			qDebug() << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << endl;
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
 
 	}
 	catch (OpenGLException & ex) {
@@ -157,6 +160,42 @@ void SceneView::resizeGL(int width, int height) {
 
 	// update cached world2view matrix
 	updateWorld2ViewMatrix();
+
+	// resize color and render buffers
+	const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
+	unsigned int scr_width = width * retinaScale;
+	unsigned int scr_height = height * retinaScale;
+	qDebug() << "Resizing framebuffer to size " << scr_width << "x" << scr_height;
+#if 1
+	// also resize the texture buffer
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, scr_width, scr_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, scr_width, scr_height); // use a single renderbuffer object for both a depth AND stencil buffer.
+#else
+	glGenFramebuffers(1, &framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	// create a color attachment texture
+	glGenTextures(1, &textureColorbuffer);
+	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, scr_width, scr_height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
+	// create a renderbuffer object for depth and stencil attachment (we won't be sampling these)
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, scr_width, scr_height); // use a single renderbuffer object for both a depth AND stencil buffer.
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo); // now actually attach it
+	// now that we actually created the framebuffer and added all attachments we want to check if it is actually complete now
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		qDebug() << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << endl;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+#endif
+	SHADER(2)->bind();
+	SHADER(2)->setUniformValue(m_shaderPrograms[2].m_uniformIDs[1], float(scr_height));
+	SHADER(2)->setUniformValue(m_shaderPrograms[2].m_uniformIDs[2], float(scr_width));
 }
 
 
@@ -170,7 +209,7 @@ void SceneView::paintGL() {
 		processInput();
 	const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
 	glViewport(0, 0, width() * retinaScale, height() * retinaScale);
-	qDebug() << "SceneView::paintGL(): Rendering to:" << width() << "x" << height();
+	qDebug() << "SceneView::paintGL(): Rendering to:" << width()* retinaScale << "x" << height()* retinaScale;
 
 	// Bind the framebuffer
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -209,7 +248,6 @@ void SceneView::paintGL() {
 	m_gridObject.render();
 	SHADER(1)->release();
 
-	m_gpuTimers.recordSample(); // done painting
 
 #if 0
 	// do some animation stuff
@@ -218,6 +256,7 @@ void SceneView::paintGL() {
 	renderLater();
 #endif
 
+	m_gpuTimers.recordSample(); // start setup framebuffer to screen rendering
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	glDisable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.
@@ -228,7 +267,13 @@ void SceneView::paintGL() {
 
 	SHADER(2)->bind();
 	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+
+	m_gpuTimers.recordSample(); // render framebuffer
 	m_texture2ScreenObject.render();
+
+	m_gpuTimers.recordSample(); // done painting
+
+
 	checkInput();
 
 	QVector<GLuint64> intervals = m_gpuTimers.waitForIntervals();
