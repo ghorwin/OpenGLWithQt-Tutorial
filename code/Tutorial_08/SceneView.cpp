@@ -110,8 +110,8 @@ void SceneView::initializeGL() {
 			// texture attributes
 			texture->setMinificationFilter(QOpenGLTexture::NearestMipMapLinear);
 			texture->setMagnificationFilter(QOpenGLTexture::Linear);
-			texture->setWrapMode(QOpenGLTexture::ClampToBorder);
-			texture->setBorderColor(Qt::red);
+//			texture->setWrapMode(QOpenGLTexture::ClampToBorder);
+//			texture->setBorderColor(Qt::red);
 			QImage img(t);
 			texture->setData(img); // allocate() will be called internally
 			qDebug()<< "Texture mipmap levels: " << texture->mipLevels();

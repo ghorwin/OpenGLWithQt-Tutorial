@@ -71,17 +71,17 @@ void BoxMesh::copy2Buffer(Vertex *& vertexBuffer, GLuint *& elementBuffer, unsig
 	// back plane: g=5, e=4, h=7, g=6
 	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
 			Vertex(m_vertices[5], cols[2], 0, 0, 1),
-			Vertex(m_vertices[4], cols[2], 1, 0, 1),
-			Vertex(m_vertices[7], cols[2], 1, 1, 1),
-			Vertex(m_vertices[6], cols[2], 0, 1, 1)
+			Vertex(m_vertices[4], cols[2], 2, 0, 1),
+			Vertex(m_vertices[7], cols[2], 2, 2, 1),
+			Vertex(m_vertices[6], cols[2], 0, 2, 1)
 		);
 
 	// left plane: 4,0,3,7
 	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
 			Vertex(m_vertices[4], cols[3], 0, 0, 1),
-			Vertex(m_vertices[0], cols[3], 1, 0, 1),
-			Vertex(m_vertices[3], cols[3], 1, 1, 1),
-			Vertex(m_vertices[7], cols[3], 0, 1, 1)
+			Vertex(m_vertices[0], cols[3], 2, 0, 1),
+			Vertex(m_vertices[3], cols[3], 2, 2, 1),
+			Vertex(m_vertices[7], cols[3], 0, 2, 1)
 		);
 
 	// bottom plane: 4,5,1,0
