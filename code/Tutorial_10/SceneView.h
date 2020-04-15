@@ -23,7 +23,6 @@ License    : BSD License,
 #include "KeyboardMouseHandler.h"
 #include "GridObject.h"
 #include "BoxObject.h"
-#include "Texture2ScreenObject.h"
 #include "Camera.h"
 
 /*! The class SceneView extends the primitive OpenGLWindow
@@ -77,7 +76,6 @@ private:
 
 	BoxObject					m_boxObject;
 	GridObject					m_gridObject;
-	Texture2ScreenObject		m_texture2ScreenObject;
 
 	QOpenGLTimeMonitor			m_gpuTimers;
 	QElapsedTimer				m_cpuTimer;

@@ -6,6 +6,5 @@
         <file>shaders/grid.frag</file>
         <file>shaders/screenfill.frag</file>
         <file>shaders/screenfill.vert</file>
-        <file>shaders/screenfill_with_kernel.frag</file>
     </qresource>
 </RCC>

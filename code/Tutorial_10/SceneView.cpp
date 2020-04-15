@@ -46,8 +46,8 @@ SceneView::SceneView() :
 	grid.m_uniformNames.append("backColor"); // vec3
 	m_shaderPrograms.append( grid );
 
-	// Shaderprogram #2 : copy texture to screen
-	ShaderProgram screenFill(":/shaders/screenfill.vert",":/shaders/screenfill_with_kernel.frag");
+	// Shaderprogram #2 : shadow texture rendering
+	ShaderProgram screenFill(":/shaders/shadow.vert",":/shaders/shadow.frag");
 	m_shaderPrograms.append( screenFill );
 
 	// *** initialize camera placement and model placement in the world
@@ -70,7 +70,6 @@ SceneView::~SceneView() {
 
 		m_boxObject.destroy();
 		m_gridObject.destroy();
-		m_texture2ScreenObject.destroy();
 
 		m_gpuTimers.destroy();
 
@@ -88,24 +87,21 @@ void SceneView::initializeGL() {
 
 		// tell OpenGL to show only faces whose normal vector points towards us
 		glEnable(GL_CULL_FACE);
+		// enable depth testing, important for the grid and for the drawing order of several objects
+		// we need to enable it here, since we disable it below for texture2screen operation
+		glEnable(GL_DEPTH_TEST);
 
 		// initialize drawable objects
 		m_boxObject.create(SHADER(0));
 		m_gridObject.create(SHADER(1));
-		m_texture2ScreenObject.create(SHADER(2));
 
 		// Timer
 		m_gpuTimers.setSampleCount(7);
 		m_gpuTimers.create();
 
-		const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
-		unsigned int scr_width = width() * retinaScale;
-		unsigned int scr_height = height() * retinaScale;
-		qDebug() << "Creating framebuffer with size " << scr_width << "x" << scr_height;
-
-		// Framebuffer object
-		m_frameBufferObject = new QOpenGLFramebufferObject(QSize(scr_width, scr_height), QOpenGLFramebufferObject::CombinedDepthStencil);
-
+		// Framebuffer for Shadow depth buffer
+		m_frameBufferObject = new QOpenGLFramebufferObject(QSize(1024, 1024), QOpenGLFramebufferObject::Depth);
+		glBindTexture(GL_TEXTURE_2D, m_frameBufferObject->texture());
 	}
 	catch (OpenGLException & ex) {
 		throw OpenGLException(ex, "OpenGL initialization failed.", FUNC_ID);
@@ -127,14 +123,6 @@ void SceneView::resizeGL(int width, int height) {
 
 	// update cached world2view matrix
 	updateWorld2ViewMatrix();
-
-	// resize color and render buffers
-	const qreal retinaScale = devicePixelRatio(); // needed for Macs with retina display
-	unsigned int scr_width = width * retinaScale;
-	unsigned int scr_height = height * retinaScale;
-	qDebug() << "Resizing framebuffer to size " << scr_width << "x" << scr_height;
-	delete m_frameBufferObject;
-	m_frameBufferObject = new QOpenGLFramebufferObject(QSize(scr_width, scr_height), QOpenGLFramebufferObject::CombinedDepthStencil);
 }
 
 
@@ -151,11 +139,11 @@ void SceneView::paintGL() {
 	qDebug() << "SceneView::paintGL(): Rendering to:" << width()* retinaScale << "x" << height()* retinaScale;
 
 	// Bind the framebuffer so that we render into an offscreen buffer
-	m_frameBufferObject->bind();
-
-	// enable depth testing, important for the grid and for the drawing order of several objects
-	// we need to enable it here, since we disable it below for texture2screen operation
-	glEnable(GL_DEPTH_TEST);
+//	m_frameBufferObject->bind();
+//	SHADER(2)->bind();
+//	SHADER(2)->release();
+	// Bind default render buffer (screen)
+//	m_frameBufferObject->bindDefault();
 
 	// set the background color = clear color
 	QVector3D backColor(0.1f, 0.15f, 0.3f);
@@ -168,6 +156,7 @@ void SceneView::paintGL() {
 	m_gpuTimers.reset();
 
 	m_gpuTimers.recordSample(); // setup boxes
+	glBindTexture(GL_TEXTURE_2D, m_frameBufferObject->texture());
 
 	// *** render boxes
 	SHADER(0)->bind();
@@ -196,24 +185,6 @@ void SceneView::paintGL() {
 	updateWorld2ViewMatrix();
 	renderLater();
 #endif
-
-	m_gpuTimers.recordSample(); // start setup framebuffer to screen rendering
-
-
-	// Bind default render buffer (screen)
-	m_frameBufferObject->bindDefault();
-
-	glDisable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.
-
-	//	// clear all relevant buffers
-	glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // set clear color to white (not really necessery actually, since we won't be able to see behind the quad anyways)
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	SHADER(2)->bind();
-	glBindTexture(GL_TEXTURE_2D, m_frameBufferObject->texture());
-
-	m_gpuTimers.recordSample(); // render framebuffer
-	m_texture2ScreenObject.render();
 
 	m_gpuTimers.recordSample(); // done painting
 
