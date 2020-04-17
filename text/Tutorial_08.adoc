@@ -26,7 +26,6 @@ Aber es gibt da ein paar Dinge, die nicht ganz so trivial sind:
 
 wenn man eine Textur mit nativem OpenGL-Code anlegt, sieht das ungefähr so aus:
 
-
 [source,c]
 ----
 // erstelle Texturobjekt
@@ -93,6 +92,25 @@ GL_INVALID_OPERATION error generated. Texture is immutable.
 Texturobjekte sind unveränderlich, zumindest was die Eigenschaften des eingebundenen Bildes (und der Mipmap) betrifft. Nach Aufruf von `setData()` können eigentlich nur noch Attribute geändert werden, die die Interpretation der gebundenen Daten betreffen (also Filter und Wrap-Style). Möchte man die Textur selbst ändern, heißt es Objekt zerstören und neu erstellen.
 ====
 
+
+=== Shader-Texture-Verknüpfung
+
+Wenn man mehrere Texturen in einem Shader verwendet, muss man dem Shaderprogramm noch mitteilen, unter welcher ID eine Texture zu finden ist. 
+
+Die Informationskette sieht so aus:
+
+- im Shaderprogram (Fragment-Shader) werden Texturen (`sampler2D`) benannt, bspw. _brickTexture_ oder _roofTiles_
+- man erfragt deren Parameter/Uniform-Index ab, als wären es gewöhnliche uniform-Variablen  -> __brickTextureUniformID__, __roofTilesUniformID__. Mit diesen Variablen-IDs kann man dem Shader Parameter geben.
+- man gibt jeder dieser Variablen eine Texture-ID, also bspw. Variable __brickTextureUniformID__ bekommt Texture #0, und __roofTilesUniformID__ bekommt Texture #1. Das Durchnummerieren der eigenen Texturen ist komplett unabhängig von den Uniform-IDs.
+- vor dem Rendern bindet man die Texturen ein, und gibt dabei die Texturenummer an.
+
+In der Initialisierung sieht das so aus:
+
+[source, c++]
+----
+SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[1+i],i); 
+----
+
 == Verwendung der Texture
 
 Jeder Vertex benötigt nun statt Farben (oder zusätzlich zu den Farben) noch die Texturkoordinaten. Dank der `Vertex`-Struktur (siehe _Tutorial 05_) ist die Erweiterung trivial:
@@ -123,10 +141,159 @@ float texID;
 
 Die Texture-ID wird später benötigt, wenn ein Shader zwischen mehreren Texturen unterscheidet.
 
+Nun, da die Vertex-Datenstruktur 3 neue Parameter hat, muss man in `BoxMesh.cpp` das Erstellen der Vertex-Objekte anpassen:
 
+.BoxMesh.cpp:copy2Buffer
+[source,c++]
+----
+// front plane: a, b, c, d, vertexes (0, 1, 2, 3)
+copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
+		Vertex(m_vertices[0], cols[0], 0, 0),
+		Vertex(m_vertices[1], cols[0], 1, 0),
+		Vertex(m_vertices[2], cols[0], 1, 1),
+		Vertex(m_vertices[3], cols[0], 0, 1)
+	);
+
+// right plane: b=1, f=5, g=6, c=2, vertexes
+// Mind: colors are numbered up
+copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
+		Vertex(m_vertices[1], cols[1], 0, 0),
+		Vertex(m_vertices[5], cols[1], 1, 0),
+		Vertex(m_vertices[6], cols[1], 1, 1),
+		Vertex(m_vertices[2], cols[1], 0, 1)
+	);
+
+// back plane: g=5, e=4, h=7, g=6
+copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
+		Vertex(m_vertices[5], cols[2], 0, 0, 1),
+		Vertex(m_vertices[4], cols[2], 2, 0, 1),
+		Vertex(m_vertices[7], cols[2], 2, 2, 1),
+		Vertex(m_vertices[6], cols[2], 0, 2, 1)
+	);
+
+// left plane: 4,0,3,7
+copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
+		Vertex(m_vertices[4], cols[3], 0, 0, 1),
+		Vertex(m_vertices[0], cols[3], 2, 0, 1),
+		Vertex(m_vertices[3], cols[3], 2, 2, 1),
+		Vertex(m_vertices[7], cols[3], 0, 2, 1)
+	);
+
+// bottom plane: 4,5,1,0
+copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
+		Vertex(m_vertices[4], cols[4], 0, 0),
+		Vertex(m_vertices[5], cols[4], 1, 0),
+		Vertex(m_vertices[1], cols[4], 1, 1),
+		Vertex(m_vertices[0], cols[4], 0, 1)
+	);
+
+// top plane: 3,2,6,7
+copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
+		Vertex(m_vertices[3], cols[5], 0, 0, 2),
+		Vertex(m_vertices[2], cols[5], 2, 0, 2),
+		Vertex(m_vertices[6], cols[5], 2, 2, 2),
+		Vertex(m_vertices[7], cols[5], 0, 2, 2)
+	);
+----
+
+Die 2 zusätzlichen Argumente geben die Texturekoordinaten an. bei 0..1 heißt das, dass die Texture genau einmal die Fläche bespannt. Bei 0..2 (z.B. bei der hinteren Fläche) wird durch die Texture-Wrap-Einstellung die Texture zweimal nebeneinander gezeichnet.
+
+Der dritte Parameter (bei back, left und top) setzt die Texture-ID (dazu gleich mehr).
+
+=== Shader
+
+Nun zur Erweiterung der Shaderprogramme:
+
+.Vertex Shader 'withTexture.vert'
+[source,c]
+----
+#version 330
+
+// GLSL version 3.3
+// vertex shader
+
+layout(location = 0) in vec3 position;   // input:  attribute with index '0' with 3 elements per vertex
+layout(location = 1) in vec3 color;      // input:  attribute with index '1' with 3 elements (=rgb) per vertex
+layout(location = 2) in vec2 texcoords;  // input:  attribute with index '2' with 2 elements per vertex
+layout(location = 3) in float texnr;     // input:  attribute with index '3' with 1 float per vertex
+
+out vec4 fragColor;                      // output: computed fragmentation color
+out vec2 texCoord;                       // output: computed texture coordinates
+flat out float texID;                    // output: texture ID - mind the 'flat' attribute!
+
+uniform mat4 worldToView;                // parameter: the camera matrix
+
+void main() {
+  // Mind multiplication order for matrixes
+  gl_Position = worldToView * vec4(position, 1.0);
+  fragColor = vec4(color, 1.0);
+  texCoord = texcoords;
+  texID = texnr;
+}
+----
+
+Der Vertexshader wird eigentlich nur um die Texture-Koordinaten erweitert, welche unverändert durchgereicht werden. Die Farbe spielt in diesem Beispiel keine Rolle und könnte weggelassen werden, aber der Einfachheit halber lassen wir das mal so.
+
+Interessant ist noch das Schlüsselwort `flat` bei der Ausgabevariable texID. Letztlich hat jede Fläche nur eine TextureID. Diese zwischen Vertexes zu interpolieren, wäre Quatsch. Dass Schlüsselwort `flat` sagt, dass der Wert vom ersten Vertex des Elements genommen und unverändert an alle Fragmente weitergereicht wird.
+
+Die eigentliche Texture wird erst im Fragment-Shaderprogramm verwendet.
+
+.Fragment Shader 'texture.frag'
+[source,c]
+----
+#version 330 core
+
+// fragment shader
+
+in vec4 fragColor;    // input: interpolated color as rgba-value
+in vec2 texCoord;     // input: texture coordinate (xy-coordinates)
+flat in float texID;  // input: textureID
+out vec4 finalColor;  // output: final color value as rgba-value
+
+uniform sampler2D brickTexture; // the wall texture
+uniform sampler2D plasterTexture; // the plaster texture
+uniform sampler2D rooftiles; // the roof texture
+
+void main() {
+  if (texID == 0)
+    finalColor = texture(brickTexture, texCoord);
+  else if (texID == 2)
+    finalColor = texture(rooftiles, texCoord);
+  else if (texID == 1)
+    finalColor = texture(plasterTexture, texCoord);
+  else
+    finalColor = vec4(texCoord,0,0);
+}
+----
+
+Auch hier muss das Schlüsselwort `flat` verwendet werden, sonst gibt es einen Linker-Fehler beim Shaderprogramm-Verknüpfen. Die Funktion `texture` interpoliert nun den Wert an der gegebenen Texturekoordinate.
 
 [CAUTION]
 ====
-`texture2D` im Fragmentshader nicht mehr benutzen (deprecated).
+`texture2D` sollte im Fragmentshader nicht mehr benutzt werden (deprecated), man findet es dennoch recht häufig in OpenGL-Beispielen.
+====
+
+=== Einbinden der Texturen
+
+Nun muss man vor dem Zeichnen der Boxen noch die Texturen einbinden, wobei man die jeweilige Texturnummer angibt (siehe auch Abschnitt _Shader-Texture-Verknüpfung_ oben).
+
+
+.SceneView.cpp:paintGL()
+[source,c]
+----
+// *** render boxes
+SHADER(0)->bind();
+SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
+for (int i=0; i<3; ++i)
+	m_textures[i]->bind(i); // bind texture #i to texture index i -> accessible in fragment shader through "texture1"
+
+m_gpuTimers.recordSample(); // render boxes
+m_boxObject.render();
+SHADER(0)->release();
+----
+
+[TIP]
+====
+In diesem Beispiel konnte man sehen, wie man mit einem Shader mehrere Texturen verwenden kann. Üblicherweise kann man maximal 16 Texturen verwenden. Daher ist bei großen Szenen mit sehr vielen Texturen ein Aufteilen in mehrere `drawXXX`- Aufrufe unumgänglich.
 ====
 
