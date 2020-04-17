@@ -231,14 +231,35 @@ table {
 </li>
 </ul>
 </li>
-<li><a href="#_texturen_mit_qopengltexture">8. Texturen mit QOpenGLTexture</a></li>
-<li><a href="#_tutorial_09_shadowmapsmehrfach_render_passes_und_qopenglframebufferobject">9. Tutorial 09: Shadowmaps/Mehrfach-Render-Passes und QOpenGLFramebufferObject</a></li>
-<li><a href="#_tutorial_10_cmake_als_buildsystem_für_qt_und_opengl_und_deployment_von_qtopengl_anwendungen">10. Tutorial 10: CMake als BuildSystem für Qt und OpenGL, und Deployment von Qt+OpenGL Anwendungen</a>
+<li><a href="#_tutorial_08_texturen_mit_qopengltexture">8. Tutorial 08: Texturen mit QOpenGLTexture</a>
 <ul class="sectlevel2">
-<li><a href="#_cmakelists_txt_für_opengl_anwendungen">10.1. CMakeLists.txt für OpenGL-Anwendungen</a>
+<li><a href="#_initialisierung_von_texturen">8.1. Initialisierung von Texturen</a>
 <ul class="sectlevel3">
-<li><a href="#_erstellung">10.1.1. Erstellung</a></li>
-<li><a href="#_deployment">10.1.2. Deployment</a></li>
+<li><a href="#_shader_texture_verknüpfung">8.1.1. Shader-Texture-Verknüpfung</a></li>
+</ul>
+</li>
+<li><a href="#_verwendung_der_texture">8.2. Verwendung der Texture</a>
+<ul class="sectlevel3">
+<li><a href="#_shader">8.2.1. Shader</a></li>
+<li><a href="#_einbinden_der_texturen">8.2.2. Einbinden der Texturen</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#_tutorial_09_render_in_eine_framebuffer_und_verwendung_von_kernel_effekten">9. Tutorial 09: Render in eine Framebuffer und Verwendung von Kernel Effekten</a>
+<ul class="sectlevel2">
+<li><a href="#_initialisierung_des_framebuffers">9.1. Initialisierung des Framebuffers</a></li>
+<li><a href="#_größenanpassung">9.2. Größenanpassung</a></li>
+<li><a href="#_rendern_in_den_framebuffer">9.3. Rendern in den Framebuffer</a></li>
+</ul>
+</li>
+<li><a href="#_tutorial_10_shadowmapsmehrfach_render_passes_und_qopenglframebufferobject">10. Tutorial 10: Shadowmaps/Mehrfach-Render-Passes und QOpenGLFramebufferObject</a></li>
+<li><a href="#_tutorial_xx_cmake_als_buildsystem_für_qt_und_opengl_und_deployment_von_qtopengl_anwendungen">11. Tutorial xx: CMake als BuildSystem für Qt und OpenGL, und Deployment von Qt+OpenGL Anwendungen</a>
+<ul class="sectlevel2">
+<li><a href="#_cmakelists_txt_für_opengl_anwendungen">11.1. CMakeLists.txt für OpenGL-Anwendungen</a>
+<ul class="sectlevel3">
+<li><a href="#_erstellung">11.1.1. Erstellung</a></li>
+<li><a href="#_deployment">11.1.2. Deployment</a></li>
 </ul>
 </li>
 </ul>
@@ -6031,6 +6052,20 @@ int main(int argc, char **argv) {
 <div class="paragraph">
 <p>1 Mio Boxen (<code>BoxObject.cpp:Zeile 34</code>), macht 6 Mio Flächen. Im Debug Modus dauert die Schnittpunktberechnung mit <em>allen</em> Flächen nach obigem Algorithmus insgesamt ca. 240 ms. Da lohnt es sich nicht, irgendwelche Performanceoptimierungen zu untersuchen (wie BSD- oder Octrees zur Partitionierung des Raumes etc., was man so in anderen Texten dazu findet).</p>
 </div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Möchte man Hervorhebungen wie bei einem "mouse over"-Effekt implementieren, sollte man versuchen, die Strahlensverfolgungszeit in den Bereich &lt; 30 ms zu bekommen, damit das bei Bildwiederholraten von 60 Hz immer noch einigermaßen flüssig aussieht. Dies kann z.B. mit OpenMP Parallelisierung erfolgen, oder durch Beschränkung des Suchraums, z.B. durch Verwendung eines dichter am Beobachter liegenden <em>farplane</em> - Punktes (also statt z=-1 z=-0.2 oder so verwenden) - damit fallen viele Ebenen bereits bei Bedingung 2 raus und man spart deutlich Rechenzeit.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </div>
 <div class="sect3">
 <h4 id="_einfärben_ausgewählter_objekte">7.1.5. Einfärben ausgewählter Objekte</h4>
@@ -6195,14 +6230,65 @@ int main(int argc, char **argv) {
 </div>
 </div>
 <div class="sect1">
-<h2 id="_texturen_mit_qopengltexture">8. Texturen mit QOpenGLTexture</h2>
+<h2 id="_tutorial_08_texturen_mit_qopengltexture">8. Tutorial 08: Texturen mit QOpenGLTexture</h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Natives OpenGL:</p>
+<p>In diesem Tutorial geht es um Texturen, und die Qt-Klasse <code>QOpenGLTexture</code>.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="./images/Tutorial_08_Textures.png" alt="Tutorial_08">
+</div>
+<div class="title">Figure 13. Tutorial_08, Texturen</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Quelltext für dieses Tutorial liegt im github repo:  <a href="https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_08">Tutorial_08</a></p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Die Verwendung von Texturen ist eigentlich nicht besonders schwierig und wird auch im Qt Beispiel <em>Cube OpenGL ES 2.0 example</em>  und diversen Tutorials im Internet gut erklärt (siehe auch <a href="https://learnopengl.com/Getting-started/Textures" class="bare">https://learnopengl.com/Getting-started/Textures</a>).</p>
+</div>
+<div class="paragraph">
+<p>Aber es gibt da ein paar Dinge, die nicht ganz so trivial sind:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>korrekte Initialisierungsreihenfolge bei Texturen</p>
+</li>
+<li>
+<p>Speicheraufräumen von Texturen</p>
+</li>
+<li>
+<p>Verwendung mehrerer Texturen im Fragment Shader und Verwendung eines <code>glDrawXXX</code>-Aufrufs für viele Flächen unterschiedlicher Texturen</p>
+</li>
+</ul>
+</div>
+<div class="sect2">
+<h3 id="_initialisierung_von_texturen">8.1. Initialisierung von Texturen</h3>
+<div class="paragraph">
+<p>wenn man eine Textur mit nativem OpenGL-Code anlegt, sieht das ungefähr so aus:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="rouge highlight"><code data-lang="c"><span class="c1">// Wrap style</span>
+<pre class="rouge highlight"><code data-lang="c"><span class="c1">// erstelle Texturobjekt</span>
+<span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">texture</span><span class="p">;</span>
+<span class="n">glGenTextures</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">texture</span><span class="p">);</span>
+<span class="c1">// binde Textur</span>
+<span class="n">glBindTexture</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">texture</span><span class="p">);</span>
+<span class="c1">// setze Attribute:</span>
+
+<span class="c1">// Wrap style</span>
 <span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">GL_TEXTURE_WRAP_S</span><span class="p">,</span> <span class="n">GL_MIRRORED_REPEAT</span><span class="p">);</span>
 <span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">GL_TEXTURE_WRAP_T</span><span class="p">,</span> <span class="n">GL_MIRRORED_REPEAT</span><span class="p">);</span>
 
@@ -6212,13 +6298,471 @@ int main(int argc, char **argv) {
 
 <span class="c1">// Texture Filtering</span>
 <span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">GL_TEXTURE_MIN_FILTER</span><span class="p">,</span> <span class="n">GL_NEAREST</span><span class="p">);</span>
-<span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">GL_TEXTURE_MAG_FILTER</span><span class="p">,</span> <span class="n">GL_LINEAR</span><span class="p">);</span></code></pre>
+<span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">GL_TEXTURE_MAG_FILTER</span><span class="p">,</span> <span class="n">GL_LINEAR</span><span class="p">);</span>
+
+<span class="c1">// Lade Texturdaten mittels 'stb_image.h'</span>
+<span class="kt">unsigned</span> <span class="kt">char</span> <span class="o">*</span><span class="n">data</span> <span class="o">=</span> <span class="n">stbi_load</span><span class="p">(</span><span class="s">"container.jpg"</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">width</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">height</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">nrChannels</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+
+<span class="c1">// Kopiere Daten in Texture und Erstelle Mipmap</span>
+<span class="n">glTexImage2D</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">GL_RGB</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">GL_RGB</span><span class="p">,</span> <span class="n">GL_UNSIGNED_BYTE</span><span class="p">,</span> <span class="n">data</span><span class="p">);</span>
+<span class="n">glGenerateMipmap</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Mit <code>QOpenGLTexture</code> ist das Ganze etwas kürzer:</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp:initializeGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="c1">// erstelle Texturobjekt</span>
+<span class="n">QOpenGLTexture</span> <span class="o">*</span> <span class="n">texture</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">QOpenGLTexture</span><span class="p">(</span><span class="n">QOpenGLTexture</span><span class="o">::</span><span class="n">Target2D</span><span class="p">);</span>
+<span class="n">texture</span><span class="o">-&gt;</span><span class="n">create</span><span class="p">();</span>
+<span class="c1">// setze Attribute</span>
+
+<span class="c1">// Wrap style</span>
+<span class="n">texture</span><span class="o">-&gt;</span><span class="n">setWrapMode</span><span class="p">(</span><span class="n">QOpenGLTexture</span><span class="o">::</span><span class="n">ClampToBorder</span><span class="p">);</span>
+<span class="n">texture</span><span class="o">-&gt;</span><span class="n">setBorderColor</span><span class="p">(</span><span class="n">Qt</span><span class="o">::</span><span class="n">red</span><span class="p">);</span>
+
+<span class="c1">// Texture Filtering</span>
+<span class="n">texture</span><span class="o">-&gt;</span><span class="n">setMinificationFilter</span><span class="p">(</span><span class="n">QOpenGLTexture</span><span class="o">::</span><span class="n">NearestMipMapLinear</span><span class="p">);</span>
+<span class="n">texture</span><span class="o">-&gt;</span><span class="n">setMagnificationFilter</span><span class="p">(</span><span class="n">QOpenGLTexture</span><span class="o">::</span><span class="n">Linear</span><span class="p">);</span>
+
+<span class="c1">// Lade Bild</span>
+<span class="n">QImage</span> <span class="nf">img</span><span class="p">(</span><span class="s">":/textures/brickwall.jpg"</span><span class="p">);</span>
+<span class="c1">// Kopiere Daten in Texture und Erstelle Mipmap</span>
+<span class="n">texture</span><span class="o">-&gt;</span><span class="n">setData</span><span class="p">(</span><span class="n">img</span><span class="p">);</span> <span class="c1">// allocate() will be called internally</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Mipmap-Daten werden standardmäßig beim Aufruf von <code>setData()</code> ohne weitere Parameter generiert.</p>
+</div>
+<div class="paragraph">
+<p>Beim Aufruf von <code>setData()</code> wird automatisch gleich <code>allocate()</code> aufgerufen, und die Bilddaten in die OpenGL-Textur kopiert. Ruft man hinterher nocheinmal <code>allocate()</code> auf, erhält man die Fehlermeldung:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>GL_INVALID_OPERATION error generated. Texture is immutable.</pre>
+</div>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Texturobjekte sind unveränderlich, zumindest was die Eigenschaften des eingebundenen Bildes (und der Mipmap) betrifft. Nach Aufruf von <code>setData()</code> können eigentlich nur noch Attribute geändert werden, die die Interpretation der gebundenen Daten betreffen (also Filter und Wrap-Style). Möchte man die Textur selbst ändern, heißt es Objekt zerstören und neu erstellen.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="sect3">
+<h4 id="_shader_texture_verknüpfung">8.1.1. Shader-Texture-Verknüpfung</h4>
+<div class="paragraph">
+<p>Wenn man mehrere Texturen in einem Shader verwendet, muss man dem Shaderprogramm noch mitteilen, unter welcher ID eine Texture zu finden ist.</p>
+</div>
+<div class="paragraph">
+<p>Die Informationskette sieht so aus:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>im Shaderprogram (Fragment-Shader) werden Texturen (<code>sampler2D</code>) benannt, bspw. <em>brickTexture</em> oder <em>roofTiles</em></p>
+</li>
+<li>
+<p>man erfragt deren Parameter/Uniform-Index ab, als wären es gewöhnliche uniform-Variablen  &#8594; <em>brickTextureUniformID</em>, <em>roofTilesUniformID</em>. Mit diesen Variablen-IDs kann man dem Shader Parameter geben.</p>
+</li>
+<li>
+<p>man gibt jeder dieser Variablen eine Texture-ID, also bspw. Variable <em>brickTextureUniformID</em> bekommt Texture #0, und <em>roofTilesUniformID</em> bekommt Texture #1. Das Durchnummerieren der eigenen Texturen ist komplett unabhängig von den Uniform-IDs.</p>
+</li>
+<li>
+<p>vor dem Rendern bindet man die Texturen ein, und gibt dabei die Texturenummer an.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>In der Initialisierung sieht das so aus:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">SHADER</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setUniformValue</span><span class="p">(</span><span class="n">m_shaderPrograms</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="n">m_uniformIDs</span><span class="p">[</span><span class="mi">1</span><span class="o">+</span><span class="n">i</span><span class="p">],</span><span class="n">i</span><span class="p">);</span></code></pre>
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_verwendung_der_texture">8.2. Verwendung der Texture</h3>
+<div class="paragraph">
+<p>Jeder Vertex benötigt nun statt Farben (oder zusätzlich zu den Farben) noch die Texturkoordinaten. Dank der <code>Vertex</code>-Struktur (siehe <em>Tutorial 05</em>) ist die Erweiterung trivial:</p>
+</div>
+<div class="listingblock">
+<div class="title">Vertex.h</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="p">....</span>
+<span class="n">Vertex</span><span class="p">(</span><span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">coords</span><span class="p">,</span> <span class="k">const</span> <span class="n">QColor</span> <span class="o">&amp;</span> <span class="n">col</span><span class="p">,</span> <span class="kt">float</span> <span class="n">textureX</span><span class="p">,</span> <span class="kt">float</span> <span class="n">textureY</span><span class="p">,</span> <span class="n">GLint</span> <span class="n">textureID</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">:</span>
+	<span class="n">x</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">coords</span><span class="p">.</span><span class="n">x</span><span class="p">())),</span>
+	<span class="n">y</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">coords</span><span class="p">.</span><span class="n">y</span><span class="p">())),</span>
+	<span class="n">z</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">coords</span><span class="p">.</span><span class="n">z</span><span class="p">())),</span>
+	<span class="n">r</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">col</span><span class="p">.</span><span class="n">redF</span><span class="p">())),</span>
+	<span class="n">g</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">col</span><span class="p">.</span><span class="n">greenF</span><span class="p">())),</span>
+	<span class="n">b</span><span class="p">(</span><span class="kt">float</span><span class="p">(</span><span class="n">col</span><span class="p">.</span><span class="n">blueF</span><span class="p">())),</span>
+	<span class="n">texi</span><span class="p">(</span><span class="n">textureX</span><span class="p">),</span>
+	<span class="n">texj</span><span class="p">(</span><span class="n">textureY</span><span class="p">),</span>
+	<span class="n">texID</span><span class="p">(</span><span class="n">textureID</span><span class="p">)</span>
+<span class="p">{</span>
+<span class="p">}</span>
+
+<span class="kt">float</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">,</span><span class="n">z</span><span class="p">;</span>
+<span class="kt">float</span> <span class="n">r</span><span class="p">,</span><span class="n">g</span><span class="p">,</span><span class="n">b</span><span class="p">;</span>
+<span class="kt">float</span> <span class="n">texi</span><span class="p">,</span><span class="n">texj</span><span class="p">;</span>
+<span class="kt">float</span> <span class="n">texID</span><span class="p">;</span>
+<span class="p">....</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die Texture-ID wird später benötigt, wenn ein Shader zwischen mehreren Texturen unterscheidet.</p>
+</div>
+<div class="paragraph">
+<p>Nun, da die Vertex-Datenstruktur 3 neue Parameter hat, muss man in <code>BoxMesh.cpp</code> das Erstellen der Vertex-Objekte anpassen:</p>
+</div>
+<div class="listingblock">
+<div class="title">BoxMesh.cpp:copy2Buffer</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="c1">// front plane: a, b, c, d, vertexes (0, 1, 2, 3)</span>
+<span class="n">copyPlane2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">elementStartIndex</span><span class="p">,</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+	<span class="p">);</span>
+
+<span class="c1">// right plane: b=1, f=5, g=6, c=2, vertexes</span>
+<span class="c1">// Mind: colors are numbered up</span>
+<span class="n">copyPlane2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">elementStartIndex</span><span class="p">,</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+	<span class="p">);</span>
+
+<span class="c1">// back plane: g=5, e=4, h=7, g=6</span>
+<span class="n">copyPlane2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">elementStartIndex</span><span class="p">,</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">7</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+	<span class="p">);</span>
+
+<span class="c1">// left plane: 4,0,3,7</span>
+<span class="n">copyPlane2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">elementStartIndex</span><span class="p">,</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">7</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+	<span class="p">);</span>
+
+<span class="c1">// bottom plane: 4,5,1,0</span>
+<span class="n">copyPlane2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">elementStartIndex</span><span class="p">,</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+	<span class="p">);</span>
+
+<span class="c1">// top plane: 3,2,6,7</span>
+<span class="n">copyPlane2Buffer</span><span class="p">(</span><span class="n">vertexBuffer</span><span class="p">,</span> <span class="n">elementBuffer</span><span class="p">,</span> <span class="n">elementStartIndex</span><span class="p">,</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+		<span class="n">Vertex</span><span class="p">(</span><span class="n">m_vertices</span><span class="p">[</span><span class="mi">7</span><span class="p">],</span> <span class="n">cols</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+	<span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Die 2 zusätzlichen Argumente geben die Texturekoordinaten an. bei 0..1 heißt das, dass die Texture genau einmal die Fläche bespannt. Bei 0..2 (z.B. bei der hinteren Fläche) wird durch die Texture-Wrap-Einstellung die Texture zweimal nebeneinander gezeichnet.</p>
+</div>
+<div class="paragraph">
+<p>Der dritte Parameter (bei back, left und top) setzt die Texture-ID (dazu gleich mehr).</p>
+</div>
+<div class="sect3">
+<h4 id="_shader">8.2.1. Shader</h4>
+<div class="paragraph">
+<p>Nun zur Erweiterung der Shaderprogramme:</p>
+</div>
+<div class="listingblock">
+<div class="title">Vertex Shader <em>withTexture.vert</em></div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="cp">#version 330
+</span>
+<span class="c1">// GLSL version 3.3</span>
+<span class="c1">// vertex shader</span>
+
+<span class="n">layout</span><span class="p">(</span><span class="n">location</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="n">in</span> <span class="n">vec3</span> <span class="n">position</span><span class="p">;</span>   <span class="c1">// input:  attribute with index '0' with 3 elements per vertex</span>
+<span class="n">layout</span><span class="p">(</span><span class="n">location</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="n">in</span> <span class="n">vec3</span> <span class="n">color</span><span class="p">;</span>      <span class="c1">// input:  attribute with index '1' with 3 elements (=rgb) per vertex</span>
+<span class="n">layout</span><span class="p">(</span><span class="n">location</span> <span class="o">=</span> <span class="mi">2</span><span class="p">)</span> <span class="n">in</span> <span class="n">vec2</span> <span class="n">texcoords</span><span class="p">;</span>  <span class="c1">// input:  attribute with index '2' with 2 elements per vertex</span>
+<span class="n">layout</span><span class="p">(</span><span class="n">location</span> <span class="o">=</span> <span class="mi">3</span><span class="p">)</span> <span class="n">in</span> <span class="kt">float</span> <span class="n">texnr</span><span class="p">;</span>     <span class="c1">// input:  attribute with index '3' with 1 float per vertex</span>
+
+<span class="n">out</span> <span class="n">vec4</span> <span class="n">fragColor</span><span class="p">;</span>                      <span class="c1">// output: computed fragmentation color</span>
+<span class="n">out</span> <span class="n">vec2</span> <span class="n">texCoord</span><span class="p">;</span>                       <span class="c1">// output: computed texture coordinates</span>
+<span class="n">flat</span> <span class="n">out</span> <span class="kt">float</span> <span class="n">texID</span><span class="p">;</span>                    <span class="c1">// output: texture ID - mind the 'flat' attribute!</span>
+
+<span class="n">uniform</span> <span class="n">mat4</span> <span class="n">worldToView</span><span class="p">;</span>                <span class="c1">// parameter: the camera matrix</span>
+
+<span class="kt">void</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="c1">// Mind multiplication order for matrixes</span>
+  <span class="n">gl_Position</span> <span class="o">=</span> <span class="n">worldToView</span> <span class="o">*</span> <span class="n">vec4</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+  <span class="n">fragColor</span> <span class="o">=</span> <span class="n">vec4</span><span class="p">(</span><span class="n">color</span><span class="p">,</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+  <span class="n">texCoord</span> <span class="o">=</span> <span class="n">texcoords</span><span class="p">;</span>
+  <span class="n">texID</span> <span class="o">=</span> <span class="n">texnr</span><span class="p">;</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Der Vertexshader wird eigentlich nur um die Texture-Koordinaten erweitert, welche unverändert durchgereicht werden. Die Farbe spielt in diesem Beispiel keine Rolle und könnte weggelassen werden, aber der Einfachheit halber lassen wir das mal so.</p>
+</div>
+<div class="paragraph">
+<p>Interessant ist noch das Schlüsselwort <code>flat</code> bei der Ausgabevariable texID. Letztlich hat jede Fläche nur eine TextureID. Diese zwischen Vertexes zu interpolieren, wäre Quatsch. Dass Schlüsselwort <code>flat</code> sagt, dass der Wert vom ersten Vertex des Elements genommen und unverändert an alle Fragmente weitergereicht wird.</p>
+</div>
+<div class="paragraph">
+<p>Die eigentliche Texture wird erst im Fragment-Shaderprogramm verwendet.</p>
+</div>
+<div class="listingblock">
+<div class="title">Fragment Shader <em>texture.frag</em></div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="cp">#version 330 core
+</span>
+<span class="c1">// fragment shader</span>
+
+<span class="n">in</span> <span class="n">vec4</span> <span class="n">fragColor</span><span class="p">;</span>    <span class="c1">// input: interpolated color as rgba-value</span>
+<span class="n">in</span> <span class="n">vec2</span> <span class="n">texCoord</span><span class="p">;</span>     <span class="c1">// input: texture coordinate (xy-coordinates)</span>
+<span class="n">flat</span> <span class="n">in</span> <span class="kt">float</span> <span class="n">texID</span><span class="p">;</span>  <span class="c1">// input: textureID</span>
+<span class="n">out</span> <span class="n">vec4</span> <span class="n">finalColor</span><span class="p">;</span>  <span class="c1">// output: final color value as rgba-value</span>
+
+<span class="n">uniform</span> <span class="n">sampler2D</span> <span class="n">brickTexture</span><span class="p">;</span> <span class="c1">// the wall texture</span>
+<span class="n">uniform</span> <span class="n">sampler2D</span> <span class="n">plasterTexture</span><span class="p">;</span> <span class="c1">// the plaster texture</span>
+<span class="n">uniform</span> <span class="n">sampler2D</span> <span class="n">rooftiles</span><span class="p">;</span> <span class="c1">// the roof texture</span>
+
+<span class="kt">void</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">texID</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">finalColor</span> <span class="o">=</span> <span class="n">texture</span><span class="p">(</span><span class="n">brickTexture</span><span class="p">,</span> <span class="n">texCoord</span><span class="p">);</span>
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">texID</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">finalColor</span> <span class="o">=</span> <span class="n">texture</span><span class="p">(</span><span class="n">rooftiles</span><span class="p">,</span> <span class="n">texCoord</span><span class="p">);</span>
+  <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">texID</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">finalColor</span> <span class="o">=</span> <span class="n">texture</span><span class="p">(</span><span class="n">plasterTexture</span><span class="p">,</span> <span class="n">texCoord</span><span class="p">);</span>
+  <span class="k">else</span>
+    <span class="n">finalColor</span> <span class="o">=</span> <span class="n">vec4</span><span class="p">(</span><span class="n">texCoord</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Auch hier muss das Schlüsselwort <code>flat</code> verwendet werden, sonst gibt es einen Linker-Fehler beim Shaderprogramm-Verknüpfen. Die Funktion <code>texture</code> interpoliert nun den Wert an der gegebenen Texturekoordinate.</p>
+</div>
+<div class="admonitionblock caution">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-caution" title="Caution"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p><code>texture2D</code> sollte im Fragmentshader nicht mehr benutzt werden (deprecated), man findet es dennoch recht häufig in OpenGL-Beispielen.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_einbinden_der_texturen">8.2.2. Einbinden der Texturen</h4>
+<div class="paragraph">
+<p>Nun muss man vor dem Zeichnen der Boxen noch die Texturen einbinden, wobei man die jeweilige Texturnummer angibt (siehe auch Abschnitt <em>Shader-Texture-Verknüpfung</em> oben).</p>
+</div>
+<div class="listingblock">
+<div class="title">SceneView.cpp:paintGL()</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="c1">// *** render boxes</span>
+<span class="n">SHADER</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">bind</span><span class="p">();</span>
+<span class="n">SHADER</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">setUniformValue</span><span class="p">(</span><span class="n">m_shaderPrograms</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="n">m_uniformIDs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">m_worldToView</span><span class="p">);</span>
+<span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="mi">3</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span>
+	<span class="n">m_textures</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-&gt;</span><span class="n">bind</span><span class="p">(</span><span class="n">i</span><span class="p">);</span> <span class="c1">// bind texture #i to texture index i -&gt; accessible in fragment shader through "texture1"</span>
+
+<span class="n">m_gpuTimers</span><span class="p">.</span><span class="n">recordSample</span><span class="p">();</span> <span class="c1">// render boxes</span>
+<span class="n">m_boxObject</span><span class="p">.</span><span class="n">render</span><span class="p">();</span>
+<span class="n">SHADER</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">-&gt;</span><span class="n">release</span><span class="p">();</span></code></pre>
+</div>
+</div>
+<div class="admonitionblock tip">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-tip" title="Tip"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>In diesem Beispiel konnte man sehen, wie man mit einem Shader mehrere Texturen verwenden kann. Üblicherweise kann man maximal 16 Texturen verwenden. Daher ist bei großen Szenen mit sehr vielen Texturen ein Aufteilen in mehrere <code>drawXXX</code>- Aufrufe unumgänglich.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
 </div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_tutorial_09_shadowmapsmehrfach_render_passes_und_qopenglframebufferobject">9. Tutorial 09: Shadowmaps/Mehrfach-Render-Passes und QOpenGLFramebufferObject</h2>
+<h2 id="_tutorial_09_render_in_eine_framebuffer_und_verwendung_von_kernel_effekten">9. Tutorial 09: Render in eine Framebuffer und Verwendung von Kernel Effekten</h2>
+<div class="sectionbody">
+<div class="imageblock">
+<div class="content">
+<img src="./images/Tutorial_09_FramebufferImageKernel.png" alt="Tutorial_09">
+</div>
+<div class="title">Figure 14. Tutorial_09, Framebuffer mit Kernel-Effekten</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Quelltext für dieses Tutorial liegt im github repo:  <a href="https://github.com/ghorwin/OpenGLWithQt-Tutorial/tree/master/code/Tutorial_09">Tutorial_09</a></p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>In dem Tutorial soll die Szene zunächst in einem Framebuffer gerendert werden, welche dann unter Verwendung eines Image-Postprocessing-Kernels auf den Bildschirm übertragen wird. Im Prinzip wird das Gleiche gemacht, wie in <a href="https://learnopengl.com/Advanced-OpenGL/Framebuffers" class="bare">https://learnopengl.com/Advanced-OpenGL/Framebuffers</a> (dieses Tutorial zu lesen, dürfte beim Verständnis des Quelltextes unten helfen).</p>
+</div>
+<div class="sect2">
+<h3 id="_initialisierung_des_framebuffers">9.1. Initialisierung des Framebuffers</h3>
+<div class="paragraph">
+<p>Mit OpenGL muss man den Framebuffer, den Tiefen- und Ausstanzpufferanhang (<em>depth and stencil attachment</em>) erstellen, und eine Textur für die Farbwerte anhängen:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="c1">// framebuffer configuration</span>
+<span class="c1">// -------------------------</span>
+<span class="n">glGenFramebuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">framebuffer</span><span class="p">);</span>
+<span class="n">glBindFramebuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">framebuffer</span><span class="p">);</span>
+<span class="c1">// create a color attachment texture</span>
+<span class="n">glGenTextures</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">textureColorbuffer</span><span class="p">);</span>
+<span class="n">glBindTexture</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">textureColorbuffer</span><span class="p">);</span>
+<span class="n">glTexImage2D</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">GL_RGB</span><span class="p">,</span> <span class="n">scr_width</span><span class="p">,</span> <span class="n">scr_height</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">GL_RGB</span><span class="p">,</span> <span class="n">GL_UNSIGNED_BYTE</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+<span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">GL_TEXTURE_MIN_FILTER</span><span class="p">,</span> <span class="n">GL_LINEAR</span><span class="p">);</span>
+<span class="n">glTexParameteri</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">GL_TEXTURE_MAG_FILTER</span><span class="p">,</span> <span class="n">GL_LINEAR</span><span class="p">);</span>
+<span class="n">glFramebufferTexture2D</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_COLOR_ATTACHMENT0</span><span class="p">,</span> <span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">textureColorbuffer</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="c1">// create a renderbuffer object for depth and stencil attachment (we won't be sampling these)</span>
+<span class="n">glGenRenderbuffers</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">rbo</span><span class="p">);</span>
+<span class="n">glBindRenderbuffer</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">rbo</span><span class="p">);</span>
+<span class="n">glRenderbufferStorage</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">GL_DEPTH24_STENCIL8</span><span class="p">,</span> <span class="n">scr_width</span><span class="p">,</span> <span class="n">scr_height</span><span class="p">);</span> <span class="c1">// use a single renderbuffer object for both a depth AND stencil buffer.</span>
+<span class="n">glFramebufferRenderbuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">GL_DEPTH_STENCIL_ATTACHMENT</span><span class="p">,</span> <span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">rbo</span><span class="p">);</span> <span class="c1">// now actually attach it</span>
+<span class="c1">// now that we actually created the framebuffer and added all attachments we want to check if it is actually complete now</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">glCheckFramebufferStatus</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">)</span> <span class="o">!=</span> <span class="n">GL_FRAMEBUFFER_COMPLETE</span><span class="p">)</span>
+	<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"ERROR::FRAMEBUFFER:: Framebuffer is not complete!"</span> <span class="o">&lt;&lt;</span> <span class="n">endl</span><span class="p">;</span>
+<span class="n">glBindFramebuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Solange man nicht Spezielles machen will, können diese vielen Zeilen einfach durch:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">m_frameBufferObject</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">QOpenGLFramebufferObject</span><span class="p">(</span><span class="n">QSize</span><span class="p">(</span><span class="n">scr_width</span><span class="p">,</span> <span class="n">scr_height</span><span class="p">),</span> <span class="n">QOpenGLFramebufferObject</span><span class="o">::</span><span class="n">CombinedDepthStencil</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>ersetzen.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_größenanpassung">9.2. Größenanpassung</h3>
+<div class="paragraph">
+<p>Wenn man die Fenstergröße verändert, muss man auch die Größe der Puffer anpassen. Dies geschieht sinnvollerweise in <code>resizeGL()</code> und sieht mit nativem OpenGL so aus:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="c1">// also resize the texture buffer</span>
+<span class="n">glBindFramebuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">framebuffer</span><span class="p">);</span>
+<span class="n">glBindTexture</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">textureColorbuffer</span><span class="p">);</span>
+<span class="c1">// actual resize operation</span>
+<span class="n">glTexImage2D</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">GL_RGB</span><span class="p">,</span> <span class="n">scr_width</span><span class="p">,</span> <span class="n">scr_height</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">GL_RGB</span><span class="p">,</span> <span class="n">GL_UNSIGNED_BYTE</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+<span class="n">glBindRenderbuffer</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">rbo</span><span class="p">);</span>
+<span class="c1">// actual resize operation</span>
+<span class="n">glRenderbufferStorage</span><span class="p">(</span><span class="n">GL_RENDERBUFFER</span><span class="p">,</span> <span class="n">GL_DEPTH24_STENCIL8</span><span class="p">,</span> <span class="n">scr_width</span><span class="p">,</span> <span class="n">scr_height</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Bei Verwendung der <code>QOpenGLFrameBufferObject</code>-Klasse muss man einfach das Klassenobjekt neu erstellen:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="k">delete</span> <span class="n">m_frameBufferObject</span><span class="p">;</span>
+<span class="n">m_frameBufferObject</span> <span class="o">=</span> <span class="k">new</span> <span class="nf">QOpenGLFramebufferObject</span><span class="p">(</span><span class="n">QSize</span><span class="p">(</span><span class="n">scr_width</span><span class="p">,</span> <span class="n">scr_height</span><span class="p">),</span> <span class="n">QOpenGLFramebufferObject</span><span class="o">::</span><span class="n">CombinedDepthStencil</span><span class="p">);</span></code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_rendern_in_den_framebuffer">9.3. Rendern in den Framebuffer</h3>
+<div class="paragraph">
+<p>Erst wird der Framebuffer eingebunden, mit nativem OpenGL:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">glBindFramebuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="n">framebuffer</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>mit <code>QOpenGLFrameBufferObject</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">m_frameBufferObject</span><span class="o">-&gt;</span><span class="n">bind</span><span class="p">();</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Nach Rendern der Szene dann wieder zurücksetzen des normalen Renderbuffers, mit nativem OpenGL:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">glBindFramebuffer</span><span class="p">(</span><span class="n">GL_FRAMEBUFFER</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>mit <code>QOpenGLFrameBufferObject</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">m_frameBufferObject</span><span class="o">-&gt;</span><span class="n">bindDefault</span><span class="p">();</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>und einbinden der Textur zur Verwendung mit dem ScreenFill-Shader und Rechteck. Wieder mit OpenGL:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">glBindTexture</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">textureColorbuffer</span><span class="p">);</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>und mit <code>QOpenGLFrameBufferObject</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="n">glBindTexture</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">m_frameBufferObject</span><span class="o">-&gt;</span><span class="n">texture</span><span class="p">());</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Das war&#8217;s auch schon. Der Quelltext für <em>Tutorial 09</em> enthält eine komplette Verwendung (und in einem früherem git Commit ist die native OpenGL-Variante drin).</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_tutorial_10_shadowmapsmehrfach_render_passes_und_qopenglframebufferobject">10. Tutorial 10: Shadowmaps/Mehrfach-Render-Passes und QOpenGLFramebufferObject</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>TODO : Schattenwurf durch doppeltes Rendern (erst Kamera in Sonnenposition in Framebuffer rendern, dann diesen als Texturinput für den 2. Renderpass nehmen).</p>
@@ -6226,7 +6770,7 @@ int main(int argc, char **argv) {
 </div>
 </div>
 <div class="sect1">
-<h2 id="_tutorial_10_cmake_als_buildsystem_für_qt_und_opengl_und_deployment_von_qtopengl_anwendungen">10. Tutorial 10: CMake als BuildSystem für Qt und OpenGL, und Deployment von Qt+OpenGL Anwendungen</h2>
+<h2 id="_tutorial_xx_cmake_als_buildsystem_für_qt_und_opengl_und_deployment_von_qtopengl_anwendungen">11. Tutorial xx: CMake als BuildSystem für Qt und OpenGL, und Deployment von Qt+OpenGL Anwendungen</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Für das automatische Bauen von Qt (z.B. mit Jenkins oder ähnlichen Build-Systemen) bietet sich CMake an. Es geht zwar auch mit qmake, aber in diesem Tutorial soll gezeigt werden, wie man das eine CMakeLists.txt-Datei für das Bauen von Qt-Anwendungen unter Linux, MacOS und Windows konfiguriert.</p>
@@ -6249,7 +6793,7 @@ int main(int argc, char **argv) {
 </table>
 </div>
 <div class="sect2">
-<h3 id="_cmakelists_txt_für_opengl_anwendungen">10.1. CMakeLists.txt für OpenGL-Anwendungen</h3>
+<h3 id="_cmakelists_txt_für_opengl_anwendungen">11.1. CMakeLists.txt für OpenGL-Anwendungen</h3>
 <div class="paragraph">
 <p>Hier ist eine Beispiel-CMakeLists.txt-Datei (aus Tutorial 05), welche das mal demonstriert:</p>
 </div>
@@ -6375,7 +6919,7 @@ int main(int argc, char **argv) {
 </table>
 </div>
 <div class="sect3">
-<h4 id="_erstellung">10.1.1. Erstellung</h4>
+<h4 id="_erstellung">11.1.1. Erstellung</h4>
 <div class="sect4">
 <h5 id="_linux">Linux</h5>
 <div class="paragraph">
@@ -6441,7 +6985,7 @@ make <span class="nt">-j4</span></code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_deployment">10.1.2. Deployment</h4>
+<h4 id="_deployment">11.1.2. Deployment</h4>
 <div class="sect4">
 <h5 id="_windows_2">Windows</h5>
 <div class="paragraph">
@@ -6511,7 +7055,7 @@ Tutorial_05.app/Contents/MacOS/Tutorial_05:
 <div id="footer">
 <div id="footer-text">
 Version 0.7.0<br>
-Last updated 2020-04-09 18:14:15 +0200
+Last updated 2020-04-14 10:15:06 +0200
 </div>
 </div>
 <style>
