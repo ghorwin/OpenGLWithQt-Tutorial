@@ -1,7 +1,7 @@
 OpenGL + Qt Tutorial
 ====================
 Andreas Nicolai <andreas.nicolai@tu-dresden.de>
-v0.7.0, April 2020
+v1.0.0, April 2020
 :Author Initials: AN
 :toc: left
 :toclevels: 3
@@ -9,7 +9,7 @@ v0.7.0, April 2020
 :icons: font
 :imagesdir: ./images
 :numbered:
-:website: https://bauklimatik-dresden.de/privat/nicolai/QtOpenGL-Tutorial
+:website: https://ghorwin.github.io/OpenGLWithQt-Tutorial
 :source-highlighter: rouge
 :rouge-style: custom
 :title-page:
@@ -28,9 +28,5 @@ include::Tutorial_06.adoc[leveloffset=+1]
 include::Tutorial_07.adoc[leveloffset=+1]
 include::Tutorial_08.adoc[leveloffset=+1]
 include::Tutorial_09.adoc[leveloffset=+1]
-
-== Tutorial 10: Shadowmaps/Mehrfach-Render-Passes und QOpenGLFramebufferObject
-
-TODO : Schattenwurf durch doppeltes Rendern (erst Kamera in Sonnenposition in Framebuffer rendern, dann diesen als Texturinput für den 2. Renderpass nehmen).
 
 include::Tutorial_0x.adoc[leveloffset=+1]

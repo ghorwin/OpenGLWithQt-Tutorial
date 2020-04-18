@@ -73,7 +73,7 @@ table {
 <div class="details">
 <span id="author" class="author">Andreas Nicolai</span><br>
 <span id="email" class="email"><a href="mailto:andreas.nicolai@tu-dresden.de">andreas.nicolai@tu-dresden.de</a></span><br>
-<span id="revnumber">version 0.7.0,</span>
+<span id="revnumber">version 1.0.0,</span>
 <span id="revdate">April 2020</span>
 </div>
 <div id="toc" class="toc2">
@@ -250,16 +250,22 @@ table {
 <ul class="sectlevel2">
 <li><a href="#_initialisierung_des_framebuffers">9.1. Initialisierung des Framebuffers</a></li>
 <li><a href="#_größenanpassung">9.2. Größenanpassung</a></li>
-<li><a href="#_rendern_in_den_framebuffer">9.3. Rendern in den Framebuffer</a></li>
+<li><a href="#_verwendung_des_framebuffers">9.3. Verwendung des Framebuffers</a>
+<ul class="sectlevel3">
+<li><a href="#_rendern_in_den_framebuffer">9.3.1. Rendern in den Framebuffer</a></li>
+<li><a href="#_zurücksetzen_des_framebuffers">9.3.2. Zurücksetzen des Framebuffers</a></li>
+<li><a href="#_einbinden_der_framebuffer_texture">9.3.3. Einbinden der Framebuffer-Texture</a></li>
+<li><a href="#_zeichnen_des_gerenderten_bilden_auf_den_bildschirm_mit_kernel_effekten">9.3.4. Zeichnen des gerenderten Bilden auf den Bildschirm (mit Kernel-Effekten)</a></li>
 </ul>
 </li>
-<li><a href="#_tutorial_10_shadowmapsmehrfach_render_passes_und_qopenglframebufferobject">10. Tutorial 10: Shadowmaps/Mehrfach-Render-Passes und QOpenGLFramebufferObject</a></li>
-<li><a href="#_tutorial_xx_cmake_als_buildsystem_für_qt_und_opengl_und_deployment_von_qtopengl_anwendungen">11. Tutorial xx: CMake als BuildSystem für Qt und OpenGL, und Deployment von Qt+OpenGL Anwendungen</a>
+</ul>
+</li>
+<li><a href="#_tutorial_xx_cmake_als_buildsystem_für_qt_und_opengl_und_deployment_von_qtopengl_anwendungen">10. Tutorial xx: CMake als BuildSystem für Qt und OpenGL, und Deployment von Qt+OpenGL Anwendungen</a>
 <ul class="sectlevel2">
-<li><a href="#_cmakelists_txt_für_opengl_anwendungen">11.1. CMakeLists.txt für OpenGL-Anwendungen</a>
+<li><a href="#_cmakelists_txt_für_opengl_anwendungen">10.1. CMakeLists.txt für OpenGL-Anwendungen</a>
 <ul class="sectlevel3">
-<li><a href="#_erstellung">11.1.1. Erstellung</a></li>
-<li><a href="#_deployment">11.1.2. Deployment</a></li>
+<li><a href="#_erstellung">10.1.1. Erstellung</a></li>
+<li><a href="#_deployment">10.1.2. Deployment</a></li>
 </ul>
 </li>
 </ul>
@@ -6706,7 +6712,9 @@ int main(int argc, char **argv) {
 </div>
 </div>
 <div class="sect2">
-<h3 id="_rendern_in_den_framebuffer">9.3. Rendern in den Framebuffer</h3>
+<h3 id="_verwendung_des_framebuffers">9.3. Verwendung des Framebuffers</h3>
+<div class="sect3">
+<h4 id="_rendern_in_den_framebuffer">9.3.1. Rendern in den Framebuffer</h4>
 <div class="paragraph">
 <p>Erst wird der Framebuffer eingebunden, mit nativem OpenGL:</p>
 </div>
@@ -6723,6 +6731,9 @@ int main(int argc, char **argv) {
 <pre class="rouge highlight"><code data-lang="c++"><span class="n">m_frameBufferObject</span><span class="o">-&gt;</span><span class="n">bind</span><span class="p">();</span></code></pre>
 </div>
 </div>
+</div>
+<div class="sect3">
+<h4 id="_zurücksetzen_des_framebuffers">9.3.2. Zurücksetzen des Framebuffers</h4>
 <div class="paragraph">
 <p>Nach Rendern der Szene dann wieder zurücksetzen des normalen Renderbuffers, mit nativem OpenGL:</p>
 </div>
@@ -6739,6 +6750,9 @@ int main(int argc, char **argv) {
 <pre class="rouge highlight"><code data-lang="c++"><span class="n">m_frameBufferObject</span><span class="o">-&gt;</span><span class="n">bindDefault</span><span class="p">();</span></code></pre>
 </div>
 </div>
+</div>
+<div class="sect3">
+<h4 id="_einbinden_der_framebuffer_texture">9.3.3. Einbinden der Framebuffer-Texture</h4>
 <div class="paragraph">
 <p>und einbinden der Textur zur Verwendung mit dem ScreenFill-Shader und Rechteck. Wieder mit OpenGL:</p>
 </div>
@@ -6755,22 +6769,136 @@ int main(int argc, char **argv) {
 <pre class="rouge highlight"><code data-lang="c++"><span class="n">glBindTexture</span><span class="p">(</span><span class="n">GL_TEXTURE_2D</span><span class="p">,</span> <span class="n">m_frameBufferObject</span><span class="o">-&gt;</span><span class="n">texture</span><span class="p">());</span></code></pre>
 </div>
 </div>
+</div>
+<div class="sect3">
+<h4 id="_zeichnen_des_gerenderten_bilden_auf_den_bildschirm_mit_kernel_effekten">9.3.4. Zeichnen des gerenderten Bilden auf den Bildschirm (mit Kernel-Effekten)</h4>
+<div class="paragraph">
+<p>Das direkte Übertragen einer Texture auf den Bildschirm ist recht einfach - ohne jedwede Transformation wird ein Rechteck (aus 2 Dreiecken bestehend) unverzerrt auf den Bildschirm übertragen. Dieses Bildschirm-Rechteck ist im Zeichenobjekt <code>Texture2ScreenObject</code> implementiert:</p>
+</div>
+<div class="listingblock">
+<div class="title">Texture2ScreenObject.cpp</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">void</span> <span class="n">Texture2ScreenObject</span><span class="o">::</span><span class="n">create</span><span class="p">(</span><span class="n">QOpenGLShaderProgram</span> <span class="o">*</span> <span class="n">shaderProgramm</span><span class="p">)</span> <span class="p">{</span>
+	<span class="c1">// Create Vertex Array Object</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>		<span class="c1">// create Vertex Array Object</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>		<span class="c1">// and bind it</span>
+
+	<span class="kt">float</span> <span class="n">quadVertices</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span> <span class="c1">// vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.</span>
+		<span class="c1">// positions   // texCoords</span>
+		<span class="o">-</span><span class="mf">1.0</span><span class="n">f</span><span class="p">,</span>  <span class="mf">1.0</span><span class="n">f</span><span class="p">,</span>  <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">,</span>
+		<span class="o">-</span><span class="mf">1.0</span><span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="n">f</span><span class="p">,</span>  <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span>
+		 <span class="mf">1.0</span><span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="n">f</span><span class="p">,</span>  <span class="mf">1.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span>
+
+		<span class="o">-</span><span class="mf">1.0</span><span class="n">f</span><span class="p">,</span>  <span class="mf">1.0</span><span class="n">f</span><span class="p">,</span>  <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">1.0</span><span class="n">f</span><span class="p">,</span>
+		 <span class="mf">1.0</span><span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="n">f</span><span class="p">,</span>  <span class="mf">1.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">0.0</span><span class="n">f</span><span class="p">,</span>
+		 <span class="mf">1.0</span><span class="n">f</span><span class="p">,</span>  <span class="mf">1.0</span><span class="n">f</span><span class="p">,</span>  <span class="mf">1.0</span><span class="n">f</span><span class="p">,</span> <span class="mf">1.0</span><span class="n">f</span>
+	<span class="p">};</span>
+	<span class="c1">// Create Vertex Buffer Object</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">create</span><span class="p">();</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">bind</span><span class="p">();</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">setUsagePattern</span><span class="p">(</span><span class="n">QOpenGLBuffer</span><span class="o">::</span><span class="n">StaticDraw</span><span class="p">);</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">allocate</span><span class="p">(</span><span class="n">quadVertices</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">quadVertices</span><span class="p">));</span>
+
+	<span class="c1">// layout(location = 0) = vec2 position</span>
+	<span class="n">shaderProgramm</span><span class="o">-&gt;</span><span class="n">enableAttributeArray</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span> <span class="c1">// array with index/id 0</span>
+	<span class="n">shaderProgramm</span><span class="o">-&gt;</span><span class="n">setAttributeBuffer</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">GL_FLOAT</span><span class="p">,</span>
+								  <span class="mi">0</span> <span class="cm">/* position/vertex offset */</span><span class="p">,</span>
+								  <span class="mi">2</span> <span class="cm">/* two floats per position = vec2 */</span><span class="p">,</span>
+								  <span class="mi">4</span><span class="o">*</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">)</span> <span class="cm">/* stride = 4 floats */</span><span class="p">);</span>
+	<span class="n">shaderProgramm</span><span class="o">-&gt;</span><span class="n">enableAttributeArray</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span> <span class="c1">// array with index/id 1</span>
+	<span class="n">shaderProgramm</span><span class="o">-&gt;</span><span class="n">setAttributeBuffer</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">GL_FLOAT</span><span class="p">,</span>
+								  <span class="mi">2</span><span class="o">*</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">)</span> <span class="cm">/* texture index offset */</span><span class="p">,</span>
+								  <span class="mi">2</span> <span class="cm">/* two floats per position = vec2 */</span><span class="p">,</span>
+								  <span class="mi">4</span><span class="o">*</span><span class="k">sizeof</span><span class="p">(</span><span class="kt">float</span><span class="p">)</span> <span class="cm">/* stride = 4 floats */</span><span class="p">);</span>
+	<span class="n">m_vao</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+	<span class="n">m_vbo</span><span class="p">.</span><span class="n">release</span><span class="p">();</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Also, Dimension entspricht den NDC und Texturekoordinaten gehen von 0..1 in beiden Achsen - also ein 1-zu-1 Abbild. Der Vertex-Shader-Code ist ebenfalls einfach:</p>
+</div>
+<div class="listingblock">
+<div class="title">screenfill.vert</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="cp">#version 330 core
+</span><span class="n">layout</span> <span class="p">(</span><span class="n">location</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="n">in</span> <span class="n">vec2</span> <span class="n">aPos</span><span class="p">;</span>
+<span class="n">layout</span> <span class="p">(</span><span class="n">location</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span> <span class="n">in</span> <span class="n">vec2</span> <span class="n">aTexCoords</span><span class="p">;</span>
+
+<span class="n">out</span> <span class="n">vec2</span> <span class="n">TexCoords</span><span class="p">;</span>
+
+<span class="kt">void</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="n">TexCoords</span> <span class="o">=</span> <span class="n">aTexCoords</span><span class="p">;</span>
+  <span class="n">gl_Position</span> <span class="o">=</span> <span class="n">vec4</span><span class="p">(</span><span class="n">aPos</span><span class="p">.</span><span class="n">x</span><span class="p">,</span> <span class="n">aPos</span><span class="p">.</span><span class="n">y</span><span class="p">,</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Und im Fragment-Shader kann man sich nun austoben (siehe dazu Erläuterungen auf <a href="https://learnopengl.com/Advanced-OpenGL/Framebuffers" class="bare">https://learnopengl.com/Advanced-OpenGL/Framebuffers</a> und die Beispiele auf <a href="https://setosa.io/ev/image-kernels" class="bare">https://setosa.io/ev/image-kernels</a>.</p>
+</div>
+<div class="listingblock">
+<div class="title">screenfill_with_kernel.frag</div>
+<div class="content">
+<pre class="rouge highlight"><code data-lang="c"><span class="cp">#version 330 core
+</span>
+<span class="n">out</span> <span class="n">vec4</span> <span class="n">FragColor</span><span class="p">;</span>
+
+<span class="n">in</span> <span class="n">vec2</span> <span class="n">TexCoords</span><span class="p">;</span>
+
+<span class="n">uniform</span> <span class="n">sampler2D</span> <span class="n">screenTexture</span><span class="p">;</span>
+
+<span class="kt">void</span> <span class="nf">main</span><span class="p">()</span> <span class="p">{</span>
+  <span class="kt">float</span> <span class="n">x_offset</span><span class="p">;</span>
+  <span class="kt">float</span> <span class="n">y_offset</span><span class="p">;</span>
+  <span class="c1">// textureSize returns dimensions of texture, and thus screen dimension</span>
+  <span class="n">x_offset</span> <span class="o">=</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span> <span class="o">/</span> <span class="n">textureSize</span><span class="p">(</span><span class="n">screenTexture</span><span class="p">,</span> <span class="mi">0</span><span class="p">).</span><span class="n">x</span><span class="p">;</span>
+  <span class="n">y_offset</span> <span class="o">=</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span> <span class="o">/</span> <span class="n">textureSize</span><span class="p">(</span><span class="n">screenTexture</span><span class="p">,</span> <span class="mi">0</span><span class="p">).</span><span class="n">y</span><span class="p">;</span>
+  <span class="c1">// x_offset = 1 means 1 pixel in normalized coordinates</span>
+  <span class="n">vec2</span> <span class="n">offsets</span><span class="p">[</span><span class="mi">9</span><span class="p">]</span> <span class="o">=</span> <span class="n">vec2</span><span class="p">[](</span>
+    <span class="n">vec2</span><span class="p">(</span><span class="o">-</span><span class="n">x_offset</span><span class="p">,</span>  <span class="n">y_offset</span><span class="p">),</span> <span class="c1">// top-left</span>
+    <span class="n">vec2</span><span class="p">(</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="n">f</span><span class="p">,</span>    <span class="n">y_offset</span><span class="p">),</span> <span class="c1">// top-center</span>
+    <span class="n">vec2</span><span class="p">(</span> <span class="n">x_offset</span><span class="p">,</span>  <span class="n">y_offset</span><span class="p">),</span> <span class="c1">// top-right</span>
+    <span class="n">vec2</span><span class="p">(</span><span class="o">-</span><span class="n">x_offset</span><span class="p">,</span>  <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="n">f</span><span class="p">),</span>   <span class="c1">// center-left</span>
+    <span class="n">vec2</span><span class="p">(</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="n">f</span><span class="p">,</span>    <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="n">f</span><span class="p">),</span>   <span class="c1">// center-center</span>
+    <span class="n">vec2</span><span class="p">(</span> <span class="n">x_offset</span><span class="p">,</span>  <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="n">f</span><span class="p">),</span>   <span class="c1">// center-right</span>
+    <span class="n">vec2</span><span class="p">(</span><span class="o">-</span><span class="n">x_offset</span><span class="p">,</span> <span class="o">-</span><span class="n">y_offset</span><span class="p">),</span> <span class="c1">// bottom-left</span>
+    <span class="n">vec2</span><span class="p">(</span> <span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="n">f</span><span class="p">,</span>   <span class="o">-</span><span class="n">y_offset</span><span class="p">),</span> <span class="c1">// bottom-center</span>
+    <span class="n">vec2</span><span class="p">(</span> <span class="n">x_offset</span><span class="p">,</span> <span class="o">-</span><span class="n">y_offset</span><span class="p">)</span>  <span class="c1">// bottom-right</span>
+  <span class="p">);</span>
+
+  <span class="c1">// sharpen kernel</span>
+  <span class="kt">float</span> <span class="n">kernel</span><span class="p">[</span><span class="mi">9</span><span class="p">]</span> <span class="o">=</span> <span class="kt">float</span><span class="p">[]</span> <span class="p">(</span>
+    <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="o">-</span><span class="mi">1</span><span class="p">,</span>  <span class="mi">9</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span>
+    <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span>
+  <span class="p">);</span>
+
+  <span class="n">vec3</span> <span class="n">sampleTex</span><span class="p">[</span><span class="mi">9</span><span class="p">];</span>
+  <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">9</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">sampleTex</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">vec3</span><span class="p">(</span><span class="n">texture</span><span class="p">(</span><span class="n">screenTexture</span><span class="p">,</span> <span class="n">TexCoords</span><span class="p">.</span><span class="n">st</span> <span class="o">+</span> <span class="n">offsets</span><span class="p">[</span><span class="n">i</span><span class="p">]));</span>
+  <span class="p">}</span>
+  <span class="n">vec3</span> <span class="n">col</span> <span class="o">=</span> <span class="n">vec3</span><span class="p">(</span><span class="mi">0</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+  <span class="k">for</span><span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="mi">9</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+    <span class="n">col</span> <span class="o">+=</span> <span class="n">sampleTex</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">kernel</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
+
+  <span class="c1">// finally grayscale transformation</span>
+  <span class="kt">float</span> <span class="n">average</span> <span class="o">=</span> <span class="mi">0</span><span class="p">.</span><span class="mi">2126</span> <span class="o">*</span> <span class="n">col</span><span class="p">.</span><span class="n">r</span> <span class="o">+</span> <span class="mi">0</span><span class="p">.</span><span class="mi">7152</span> <span class="o">*</span> <span class="n">col</span><span class="p">.</span><span class="n">g</span> <span class="o">+</span> <span class="mi">0</span><span class="p">.</span><span class="mo">0722</span> <span class="o">*</span> <span class="n">col</span><span class="p">.</span><span class="n">b</span><span class="p">;</span>
+  <span class="n">FragColor</span> <span class="o">=</span> <span class="n">vec4</span><span class="p">(</span><span class="n">average</span><span class="p">,</span> <span class="n">average</span><span class="p">,</span> <span class="n">average</span><span class="p">,</span> <span class="mi">1</span><span class="p">.</span><span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Mit diesen Shaderprogrammen wird dann das Bildschirmrechteck unter Verwendung der Framebuffer-Texture gezeichnet - und dabei die Kernel-Effekte angewendet.</p>
+</div>
 <div class="paragraph">
 <p>Das war&#8217;s auch schon. Der Quelltext für <em>Tutorial 09</em> enthält eine komplette Verwendung (und in einem früherem git Commit ist die native OpenGL-Variante drin).</p>
 </div>
 </div>
 </div>
 </div>
-<div class="sect1">
-<h2 id="_tutorial_10_shadowmapsmehrfach_render_passes_und_qopenglframebufferobject">10. Tutorial 10: Shadowmaps/Mehrfach-Render-Passes und QOpenGLFramebufferObject</h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>TODO : Schattenwurf durch doppeltes Rendern (erst Kamera in Sonnenposition in Framebuffer rendern, dann diesen als Texturinput für den 2. Renderpass nehmen).</p>
-</div>
-</div>
 </div>
 <div class="sect1">
-<h2 id="_tutorial_xx_cmake_als_buildsystem_für_qt_und_opengl_und_deployment_von_qtopengl_anwendungen">11. Tutorial xx: CMake als BuildSystem für Qt und OpenGL, und Deployment von Qt+OpenGL Anwendungen</h2>
+<h2 id="_tutorial_xx_cmake_als_buildsystem_für_qt_und_opengl_und_deployment_von_qtopengl_anwendungen">10. Tutorial xx: CMake als BuildSystem für Qt und OpenGL, und Deployment von Qt+OpenGL Anwendungen</h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>Für das automatische Bauen von Qt (z.B. mit Jenkins oder ähnlichen Build-Systemen) bietet sich CMake an. Es geht zwar auch mit qmake, aber in diesem Tutorial soll gezeigt werden, wie man das eine CMakeLists.txt-Datei für das Bauen von Qt-Anwendungen unter Linux, MacOS und Windows konfiguriert.</p>
@@ -6793,7 +6921,7 @@ int main(int argc, char **argv) {
 </table>
 </div>
 <div class="sect2">
-<h3 id="_cmakelists_txt_für_opengl_anwendungen">11.1. CMakeLists.txt für OpenGL-Anwendungen</h3>
+<h3 id="_cmakelists_txt_für_opengl_anwendungen">10.1. CMakeLists.txt für OpenGL-Anwendungen</h3>
 <div class="paragraph">
 <p>Hier ist eine Beispiel-CMakeLists.txt-Datei (aus Tutorial 05), welche das mal demonstriert:</p>
 </div>
@@ -6919,7 +7047,7 @@ int main(int argc, char **argv) {
 </table>
 </div>
 <div class="sect3">
-<h4 id="_erstellung">11.1.1. Erstellung</h4>
+<h4 id="_erstellung">10.1.1. Erstellung</h4>
 <div class="sect4">
 <h5 id="_linux">Linux</h5>
 <div class="paragraph">
@@ -6985,7 +7113,7 @@ make <span class="nt">-j4</span></code></pre>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_deployment">11.1.2. Deployment</h4>
+<h4 id="_deployment">10.1.2. Deployment</h4>
 <div class="sect4">
 <h5 id="_windows_2">Windows</h5>
 <div class="paragraph">
@@ -7054,8 +7182,8 @@ Tutorial_05.app/Contents/MacOS/Tutorial_05:
 </div>
 <div id="footer">
 <div id="footer-text">
-Version 0.7.0<br>
-Last updated 2020-04-14 10:15:06 +0200
+Version 1.0.0<br>
+Last updated 2020-04-18 18:08:05 +0200
 </div>
 </div>
 <style>

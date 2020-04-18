@@ -59,6 +59,8 @@ private:
 	/*! Compines camera matrix and project matrix to form the world2view matrix. */
 	void updateWorld2ViewMatrix();
 
+	void renderScene(const QMatrix4x4 & matrix);
+
 	/*! If set to true, an input event was received, which will be evaluated at next repaint. */
 	bool						m_inputEventReceived;
 
@@ -70,6 +72,7 @@ private:
 	Transform3D					m_transform;	// world transformation matrix generator
 	Camera						m_camera;		// Camera position, orientation and lens data
 	QMatrix4x4					m_worldToView;	// cached world to view transformation matrix
+	QMatrix4x4					m_lightSpaceMatrix;	// cached light view transformation matrix
 
 	/*! All shader programs used in the scene. */
 	QList<ShaderProgram>		m_shaderPrograms;
@@ -79,6 +82,10 @@ private:
 
 	QOpenGLTimeMonitor			m_gpuTimers;
 	QElapsedTimer				m_cpuTimer;
+
+	// shadow map opengl objects
+	unsigned int				depthMapFBO;
+	unsigned int				depthMap;
 
 	QOpenGLFramebufferObject	*m_frameBufferObject;
 };

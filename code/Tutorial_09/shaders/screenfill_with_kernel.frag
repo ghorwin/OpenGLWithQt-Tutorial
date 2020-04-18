@@ -48,8 +48,8 @@ void main() {
   for(int i = 0; i < 9; i++)
     col += sampleTex[i] * kernel[i];
 
+  // finally grayscale transformation
   float average = 0.2126 * col.r + 0.7152 * col.g + 0.0722 * col.b;
   FragColor = vec4(average, average, average, 1.0);
-//  FragColor = vec4(col*1.2, 1.0);
 }
 

@@ -76,7 +76,9 @@ delete m_frameBufferObject;
 m_frameBufferObject = new QOpenGLFramebufferObject(QSize(scr_width, scr_height), QOpenGLFramebufferObject::CombinedDepthStencil);
 ----
 
-== Rendern in den Framebuffer
+== Verwendung des Framebuffers
+
+=== Rendern in den Framebuffer
 
 Erst wird der Framebuffer eingebunden, mit nativem OpenGL:
 
@@ -92,6 +94,8 @@ mit `QOpenGLFrameBufferObject`:
 m_frameBufferObject->bind();
 ----
 
+=== Zurücksetzen des Framebuffers
+
 Nach Rendern der Szene dann wieder zurücksetzen des normalen Renderbuffers, mit nativem OpenGL:
 
 [source,c++]
@@ -106,6 +110,8 @@ mit `QOpenGLFrameBufferObject`:
 m_frameBufferObject->bindDefault();
 ----
 
+=== Einbinden der Framebuffer-Texture
+
 und einbinden der Textur zur Verwendung mit dem ScreenFill-Shader und Rechteck. Wieder mit OpenGL:
 
 [source,c++]
@@ -119,5 +125,121 @@ und mit `QOpenGLFrameBufferObject`:
 ----
 glBindTexture(GL_TEXTURE_2D, m_frameBufferObject->texture());
 ----
+
+=== Zeichnen des gerenderten Bilden auf den Bildschirm (mit Kernel-Effekten)
+
+Das direkte Übertragen einer Texture auf den Bildschirm ist recht einfach - ohne jedwede Transformation wird ein Rechteck (aus 2 Dreiecken bestehend) unverzerrt auf den Bildschirm übertragen. Dieses Bildschirm-Rechteck ist im Zeichenobjekt `Texture2ScreenObject` implementiert:
+
+.Texture2ScreenObject.cpp
+[source,c++]
+----
+void Texture2ScreenObject::create(QOpenGLShaderProgram * shaderProgramm) {
+	// Create Vertex Array Object
+	m_vao.create();		// create Vertex Array Object
+	m_vao.bind();		// and bind it
+
+	float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+		// positions   // texCoords
+		-1.0f,  1.0f,  0.0f, 1.0f,
+		-1.0f, -1.0f,  0.0f, 0.0f,
+		 1.0f, -1.0f,  1.0f, 0.0f,
+
+		-1.0f,  1.0f,  0.0f, 1.0f,
+		 1.0f, -1.0f,  1.0f, 0.0f,
+		 1.0f,  1.0f,  1.0f, 1.0f
+	};
+	// Create Vertex Buffer Object
+	m_vbo.create();
+	m_vbo.bind();
+	m_vbo.setUsagePattern(QOpenGLBuffer::StaticDraw);
+	m_vbo.allocate(quadVertices, sizeof(quadVertices));
+
+	// layout(location = 0) = vec2 position
+	shaderProgramm->enableAttributeArray(0); // array with index/id 0
+	shaderProgramm->setAttributeBuffer(0, GL_FLOAT,
+								  0 /* position/vertex offset */,
+								  2 /* two floats per position = vec2 */,
+								  4*sizeof(float) /* stride = 4 floats */);
+	shaderProgramm->enableAttributeArray(1); // array with index/id 1
+	shaderProgramm->setAttributeBuffer(1, GL_FLOAT,
+								  2*sizeof(float) /* texture index offset */,
+								  2 /* two floats per position = vec2 */,
+								  4*sizeof(float) /* stride = 4 floats */);
+	m_vao.release();
+	m_vbo.release();
+}
+----
+
+Also, Dimension entspricht den NDC und Texturekoordinaten gehen von 0..1 in beiden Achsen - also ein 1-zu-1 Abbild. Der Vertex-Shader-Code ist ebenfalls einfach:
+
+.screenfill.vert
+[source,c]
+----
+#version 330 core
+layout (location = 0) in vec2 aPos;
+layout (location = 1) in vec2 aTexCoords;
+
+out vec2 TexCoords;
+
+void main() {
+  TexCoords = aTexCoords;
+  gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0); 
+}
+----
+
+Und im Fragment-Shader kann man sich nun austoben (siehe dazu Erläuterungen auf https://learnopengl.com/Advanced-OpenGL/Framebuffers und die Beispiele auf https://setosa.io/ev/image-kernels.
+
+.screenfill_with_kernel.frag
+[source,c]
+----
+#version 330 core
+
+out vec4 FragColor;
+
+in vec2 TexCoords;
+
+uniform sampler2D screenTexture;
+
+void main() {
+  float x_offset;
+  float y_offset;
+  // textureSize returns dimensions of texture, and thus screen dimension
+  x_offset = 1.0 / textureSize(screenTexture, 0).x;
+  y_offset = 1.0 / textureSize(screenTexture, 0).y;
+  // x_offset = 1 means 1 pixel in normalized coordinates
+  vec2 offsets[9] = vec2[](
+    vec2(-x_offset,  y_offset), // top-left
+    vec2( 0.0f,    y_offset), // top-center
+    vec2( x_offset,  y_offset), // top-right
+    vec2(-x_offset,  0.0f),   // center-left
+    vec2( 0.0f,    0.0f),   // center-center
+    vec2( x_offset,  0.0f),   // center-right
+    vec2(-x_offset, -y_offset), // bottom-left
+    vec2( 0.0f,   -y_offset), // bottom-center
+    vec2( x_offset, -y_offset)  // bottom-right
+  );
+
+  // sharpen kernel
+  float kernel[9] = float[] (
+    -1, -1, -1,
+    -1,  9, -1,
+    -1, -1, -1
+  );
+
+  vec3 sampleTex[9];
+  for(int i = 0; i < 9; i++) {
+    sampleTex[i] = vec3(texture(screenTexture, TexCoords.st + offsets[i]));
+  }
+  vec3 col = vec3(0.0);
+  for(int i = 0; i < 9; i++)
+    col += sampleTex[i] * kernel[i];
+
+  // finally grayscale transformation
+  float average = 0.2126 * col.r + 0.7152 * col.g + 0.0722 * col.b;
+  FragColor = vec4(average, average, average, 1.0);
+}
+----
+
+Mit diesen Shaderprogrammen wird dann das Bildschirmrechteck unter Verwendung der Framebuffer-Texture gezeichnet - und dabei die Kernel-Effekte angewendet.
 
 Das war's auch schon. Der Quelltext für _Tutorial 09_ enthält eine komplette Verwendung (und in einem früherem git Commit ist die native OpenGL-Variante drin).
