@@ -20,7 +20,9 @@ License    : BSD License,
 #define SHADER(x) m_shaderPrograms[x].shaderProgram()
 
 const QVector3D UP_VECTOR = QVector3D(0.0f, 1.0f, 0.0f);
-const unsigned int SHADOW_WIDTH = 1024, SHADOW_HEIGHT = 1024;
+const unsigned int SHADOW_WIDTH = 10000, SHADOW_HEIGHT = 10000;
+
+QVector3D LIGHT_POS(30.0f, 50.0f, 75.0f);
 
 SceneView::SceneView() :
 	m_inputEventReceived(false),
@@ -142,7 +144,7 @@ void SceneView::initializeGL() {
 		QMatrix4x4 lightProjection;
 		float near_plane = 1.0f;
 		float far_plane = 500.5f;
-		lightProjection.ortho(-50.f, 50.f, -50.f, 50.f, near_plane, far_plane);
+		lightProjection.ortho(-100.f, 100.f, -100.f, 100.f, near_plane, far_plane);
 		QMatrix4x4 lightCam;
 		lightCam.setToIdentity();
 		lightCam.lookAt( QVector3D(-10.0f, 75.0f, -50.0f),
@@ -233,7 +235,7 @@ void SceneView::paintGL() {
 	SHADER(0)->bind();
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[1], m_lightSpaceMatrix);
-	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[2], QVector3D(10, 60, -5)); // lightPos
+	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[2], LIGHT_POS); // lightPos
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[3], m_camera.translation()); // cameraPos
 
 	m_boxObject.render();
