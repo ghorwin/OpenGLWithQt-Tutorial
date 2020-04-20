@@ -24,6 +24,7 @@ License    : BSD License,
 #include "GridObject.h"
 #include "BoxObject.h"
 #include "Camera.h"
+#include "Texture2ScreenObject.h"
 
 /*! The class SceneView extends the primitive OpenGLWindow
 	by adding keyboard/mouse event handling, and rendering of different
@@ -59,8 +60,6 @@ private:
 	/*! Compines camera matrix and project matrix to form the world2view matrix. */
 	void updateWorld2ViewMatrix();
 
-	void renderScene(const QMatrix4x4 & matrix);
-
 	/*! If set to true, an input event was received, which will be evaluated at next repaint. */
 	bool						m_inputEventReceived;
 
@@ -79,6 +78,7 @@ private:
 
 	BoxObject					m_boxObject;
 	GridObject					m_gridObject;
+	Texture2ScreenObject		m_texture2ScreenObject;
 
 	QOpenGLTimeMonitor			m_gpuTimers;
 	QElapsedTimer				m_cpuTimer;
@@ -88,6 +88,7 @@ private:
 	unsigned int				depthMap;
 
 	QOpenGLFramebufferObject	*m_frameBufferObject;
+
 };
 
 #endif // SCENEVIEW_H

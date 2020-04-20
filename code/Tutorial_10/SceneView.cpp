@@ -38,8 +38,12 @@ SceneView::SceneView() :
 	// *** create scene (no OpenGL calls are being issued below, just the data structures are created.
 
 	// Shaderprogram #0 : regular geometry (painting triangles via element index)
-	ShaderProgram blocks(":/shaders/withWorldAndCamera.vert",":/shaders/simple.frag");
-	blocks.m_uniformNames.append("worldToView");
+	ShaderProgram blocks(":/shaders/sceneWithShadowMap.vert",":/shaders/sceneWithShadowMap.frag");
+	blocks.m_uniformNames.append("worldToView");         // #0
+	blocks.m_uniformNames.append("lightSpaceMatrix");    // #1
+	blocks.m_uniformNames.append("lightPos");            // #2
+	blocks.m_uniformNames.append("viewPos");             // #3
+	blocks.m_uniformNames.append("shadowMap");           // #4
 	m_shaderPrograms.append( blocks );
 
 	// Shaderprogram #1 : grid (painting grid lines)
@@ -50,9 +54,13 @@ SceneView::SceneView() :
 	m_shaderPrograms.append( grid );
 
 	// Shaderprogram #2 : only for shadow
-	ShaderProgram shadow(":/shaders/positionOnly.vert",":/shaders/shadow.frag");
+	ShaderProgram shadow(":/shaders/depthMap.vert",":/shaders/depthMap.frag");
 	shadow.m_uniformNames.append("worldToView");
 	m_shaderPrograms.append( shadow );
+
+	// Shaderprogram #3 : screenfill (for debugging, only)
+	ShaderProgram screenFill(":/shaders/screenfill.vert",":/shaders/screenfill.frag");
+	m_shaderPrograms.append( screenFill );
 
 	// *** initialize camera placement and model placement in the world
 
@@ -74,6 +82,7 @@ SceneView::~SceneView() {
 
 		m_boxObject.destroy();
 		m_gridObject.destroy();
+		m_texture2ScreenObject.destroy();
 
 		m_gpuTimers.destroy();
 
@@ -99,23 +108,30 @@ void SceneView::initializeGL() {
 		// initialize drawable objects
 		m_boxObject.create(SHADER(0));
 		m_gridObject.create(SHADER(1));
+		m_texture2ScreenObject.create(SHADER(3));
 
 		// Timer
-		m_gpuTimers.setSampleCount(7);
+		m_gpuTimers.setSampleCount(4);
 		m_gpuTimers.create();
 
+		// generate framebuffer for depth map
 		glGenFramebuffers(1, &depthMapFBO);
 
+		// generate depth map texture
 		glGenTextures(1, &depthMap);
 		glBindTexture(GL_TEXTURE_2D, depthMap);
+		// create the texture
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+		// and set texture parameters
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
+		// attach depth texture to framebuffer
 		glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMap, 0);
+
 		// explicitely tell OpenGL that we do not want to render to color buffer
 		glDrawBuffer(GL_NONE);
 		glReadBuffer(GL_NONE);
@@ -123,18 +139,19 @@ void SceneView::initializeGL() {
 			qDebug() << "Framebuffer complete";
 		glBindFramebuffer(GL_FRAMEBUFFER, 0); // unbind framebuffer
 
-
 		QMatrix4x4 lightProjection;
 		float near_plane = 1.0f;
-		float far_plane = 70.5f;
-		lightProjection.ortho(-10.f, 10.f, -10.f, 10.f, near_plane, far_plane);
+		float far_plane = 500.5f;
+		lightProjection.ortho(-50.f, 50.f, -50.f, 50.f, near_plane, far_plane);
 		QMatrix4x4 lightCam;
 		lightCam.setToIdentity();
-		lightCam.lookAt( QVector3D(-15.0f, 40.0f, -5.0f),
+		lightCam.lookAt( QVector3D(-10.0f, 75.0f, -50.0f),
 						 QVector3D(0,0,0),
 						 UP_VECTOR);
 
 		m_lightSpaceMatrix = lightProjection * lightCam * m_transform.toMatrix();
+
+		SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[4], 0); // uniform #4 = "shadowMap" -> bind to TEXTURE0
 	}
 	catch (OpenGLException & ex) {
 		throw OpenGLException(ex, "OpenGL initialization failed.", FUNC_ID);
@@ -172,7 +189,7 @@ void SceneView::paintGL() {
 
 	m_gpuTimers.recordSample(); // render shadow map
 
-	// render to shadow map
+	// *** render shadow map ***
 	glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFBO);
 		glClear(GL_DEPTH_BUFFER_BIT);
@@ -191,8 +208,53 @@ void SceneView::paintGL() {
 
 	// set the background color = clear color
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// bind depthmap to TEXTURE0 -> maps to "shadowMap" texture in shader
+	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, depthMap);
-	renderScene(m_worldToView);
+
+//#define RENDER_DEPTHMAP
+#ifdef RENDER_DEPTHMAP
+	glDisable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.
+
+	//	// clear all relevant buffers
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // set clear color to white (not really necessery actually, since we won't be able to see behind the quad anyways)
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	SHADER(3)->bind();
+
+//	m_gpuTimers.recordSample(); // render framebuffer
+	m_texture2ScreenObject.render();
+	glEnable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.
+
+#else
+	// *** render boxes ***
+
+	SHADER(0)->bind();
+	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
+	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[1], m_lightSpaceMatrix);
+	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[2], QVector3D(10, 60, -5)); // lightPos
+	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[3], m_camera.translation()); // cameraPos
+
+	m_boxObject.render();
+	SHADER(0)->release();
+
+
+	// *** render grid ***
+
+	QVector3D backColor(0.1f, 0.15f, 0.3f);
+	QVector3D gridColor(0.5f, 0.5f, 0.7f);
+
+	m_gpuTimers.recordSample(); // render grid
+	SHADER(1)->bind();
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[0], m_worldToView);
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], gridColor);
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[2], backColor);
+
+	m_gridObject.render();
+	SHADER(1)->release();
+
+#endif // RENDER_DEPTHMAP
 
 #if 0
 	// do some animation stuff
@@ -342,28 +404,3 @@ void SceneView::updateWorld2ViewMatrix() {
 }
 
 
-void SceneView::renderScene(const QMatrix4x4 & matrix) {
-
-	// *** render boxes
-	SHADER(0)->bind();
-	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], matrix);
-
-//	m_gpuTimers.recordSample(); // render boxes
-	m_boxObject.render();
-	SHADER(0)->release();
-
-	// *** render grid afterwards ***
-
-	QVector3D backColor(0.1f, 0.15f, 0.3f);
-	QVector3D gridColor(0.5f, 0.5f, 0.7f);
-
-//	m_gpuTimers.recordSample(); // setup grid
-	SHADER(1)->bind();
-	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[0], matrix);
-	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], gridColor);
-	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[2], backColor);
-
-//	m_gpuTimers.recordSample(); // render grid
-	m_gridObject.render();
-	SHADER(1)->release();
-}

@@ -29,8 +29,8 @@ BoxObject::BoxObject() :
 
 	// create 'some' other boxes
 
-	const int BoxGenCount = 10000;
-	const int GridDim = 50; // must be an int, or you have to use a cast below
+	const int BoxGenCount = 100000;
+	const int GridDim = 100; // must be an int, or you have to use a cast below
 
 	// initialize grid (block count)
 	int boxPerCells[GridDim][GridDim];
