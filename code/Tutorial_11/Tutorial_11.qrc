@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/">
+        <file>shaders/grid.vert</file>
+        <file>shaders/simple.frag</file>
+        <file>shaders/withWorldAndCamera.vert</file>
+        <file>shaders/grid.frag</file>
+        <file>shaders/screenfill.frag</file>
+        <file>shaders/screenfill.vert</file>
+        <file>shaders/depthMap.vert</file>
+        <file>shaders/depthMap.frag</file>
+        <file>shaders/sceneWithShadowMap.vert</file>
+        <file>shaders/sceneWithShadowMap.frag</file>
+    </qresource>
+</RCC>
