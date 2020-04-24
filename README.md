@@ -10,6 +10,22 @@ The offline-PDF version can be downloaded from the repo:
 https://github.com/ghorwin/OpenGLWithQt-Tutorial/raw/master/docs/OpenGLQtTutorial.pdf
 
 
+## Contents
+
+Tutorial discusses modern OpenGL approach with shader programs and vertex buffers/arrays. The following Qt classes are discussed:
+
+- `QMatrix4x4`
+- `QVector3D` and `QVector4D`
+- `QOpenGLWindow` and `QOpenGLWidget`
+- `QOpenGLContext`, `QSurfaceFormat` and `QOpenGLFunctions`
+- `QOpenGLShaderProgram`
+- `QOpenGLTexture`
+- `QOpenGLFramebufferObject`
+- `QOpenGLVertexArrayObject` and `QOpenGLBuffer`
+- `QOpenGLDebugLogger`
+- `QOpenGLTimerQuery`, `QOpenGLTimeMonitor`, and `QElapsedTimer`
+
+
 ## Writing and generating the docs
 
 Uses Asciidoctor. Go to directory `text` and run `build.sh`.
