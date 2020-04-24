@@ -20,9 +20,9 @@ License    : BSD License,
 #define SHADER(x) m_shaderPrograms[x].shaderProgram()
 
 const QVector3D UP_VECTOR = QVector3D(0.0f, 1.0f, 0.0f);
-const unsigned int SHADOW_WIDTH = 10000, SHADOW_HEIGHT = 10000;
+const unsigned int SHADOW_WIDTH = 4000, SHADOW_HEIGHT = 4000;
 
-QVector3D LIGHT_POS(30.0f, 50.0f, 75.0f);
+QVector3D LIGHT_POS(50.0f, 100.0f, 75.0f);
 
 SceneView::SceneView() :
 	m_inputEventReceived(false),
@@ -113,7 +113,7 @@ void SceneView::initializeGL() {
 		m_texture2ScreenObject.create(SHADER(3));
 
 		// Timer
-		m_gpuTimers.setSampleCount(4);
+		m_gpuTimers.setSampleCount(7);
 		m_gpuTimers.create();
 
 		// generate framebuffer for depth map
@@ -147,7 +147,7 @@ void SceneView::initializeGL() {
 		lightProjection.ortho(-100.f, 100.f, -100.f, 100.f, near_plane, far_plane);
 		QMatrix4x4 lightCam;
 		lightCam.setToIdentity();
-		lightCam.lookAt( QVector3D(-10.0f, 75.0f, -50.0f),
+		lightCam.lookAt( LIGHT_POS,
 						 QVector3D(0,0,0),
 						 UP_VECTOR);
 
@@ -198,6 +198,7 @@ void SceneView::paintGL() {
 		SHADER(2)->bind();
 		SHADER(2)->setUniformValue(m_shaderPrograms[2].m_uniformIDs[0], m_lightSpaceMatrix);
 
+		m_gpuTimers.recordSample(); // render main scene
 		m_boxObject.render();
 		SHADER(2)->release();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -237,6 +238,7 @@ void SceneView::paintGL() {
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[1], m_lightSpaceMatrix);
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[2], LIGHT_POS); // lightPos
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[3], m_camera.translation()); // cameraPos
+	m_gpuTimers.recordSample(); // render main scene
 
 	m_boxObject.render();
 	SHADER(0)->release();
@@ -253,6 +255,7 @@ void SceneView::paintGL() {
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], gridColor);
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[2], backColor);
 
+	m_gpuTimers.recordSample(); // render main scene
 	m_gridObject.render();
 	SHADER(1)->release();
 
