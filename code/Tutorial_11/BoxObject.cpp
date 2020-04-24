@@ -50,12 +50,8 @@ BoxObject::BoxObject() :
 		int xGrid = qrand()*double(GridDim)/RAND_MAX;
 		int zGrid = qrand()*double(GridDim)/RAND_MAX;
 		// prefer higher buildings
-		if (boxPerCells[xGrid][zGrid] == 0) {
-			xGrid = qrand()*double(GridDim)/RAND_MAX;
-			zGrid = qrand()*double(GridDim)/RAND_MAX;
-		}
-		// prefer higher buildings
-		if (boxPerCells[xGrid][zGrid] == 0) {
+		int c = 1;
+		while (--c && boxPerCells[xGrid][zGrid] == 0) {
 			xGrid = qrand()*double(GridDim)/RAND_MAX;
 			zGrid = qrand()*double(GridDim)/RAND_MAX;
 		}
@@ -115,6 +111,9 @@ void BoxObject::create(QOpenGLShaderProgram * shaderProgramm) {
 	// index 1 = color
 	shaderProgramm->enableAttributeArray(1); // array with index/id 1
 	shaderProgramm->setAttributeBuffer(1, GL_FLOAT, offsetof(Vertex, r), 3, sizeof(Vertex));
+	// index 2 = normals
+	shaderProgramm->enableAttributeArray(2); // array with index/id 2
+	shaderProgramm->setAttributeBuffer(2, GL_FLOAT, offsetof(Vertex, nx), 3, sizeof(Vertex));
 
 	// Release (unbind) all
 	m_vao.release();

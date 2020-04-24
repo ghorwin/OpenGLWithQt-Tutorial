@@ -1,10 +1,11 @@
 #version 330 core
-out vec4 FragColor;
+out vec4 FinalColor;
 
 in VS_OUT {
-  vec3 FragPos;
-  vec4 FragPosLightSpace;
-  vec3 FragColor;
+	vec3 FragPos;            // position of fragment in world coordinates
+	vec4 FragPosLightSpace;  // position of fragment in light-space coordinates
+	vec3 FragNormal;         // normal vector of fragment
+	vec3 FragColor;          // color of fragment
 } fs_in;
 
 uniform sampler2D shadowMap;
@@ -24,8 +25,8 @@ float ShadowCalculation(vec4 fragPosLightSpace)
   float currentDepth = projCoords.z;
   // check whether current frag pos is in shadow
 //  float shadow = currentDepth > closestDepth  ? 1.0 : 0.0;
-  float bias = 0.0007;
-  float shadow = currentDepth - bias > closestDepth  ? 0.3 : 1.0;
+  float bias = 0.001;
+  float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
 
   return shadow;
 }
@@ -33,10 +34,24 @@ float ShadowCalculation(vec4 fragPosLightSpace)
 void main()
 {
   vec3 color = fs_in.FragColor;
+  vec3 normal = normalize(fs_in.FragNormal);
+  vec3 lightColor = vec3(1.0);
+  // ambient
+  vec3 ambient = 0.15 * color;
   // diffuse
-  // calculate shadow
+  vec3 lightDir = normalize(lightPos - fs_in.FragPos);
+  float diff = max(dot(lightDir, normal), 0.0);
+  vec3 diffuse = diff * lightColor;
+  // specular
+  vec3 viewDir = normalize(viewPos - fs_in.FragPos);
+  float spec = 0.0;
+  vec3 halfwayDir = normalize(lightDir + viewDir);
+  spec = pow(max(dot(normal, halfwayDir), 0.0), 64.0);
+  vec3 specular = spec * lightColor;
+  // calculate shadow: 1 - in light, 0 - dark
   float shadow = ShadowCalculation(fs_in.FragPosLightSpace);
-  vec3 lighting = shadow * color;
-  FragColor = vec4(lighting, 1.0);
+  // compose final light value - mind that this can lead to a brighter color than the original color
+  vec3 lighting = (ambient + (1.0 - shadow) * (diffuse + specular)) * color;
+  FinalColor = vec4(lighting, 1.0);
 }
 

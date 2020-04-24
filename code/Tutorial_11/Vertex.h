@@ -41,8 +41,13 @@ struct Vertex {
 	{
 	}
 
+	QVector3D pos() const { return QVector3D(x, y, z); }
+
+	void setNormal(const QVector3D & n) { nx = n.x(); ny = n.y(); nz = n.z(); }
+
 	float x,y,z;
 	float r,g,b;
+	float nx,ny,nz;
 };
 
 #endif // VERTEX_H

@@ -22,7 +22,7 @@ License    : BSD License,
 const QVector3D UP_VECTOR = QVector3D(0.0f, 1.0f, 0.0f);
 const unsigned int SHADOW_WIDTH = 4000, SHADOW_HEIGHT = 4000;
 
-QVector3D LIGHT_POS(50.0f, 100.0f, -75.0f);
+QVector3D LIGHT_POS(500.0f, 1000.0f, -750.0f);
 
 SceneView::SceneView() :
 	m_inputEventReceived(false),
@@ -55,7 +55,7 @@ SceneView::SceneView() :
 	grid.m_uniformNames.append("backColor"); // vec3
 	m_shaderPrograms.append( grid );
 
-	// Shaderprogram #2 : only for shadow
+	// Shaderprogram #2 : only for shadow/depth map
 	ShaderProgram shadow(":/shaders/depthMap.vert",":/shaders/depthMap.frag");
 	shadow.m_uniformNames.append("worldToView");
 	m_shaderPrograms.append( shadow );
@@ -143,7 +143,7 @@ void SceneView::initializeGL() {
 
 		QMatrix4x4 lightProjection;
 		float near_plane = 1.0f;
-		float far_plane = 500.5f;
+		float far_plane = 10000.5f;
 		lightProjection.ortho(-100.f, 100.f, -100.f, 100.f, near_plane, far_plane);
 		QMatrix4x4 lightCam;
 		lightCam.setToIdentity();

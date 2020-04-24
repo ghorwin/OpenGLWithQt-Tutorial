@@ -105,12 +105,21 @@ void BoxMesh::copy2Buffer(Vertex *& vertexBuffer, GLuint *& elementBuffer, unsig
 void copyPlane2Buffer(Vertex * & vertexBuffer, GLuint * & elementBuffer, unsigned int & elementStartIndex,
 					  const Vertex & a, const Vertex & b, const Vertex & c, const Vertex & d)
 {
+	// compute normal vector of plane
+	QVector3D w1 = b.pos() - a.pos();
+	QVector3D w2 = d.pos() - a.pos();
+	QVector3D normal = QVector3D::crossProduct(w1, w2);
+	normal.normalize();
+
 	// first store the vertex data (a,b,c,d in counter-clockwise order)
 
 	vertexBuffer[0] = a;
 	vertexBuffer[1] = b;
 	vertexBuffer[2] = c;
 	vertexBuffer[3] = d;
+	// all 4 vertexes have the same normal vectors
+	for (int i=0; i<4; ++i)
+		vertexBuffer[i].setNormal(normal);
 #if 0
 	// tweak the colors of the bottom left and bottom right nodes
 	if (a.y < c.y) {
