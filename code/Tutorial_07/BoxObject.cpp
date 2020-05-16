@@ -134,7 +134,7 @@ void BoxObject::pick(const QVector3D & p1, const QVector3D & d, PickObject & po)
 			float z;
 			// is intersection point closes to viewer than previous intersection points?
 			if (bm.intersects(j, p1, d, z)) {
-//				qDebug() << QString("Plane %1 of box %2 intersects line at z = %3").arg(j).arg(i).arg(z);
+				qDebug() << QString("Plane %1 of box %2 intersects line at z = %3").arg(j).arg(i).arg(z);
 				if (z > po.m_z) {
 					po.m_z = z;
 					po.m_objectId = i;

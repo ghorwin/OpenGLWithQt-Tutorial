@@ -171,6 +171,7 @@ void OpenGLWindow::initOpenGL() {
 		connect(m_debugLogger, SIGNAL(messageLogged(QOpenGLDebugMessage)), this, SLOT(onMessageLogged(QOpenGLDebugMessage)));
 		m_debugLogger->startLogging();
 	}
+	qDebug() << "DepthBufferSize = " << m_context->format().depthBufferSize();
 #endif // GL_DEBUG
 
 	initializeGL(); // call user code

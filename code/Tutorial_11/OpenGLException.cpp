@@ -1,6 +1,7 @@
 #include "OpenGLException.h"
 
 #include <QStringList>
+#include <iostream>
 
 OpenGLException::OpenGLException(const QString & msg) {
 	m_msgStack.push_back( std::make_pair(QString(msg), QString()));
