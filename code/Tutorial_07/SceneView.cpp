@@ -385,8 +385,8 @@ void SceneView::selectNearestObject(const QVector3D & nearPoint, const QVector3D
 	// compute view direction
 	QVector3D d = farPoint - nearPoint;
 
-	// create pick object
-	PickObject p(-10000000.f, std::numeric_limits<unsigned int>::max());
+	// create pick object, distance is a value between 0 and 1, so initialize with 2 (very far back) to be on the safe side.
+	PickObject p(2.f, std::numeric_limits<unsigned int>::max());
 
 	// now process all objects and update p to hold the closest hit
 	m_boxObject.pick(nearPoint, d, p);
@@ -397,7 +397,7 @@ void SceneView::selectNearestObject(const QVector3D & nearPoint, const QVector3D
 		return; // nothing selected
 
 	qDebug().nospace() << "Pick successful (Box #"
-					   << p.m_objectId <<  ", Face #" << p.m_faceId << ", z = " << p.m_z << ") after "
+					   << p.m_objectId <<  ", Face #" << p.m_faceId << ", t = " << p.m_dist << ") after "
 					   << pickTimer.elapsed() << " ms";
 
 	// Mind: OpenGL-context must be current when we call this function!

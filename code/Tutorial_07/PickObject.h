@@ -3,17 +3,18 @@
 
 #include <QVector3D>
 
+/*! An Object to hold information on the clicked-on object. */
 struct PickObject {
-	PickObject(float z, unsigned int id) :
-		m_z(z), m_objectId(id), m_faceId(0)
+	PickObject(float dist, unsigned int id) :
+		m_dist(dist), m_objectId(id), m_faceId(0)
 	{
 	}
-	PickObject(float z, unsigned int id, unsigned int faceId) :
-		m_z(z), m_objectId(id), m_faceId(faceId)
+	PickObject(float dist, unsigned int id, unsigned int faceId) :
+		m_dist(dist), m_objectId(id), m_faceId(faceId)
 	{
 	}
 
-	float m_z; // the depths of the intersection point
+	float m_dist; // the normalized distance of the intersection point from starting point of pick line
 	unsigned int m_objectId; // the object clicked on
 	unsigned int m_faceId; // the actual triangle/plane clicked on
 };
@@ -21,7 +22,7 @@ struct PickObject {
 
 /*! Tests if a line (with equation p = p1 + t * d) hits a plane, defined by
 	p = x * a  +  y * b. Returns true if intersection is found, and returns
-	the z-component of intersection point.
+	the normalized distance (t) between intersection point and point p1.
 */
 bool intersectsRect(const QVector3D & a,
 				const QVector3D & b,
@@ -29,7 +30,7 @@ bool intersectsRect(const QVector3D & a,
 				const QVector3D & offset,
 				const QVector3D & p1,
 				const QVector3D & d,
-				float & z);
+				float & dist);
 
 
 #endif // PICKOBJECT_H

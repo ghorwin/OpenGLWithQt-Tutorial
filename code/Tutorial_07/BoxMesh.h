@@ -63,7 +63,7 @@ public:
 	/*! Tests if line in space, defined through starting point p1 and distance/direction d intersects the plane
 		with index planeIdx.
 	*/
-	bool intersects(unsigned int planeIdx, const QVector3D & p1, const QVector3D & d, float & z) const;
+	bool intersects(unsigned int planeIdx, const QVector3D & p1, const QVector3D & d, float & dist) const;
 
 private:
 	struct Rect {

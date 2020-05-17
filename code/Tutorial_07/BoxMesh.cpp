@@ -38,9 +38,9 @@ void BoxMesh::transform(const QMatrix4x4 & transform) {
 }
 
 
-bool BoxMesh::intersects(unsigned int planeIdx, const QVector3D & p1, const QVector3D & d, float & z) const {
+bool BoxMesh::intersects(unsigned int planeIdx, const QVector3D & p1, const QVector3D & d, float & dist) const {
 	const Rect & p = m_planeInfo[planeIdx];
-	return intersectsRect(p.m_a, p.m_b, p.m_normal, p.m_offset, p1, d, z);
+	return intersectsRect(p.m_a, p.m_b, p.m_normal, p.m_offset, p1, d, dist);
 }
 
 

@@ -32,8 +32,8 @@ BoxObject::BoxObject() :
 
 	// create 'some' other boxes
 
-	const int BoxGenCount = 10000;
-	const int GridDim = 100; // must be an int, or you have to use a cast below
+	const int BoxGenCount = 10;
+	const int GridDim = 10; // must be an int, or you have to use a cast below
 
 	// initialize grid (block count)
 	int boxPerCells[GridDim][GridDim];
@@ -131,12 +131,13 @@ void BoxObject::pick(const QVector3D & p1, const QVector3D & d, PickObject & po)
 	for (unsigned int i=0; i<m_boxes.size(); ++i) {
 		const BoxMesh & bm = m_boxes[i];
 		for (unsigned int j=0; j<6; ++j) {
-			float z;
+			float dist;
 			// is intersection point closes to viewer than previous intersection points?
-			if (bm.intersects(j, p1, d, z)) {
-				qDebug() << QString("Plane %1 of box %2 intersects line at z = %3").arg(j).arg(i).arg(z);
-				if (z > po.m_z) {
-					po.m_z = z;
+			if (bm.intersects(j, p1, d, dist)) {
+				qDebug() << QString("Plane %1 of box %2 intersects line at normalized distance = %3").arg(j).arg(i).arg(dist);
+				// keep objects that is closer to near plane
+				if (dist < po.m_dist) {
+					po.m_dist = dist;
 					po.m_objectId = i;
 					po.m_faceId = j;
 				}

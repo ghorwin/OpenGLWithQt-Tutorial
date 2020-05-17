@@ -5769,7 +5769,12 @@ int main(int argc, char **argv) {
 <p>Ob eine begrenzte <em>Fläche</em> von der <em>Strecke</em> (unserer Sichtlinie) geschnitten wird, hängt von der Lage des Schnittpunkts ab.</p>
 </div>
 <div class="paragraph">
-<p>Wird die Sichtlinie durch den Start- und Endpunkt <strong>p1</strong> und <strong>p2</strong> (near und far-Punkte) definiert, und damit <strong>s</strong> = <strong>p1</strong> und <strong>d</strong> = <strong>p2</strong> - <strong>p1</strong>, dann muss t zwischen 0 und 1 liegen (Bedingung 2).</p>
+<p>Die Sichtgerade definiert die Strecke zwischen <em>near plane</em> und <em>far plane</em>, d.h. die Sichtlinie wird durch den Start- und Endpunkt <strong>p1</strong> und <strong>p2</strong> (near und far-Punkte) definiert, und damit <strong>s</strong> = <strong>p1</strong> und <strong>d</strong> = <strong>p2</strong> - <strong>p1</strong>. Bei einem Schnittpunkt hinter uns ist <strong>t_0 &lt; 0</strong> und einem Schnittpunkt hinter der <em>far plane</em> wäre <strong>t_0 &gt; 1</strong> (was man nicht sieht, kann man auch nicht anklicken). Damit hätte man das zweite Prüfkriterium (Bedingung 2):</p>
+</div>
+<div class="stemblock">
+<div class="content">
+\[0 \le t_0 \le 1\]
+</div>
 </div>
 <div class="paragraph">
 <p>Der berechnete Schnittpunkt</p>
@@ -5866,8 +5871,9 @@ int main(int argc, char **argv) {
 	<span class="c1">// compute view direction</span>
 	<span class="n">QVector3D</span> <span class="n">d</span> <span class="o">=</span> <span class="n">farPoint</span> <span class="o">-</span> <span class="n">nearPoint</span><span class="p">;</span>
 
-	<span class="c1">// create pick object</span>
-	<span class="n">PickObject</span> <span class="n">p</span><span class="p">(</span><span class="o">-</span><span class="mf">10000000.</span><span class="n">f</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">numeric_limits</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">max</span><span class="p">());</span>
+	<span class="c1">// create pick object, distance is a value between 0 and 1,</span>
+	<span class="c1">// so initialize with 2 (very far back) to be on the safe side.</span>
+	<span class="n">PickObject</span> <span class="n">p</span><span class="p">(</span><span class="mf">2.</span><span class="n">f</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">numeric_limits</span><span class="o">&lt;</span><span class="kt">unsigned</span> <span class="kt">int</span><span class="o">&gt;::</span><span class="n">max</span><span class="p">());</span>
 
 	<span class="c1">// now process all objects and update p to hold the closest hit</span>
 	<span class="n">m_boxObject</span><span class="p">.</span><span class="n">pick</span><span class="p">(</span><span class="n">nearPoint</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">p</span><span class="p">);</span>
@@ -5878,7 +5884,7 @@ int main(int argc, char **argv) {
 		<span class="k">return</span><span class="p">;</span> <span class="c1">// nothing selected</span>
 
 	<span class="n">qDebug</span><span class="p">().</span><span class="n">nospace</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">"Pick successful (Box #"</span>
-					   <span class="o">&lt;&lt;</span> <span class="n">p</span><span class="p">.</span><span class="n">m_objectId</span> <span class="o">&lt;&lt;</span>  <span class="s">", Face #"</span> <span class="o">&lt;&lt;</span> <span class="n">p</span><span class="p">.</span><span class="n">m_faceId</span> <span class="o">&lt;&lt;</span> <span class="s">", z = "</span> <span class="o">&lt;&lt;</span> <span class="n">p</span><span class="p">.</span><span class="n">m_z</span> <span class="o">&lt;&lt;</span> <span class="s">") after "</span>
+					   <span class="o">&lt;&lt;</span> <span class="n">p</span><span class="p">.</span><span class="n">m_objectId</span> <span class="o">&lt;&lt;</span>  <span class="s">", Face #"</span> <span class="o">&lt;&lt;</span> <span class="n">p</span><span class="p">.</span><span class="n">m_faceId</span> <span class="o">&lt;&lt;</span> <span class="s">", t = "</span> <span class="o">&lt;&lt;</span> <span class="n">p</span><span class="p">.</span><span class="n">m_dist</span> <span class="o">&lt;&lt;</span> <span class="s">") after "</span>
 					   <span class="o">&lt;&lt;</span> <span class="n">pickTimer</span><span class="p">.</span><span class="n">elapsed</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="s">" ms"</span><span class="p">;</span>
 
 	<span class="c1">// Mind: OpenGL-context must be current when we call this function!</span>
@@ -5890,7 +5896,7 @@ int main(int argc, char **argv) {
 <p>Zum Testen der Performance hab ich in die Funktion einen Timer reingelegt (siehe Kapitel <em>Picking Performance</em> unten). Den Timer und die <code>qDebug()</code>-Ausgabe kann man aber getrost rauswerfen.</p>
 </div>
 <div class="paragraph">
-<p>In der Funktion wird zuerst der Linienvektor <strong>d</strong> berechnet. Dann wird ein <code>PickObject</code> (eine Struktur mit Infos über angeklickte Objekte) erstellt und deren z-Wert ganz weit hinten initialisiert. Dann geht man alle Zeichenobjekte durch (bzw. alle Datenstrukturen, die Modellgeometrien enthalten) und testet alle enthaltenen Flächen auf Kollision mit dem Sichtstrahl. In diesem Tutorial gibt es nur ein Zeichenobjekt (<code>m_boxObject</code>), aber das Schema ist klar.</p>
+<p>In der Funktion wird zuerst der Linienvektor <strong>d</strong> berechnet. Dann wird ein <code>PickObject</code> (eine Struktur mit Infos über angeklickte Objekte) erstellt und deren Entfernungswert ganz weit hinten initialisiert (Wertebereich ist 0..1, daher ist 2 definitiv weit genug hinten :-). Dann geht man alle Zeichenobjekte durch (bzw. alle Datenstrukturen, die Modellgeometrien enthalten) und testet alle enthaltenen Flächen auf Kollision mit dem Sichtstrahl. In diesem Tutorial gibt es nur ein Zeichenobjekt (<code>m_boxObject</code>), aber das Schema ist klar.</p>
 </div>
 <div class="paragraph">
 <p>Hinterher kann man über Vergleich der Objekt-ID mit dem Initialisierungswert (hier größter <code>unsigned int</code>) prüfen, ob überhaupt eine Fläche getroffen wurde.</p>
@@ -5909,11 +5915,13 @@ int main(int argc, char **argv) {
 	<span class="k">for</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">i</span><span class="o">&lt;</span><span class="n">m_boxes</span><span class="p">.</span><span class="n">size</span><span class="p">();</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
 		<span class="k">const</span> <span class="n">BoxMesh</span> <span class="o">&amp;</span> <span class="n">bm</span> <span class="o">=</span> <span class="n">m_boxes</span><span class="p">[</span><span class="n">i</span><span class="p">];</span>
 		<span class="k">for</span> <span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">j</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="n">j</span><span class="o">&lt;</span><span class="mi">6</span><span class="p">;</span> <span class="o">++</span><span class="n">j</span><span class="p">)</span> <span class="p">{</span>
-			<span class="kt">float</span> <span class="n">z</span><span class="p">;</span>
+			<span class="kt">float</span> <span class="n">dist</span><span class="p">;</span>
 			<span class="c1">// is intersection point closes to viewer than previous intersection points?</span>
-			<span class="k">if</span> <span class="p">(</span><span class="n">bm</span><span class="p">.</span><span class="n">intersects</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">p1</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">z</span><span class="p">))</span> <span class="p">{</span>
-				<span class="k">if</span> <span class="p">(</span><span class="n">z</span> <span class="o">&gt;</span> <span class="n">po</span><span class="p">.</span><span class="n">m_z</span><span class="p">)</span> <span class="p">{</span>
-					<span class="n">po</span><span class="p">.</span><span class="n">m_z</span> <span class="o">=</span> <span class="n">z</span><span class="p">;</span>
+			<span class="k">if</span> <span class="p">(</span><span class="n">bm</span><span class="p">.</span><span class="n">intersects</span><span class="p">(</span><span class="n">j</span><span class="p">,</span> <span class="n">p1</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">dist</span><span class="p">))</span> <span class="p">{</span>
+				<span class="n">qDebug</span><span class="p">()</span> <span class="o">&lt;&lt;</span> <span class="n">QString</span><span class="p">(</span><span class="s">"Plane %1 of box %2 intersects line at normalized distance = %3"</span><span class="p">).</span><span class="n">arg</span><span class="p">(</span><span class="n">j</span><span class="p">).</span><span class="n">arg</span><span class="p">(</span><span class="n">i</span><span class="p">).</span><span class="n">arg</span><span class="p">(</span><span class="n">dist</span><span class="p">);</span>
+				<span class="c1">// keep objects that is closer to near plane</span>
+				<span class="k">if</span> <span class="p">(</span><span class="n">dist</span> <span class="o">&lt;</span> <span class="n">po</span><span class="p">.</span><span class="n">m_dist</span><span class="p">)</span> <span class="p">{</span>
+					<span class="n">po</span><span class="p">.</span><span class="n">m_dist</span> <span class="o">=</span> <span class="n">dist</span><span class="p">;</span>
 					<span class="n">po</span><span class="p">.</span><span class="n">m_objectId</span> <span class="o">=</span> <span class="n">i</span><span class="p">;</span>
 					<span class="n">po</span><span class="p">.</span><span class="n">m_faceId</span> <span class="o">=</span> <span class="n">j</span><span class="p">;</span>
 				<span class="p">}</span>
@@ -5924,19 +5932,19 @@ int main(int argc, char **argv) {
 </div>
 </div>
 <div class="paragraph">
-<p>In dieser Funktion wird letztlich jede Box einzeln geprüft, und in jeder Box jede einzelne Fläche. Der eigentliche Schnittpunkt-Test erfolgt in der Funktion <code>BoxMesh::intersects()</code>.  Wurde ein Schnittpunkte gefunden, aktualisiert man die <code>PickObject</code> Struktur, aber nur, wenn das Objekt dichter am Betrachter liegt (größerer z-Wert).</p>
+<p>In dieser Funktion wird letztlich jede Box einzeln geprüft, und in jeder Box jede einzelne Fläche. Der eigentliche Schnittpunkt-Test erfolgt in der Funktion <code>BoxMesh::intersects()</code>.  Wurde ein Schnittpunkte gefunden, aktualisiert man die <code>PickObject</code> Struktur, aber nur, wenn das Objekt dichter am Betrachter liegt (kleinerer Entfernungswert in <em>dist</em>).</p>
 </div>
 <div class="listingblock">
 <div class="title">BoxMesh.cpp::intersects()</div>
 <div class="content">
-<pre class="rouge highlight"><code data-lang="c++"><span class="kt">bool</span> <span class="n">BoxMesh</span><span class="o">::</span><span class="n">intersects</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">planeIdx</span><span class="p">,</span> <span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">p1</span><span class="p">,</span> <span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">d</span><span class="p">,</span> <span class="kt">float</span> <span class="o">&amp;</span> <span class="n">z</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
+<pre class="rouge highlight"><code data-lang="c++"><span class="kt">bool</span> <span class="n">BoxMesh</span><span class="o">::</span><span class="n">intersects</span><span class="p">(</span><span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">planeIdx</span><span class="p">,</span> <span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">p1</span><span class="p">,</span> <span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">d</span><span class="p">,</span> <span class="kt">float</span> <span class="o">&amp;</span> <span class="n">dist</span><span class="p">)</span> <span class="k">const</span> <span class="p">{</span>
 	<span class="k">const</span> <span class="n">Rect</span> <span class="o">&amp;</span> <span class="n">p</span> <span class="o">=</span> <span class="n">m_planeInfo</span><span class="p">[</span><span class="n">planeIdx</span><span class="p">];</span>
-	<span class="k">return</span> <span class="n">intersectsRect</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">m_a</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">m_b</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">m_normal</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">m_offset</span><span class="p">,</span> <span class="n">p1</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">z</span><span class="p">);</span>
+	<span class="k">return</span> <span class="n">intersectsRect</span><span class="p">(</span><span class="n">p</span><span class="p">.</span><span class="n">m_a</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">m_b</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">m_normal</span><span class="p">,</span> <span class="n">p</span><span class="p">.</span><span class="n">m_offset</span><span class="p">,</span> <span class="n">p1</span><span class="p">,</span> <span class="n">d</span><span class="p">,</span> <span class="n">dist</span><span class="p">);</span>
 <span class="p">}</span></code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Hier wird die objektunabhängige Schnittpunkt-Testfunktion <code>intersectsRect</code> aufgerufen, und dieser Funktion die für den mathematischen Algorithmus oben benötigten Parameter der aktuell gewählten Seite (mit Index <code>planeIdx</code>) übergeben. Das sind die Parameter der Ebenegleichung (<strong>a</strong>, <strong>b</strong>, <strong>n</strong>, <strong>offset</strong>) und die Parameter der Sichtline <strong>p1</strong> und <strong>d</strong>. Die z-Koordinate des gefundenen Schnittpunkts wird im Falle eines Treffers in das Argument <strong>z</strong> eingetragen.</p>
+<p>Hier wird die objektunabhängige Schnittpunkt-Testfunktion <code>intersectsRect</code> aufgerufen, und dieser Funktion die für den mathematischen Algorithmus oben benötigten Parameter der aktuell gewählten Seite (mit Index <code>planeIdx</code>) übergeben. Das sind die Parameter der Ebenegleichung (<strong>a</strong>, <strong>b</strong>, <strong>n</strong>, <strong>offset</strong>) und die Parameter der Sichtline <strong>p1</strong> und <strong>d</strong>. Die Entfernung des gefundenen Schnittpunkts (Linienfaktor <strong>t</strong> wird im Falle eines Treffers in das Argument <strong>dist</strong> eingetragen.</p>
 </div>
 <div class="paragraph">
 <p>Die Parameter der Seitenfläche werden bei Übertragung der Boxobjekt-Koordinante in den Vertexpuffer aktualisiert (dann sind die Vertexkoordinaten des Boxobjekts bereits transformiert).</p>
@@ -5953,39 +5961,57 @@ int main(int argc, char **argv) {
 				<span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">offset</span><span class="p">,</span>
 				<span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">p1</span><span class="p">,</span>
 				<span class="k">const</span> <span class="n">QVector3D</span> <span class="o">&amp;</span> <span class="n">d</span><span class="p">,</span>
-				<span class="kt">float</span> <span class="o">&amp;</span> <span class="n">z</span><span class="p">)</span>
+				<span class="kt">float</span> <span class="o">&amp;</span> <span class="n">dist</span><span class="p">)</span>
 <span class="p">{</span>
 	<span class="c1">// first the normal test</span>
-	<span class="kt">double</span> <span class="n">angle</span> <span class="o">=</span> <span class="n">QVector3D</span><span class="o">::</span><span class="n">dotProduct</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">normal</span><span class="p">)</span><span class="o">/</span><span class="n">qAbs</span><span class="p">(</span><span class="n">d</span><span class="p">.</span><span class="n">length</span><span class="p">());</span>
-	<span class="k">if</span> <span class="p">(</span><span class="n">angle</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
-		<span class="k">return</span> <span class="nb">false</span><span class="p">;</span> <span class="c1">// same direction, no intersection possible</span>
 
-	<span class="c1">// intersection point on line</span>
+	<span class="kt">double</span> <span class="n">angle</span> <span class="o">=</span> <span class="n">QVector3D</span><span class="o">::</span><span class="n">dotProduct</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">normal</span><span class="p">)</span><span class="o">/</span><span class="n">qAbs</span><span class="p">(</span><span class="n">d</span><span class="p">.</span><span class="n">length</span><span class="p">());</span>
+	<span class="c1">// Condition 1: same direction of normal vectors?</span>
+	<span class="k">if</span> <span class="p">(</span><span class="n">angle</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span>
+		<span class="k">return</span> <span class="nb">false</span><span class="p">;</span> <span class="c1">// no intersection possible</span>
+
+	<span class="c1">// compute intersection point on line</span>
 	<span class="kt">double</span> <span class="n">t</span> <span class="o">=</span> <span class="n">QVector3D</span><span class="o">::</span><span class="n">dotProduct</span><span class="p">(</span><span class="n">offset</span> <span class="o">-</span> <span class="n">p1</span><span class="p">,</span> <span class="n">normal</span><span class="p">)</span> <span class="o">/</span> <span class="n">QVector3D</span><span class="o">::</span><span class="n">dotProduct</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">normal</span><span class="p">);</span>
-	<span class="c1">// outside viewing range?</span>
+	<span class="c1">// Condition 2: outside viewing range?</span>
 	<span class="k">if</span> <span class="p">(</span><span class="n">t</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="o">||</span> <span class="n">t</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
 		<span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
-	<span class="n">QVector3D</span> <span class="n">x0</span> <span class="o">=</span> <span class="n">p1</span> <span class="o">+</span> <span class="n">t</span><span class="o">*</span><span class="n">d</span><span class="p">;</span>
 
 	<span class="c1">// now determine location on plane</span>
+	<span class="n">QVector3D</span> <span class="n">x0</span> <span class="o">=</span> <span class="n">p1</span> <span class="o">+</span> <span class="n">t</span><span class="o">*</span><span class="n">d</span><span class="p">;</span>
+
 	<span class="n">QVector3D</span> <span class="n">rhs</span> <span class="o">=</span> <span class="n">x0</span> <span class="o">-</span> <span class="n">offset</span><span class="p">;</span> <span class="c1">// right hand side of equation system:  a * x  +  b * y = (x - offset)</span>
 
 	<span class="c1">// we have three possible ways to get the intersection point, try them all until we succeed</span>
 	<span class="kt">double</span> <span class="n">x</span><span class="p">,</span><span class="n">y</span><span class="p">;</span>
 	<span class="c1">// rows 1 and 2</span>
 	<span class="k">if</span> <span class="p">(</span><span class="n">solve</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">a</span><span class="p">.</span><span class="n">y</span><span class="p">(),</span> <span class="n">b</span><span class="p">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">b</span><span class="p">.</span><span class="n">y</span><span class="p">(),</span> <span class="n">rhs</span><span class="p">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">rhs</span><span class="p">.</span><span class="n">y</span><span class="p">(),</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span> <span class="p">{</span>
-		<span class="k">if</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span>   <span class="p">{</span> <span class="n">z</span> <span class="o">=</span> <span class="n">x0</span><span class="p">.</span><span class="n">z</span><span class="p">();</span> <span class="k">return</span> <span class="nb">true</span><span class="p">;</span> <span class="p">}</span>
-		<span class="k">else</span>			                        <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+		<span class="c1">// Condition 3: check if inside rect</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+			<span class="n">dist</span> <span class="o">=</span> <span class="n">t</span><span class="p">;</span>
+			<span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+		<span class="p">}</span>
+		<span class="k">else</span>
+			<span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
 	<span class="p">}</span>
 	<span class="c1">// rows 1 and 3</span>
 	<span class="k">if</span> <span class="p">(</span><span class="n">solve</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">a</span><span class="p">.</span><span class="n">z</span><span class="p">(),</span> <span class="n">b</span><span class="p">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="p">(),</span> <span class="n">rhs</span><span class="p">.</span><span class="n">x</span><span class="p">(),</span> <span class="n">rhs</span><span class="p">.</span><span class="n">z</span><span class="p">(),</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span> <span class="p">{</span>
-		<span class="k">if</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span>   <span class="p">{</span> <span class="n">z</span> <span class="o">=</span> <span class="n">x0</span><span class="p">.</span><span class="n">z</span><span class="p">();</span> <span class="k">return</span> <span class="nb">true</span><span class="p">;</span> <span class="p">}</span>
-		<span class="k">else</span>			                        <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+		<span class="c1">// Condition 3: check if inside rect</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+			<span class="n">dist</span> <span class="o">=</span> <span class="n">t</span><span class="p">;</span>
+			<span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+		<span class="p">}</span>
+		<span class="k">else</span>
+			<span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
 	<span class="p">}</span>
 	<span class="c1">// rows 2 and 3</span>
 	<span class="k">if</span> <span class="p">(</span><span class="n">solve</span><span class="p">(</span><span class="n">a</span><span class="p">.</span><span class="n">y</span><span class="p">(),</span> <span class="n">a</span><span class="p">.</span><span class="n">z</span><span class="p">(),</span> <span class="n">b</span><span class="p">.</span><span class="n">y</span><span class="p">(),</span> <span class="n">b</span><span class="p">.</span><span class="n">z</span><span class="p">(),</span> <span class="n">rhs</span><span class="p">.</span><span class="n">y</span><span class="p">(),</span> <span class="n">rhs</span><span class="p">.</span><span class="n">z</span><span class="p">(),</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">))</span> <span class="p">{</span>
-		<span class="k">if</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span>   <span class="p">{</span> <span class="n">z</span> <span class="o">=</span> <span class="n">x0</span><span class="p">.</span><span class="n">z</span><span class="p">();</span> <span class="k">return</span> <span class="nb">true</span><span class="p">;</span> <span class="p">}</span>
-		<span class="k">else</span>			                        <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+		<span class="c1">// Condition 3: check if inside rect</span>
+		<span class="k">if</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="o">&amp;&amp;</span> <span class="n">y</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+			<span class="n">dist</span> <span class="o">=</span> <span class="n">t</span><span class="p">;</span>
+			<span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+		<span class="p">}</span>
+		<span class="k">else</span>
+			<span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
 	<span class="p">}</span>
 
 	<span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
@@ -6172,7 +6198,7 @@ int main(int argc, char **argv) {
 <div class="sect2">
 <h3 id="_option_2_falschfarbenrendering">7.2. Option 2: Falschfarbenrendering</h3>
 <div class="paragraph">
-<p>Technisch gibt es eine Einschränkung: es stehen <strong>256^4 - 1</strong> Farben stehen zur Verfügung (rgba) für ebenso viele Elemente. Reicht das nicht aus, muss entweder gefiltert werden (d.h. nur die <em>prinzipiell</em> sichtbaren Objekte bekommen eine Nummer/Farbe), oder man benutzt Ray-Tracking.</p>
+<p>Grundgedanke dieser Option ist das Rendern aller unterschiedlich anklickbaren Fläche mit jeweils individuellen Farben. Technisch gibt es eine Einschränkung: es stehen <strong>256^3 - 1</strong> Farben stehen zur Verfügung (rgb) für ebenso viele Ebenen/Elemente. Reicht das nicht aus, muss entweder gefiltert werden (d.h. nur die <em>prinzipiell</em> sichtbaren Objekte bekommen eine Nummer/Farbe), oder man benutzt Ray-Tracking (siehe oben).</p>
 </div>
 <div class="paragraph">
 <p>Die zahlreichen Tutorials zum Thema <em>Picking</em> verwenden die folgende Technik:</p>
@@ -6198,12 +6224,12 @@ int main(int argc, char **argv) {
 </ul>
 </div>
 <div class="paragraph">
-<p>Unnötig zu erwähnen, dass alleine die Vielzahl an <code>glDrawXXX</code> Calls problematisch ist. Außerdem ist es je anch Anwendung nicht notwendig, dieses Prozedere bei <em>jedem</em> Mausklick zu wiederholen.</p>
+<p>Unnötig zu erwähnen, dass alleine die Vielzahl an <code>glDrawXXX</code> Calls problematisch ist. Außerdem ist es je nach Anwendung nicht notwendig, dieses Prozedere bei <em>jedem</em> Mausklick zu wiederholen.</p>
 </div>
 <div class="sect3">
 <h4 id="_optimierungsidee_für_quasi_statische_szenen">7.2.1. Optimierungsidee für quasi-statische Szenen</h4>
 <div class="paragraph">
-<p>Nehmen wir mal an, es handelt sich um ein Programm mit vorwiegend nicht-animierten Szenen (Zielvorgabe dieses Tutorials). Dann könnte man die Falschfarbenberechnung stets kurz nach dem Abschluss der Kamerabewegung machen (d.h. mit kleiner Zeitverzögerung), und das resultierende Falschfarbenbild im CPU-Speicher vorhalten. Wenn man nun mit der Maus klickt, hat man sofort den Farbwert unter dem Mauscursor zur Hand. Man könnte auch viele Klicks abfragen, ohne die GPU zu beschäftigen.</p>
+<p>Nehmen wir mal an, es handelt sich um ein Programm mit vorwiegend nicht-animierten Szenen (Zielvorgabe dieses Tutorials). Dann könnte man die Falschfarbenberechnung stets kurz nach dem Abschluss der Kamerabewegung machen (d.h. mit kleiner Zeitverzögerung), und das resultierende Falschfarbenbild im CPU-Speicher vorhalten. Wenn man nun mit der Maus klickt, hat man sofort den Farbwert unter dem Mauscursor zur Hand. Man könnte auch viele Klicks abfragen, ohne die GPU zu beschäftigen. Für schnelle mouse-over-Effekte ist das eine sinnvolle Variante.</p>
 </div>
 <div class="paragraph">
 <p>Ist sicher eine recht einfache Variante und klingt super nach Arbeitseinsparung. Vor allem, wenn bei der Anwendungen ein Auswahl-Klick in der Scene zunächst nur mit irgendeiner Art der Hervorhebung verbunden ist. Die Scene müsste dann zwar neu gezeichnet werden, aber an der Falschfarbendarstellung zur Auswahl ändert sich nichts.</p>
@@ -6214,10 +6240,10 @@ int main(int argc, char **argv) {
 <div class="ulist">
 <ul>
 <li>
-<p>Falls Scenensicht bewegt: zeichnen der Scene in einen Framebuffer, wobei hier der Vertexshader die Farben der Flächen aus einem separaten Farbpuffer holt - dies erlaubt weiterhin die Verwendung von Indexlisten und Vertexarrays</p>
+<p>Zeichnen der Scene wie gehabt in den Ausgabepuffer</p>
 </li>
 <li>
-<p>Zeichnen der Scene wie gehabt</p>
+<p>Zeichnen der Scene in einen Framebuffer, wobei hier der Vertexshader die Farben der Flächen aus einem separaten Farbpuffer holt - dies erlaubt weiterhin die Verwendung von Indexlisten und Vertexarrays</p>
 </li>
 </ul>
 </div>
@@ -6229,7 +6255,10 @@ int main(int argc, char **argv) {
 - eine Abfrage der Farbwerte und Identifikation des angeklickten Elements</p>
 </div>
 <div class="paragraph">
-<p>Hmm, wenn ich so darüber nachdenke, dass wir bereits einen funktionierenden und ausreichend schnellen Pickingalgorithmus oben haben, will man sich diesen Aufwand eigentlich nicht machen. Daher lass ich das jetzt mal bleiben und würde das Thema "Falschfarbenrendering" in einem späteren Tutorial zum Zweck der Sichtfaktorberechnung wieder ausbuddeln.</p>
+<p>Idealerweise wird hier nur der Farbpuffer beim Zeichnen getauscht, sodass man besser statt <em>interleaved</em>-Storage der Vertex-Daten, den Farbpuffer abtrennt und in einem separaten Speicherblock hält - dies macht die Aktualisierung der Daten durch das CPU-GPU-Mem-Bottleneck deutlich schneller.</p>
+</div>
+<div class="paragraph">
+<p>Hmm, wenn ich so darüber nachdenke, dass wir bereits einen funktionierenden und ausreichend schnellen Picking-Algorithmus oben haben, will man sich diesen Aufwand eigentlich nicht machen. Daher lass ich das jetzt mal bleiben und würde das Thema "Falschfarbenrendering" in einem späteren Tutorial zum Zweck der Sichtfaktorberechnung wieder ausbuddeln.</p>
 </div>
 </div>
 </div>
