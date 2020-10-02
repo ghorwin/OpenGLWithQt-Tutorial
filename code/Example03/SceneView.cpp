@@ -65,7 +65,8 @@ SceneView::~SceneView() {
 			p.destroy();
 
 		m_boxObject.destroy();
-		m_gridObject.destroy();
+		m_minorGridObject.destroy();
+		m_majorGridObject.destroy();
 		m_pickLineObject.destroy();
 
 		m_gpuTimers.destroy();
@@ -87,7 +88,8 @@ void SceneView::initializeGL() {
 
 		// initialize drawable objects
 		m_boxObject.create(SHADER(0));
-		m_gridObject.create(SHADER(1));
+		m_minorGridObject.create(SHADER(1), false);
+		m_majorGridObject.create(SHADER(1), true);
 		m_pickLineObject.create(SHADER(0));
 
 		// Timer
@@ -108,7 +110,7 @@ void SceneView::resizeGL(int width, int height) {
 				/* vertical angle */ 45.0f,
 				/* aspect ratio */   width / float(height),
 				/* near */           0.1f,
-				/* far */            1000.0f
+				/* far */            10000.0f
 		);
 	// Mind: to not use 0.0 for near plane, otherwise depth buffering and depth testing won't work!
 
@@ -137,7 +139,8 @@ void SceneView::paintGL() {
 	QVector3D backColor(0.1f, 0.15f, 0.3f);
 	glClearColor(0.1f, 0.15f, 0.3f, 1.0f);
 
-	QVector3D gridColor(0.5f, 0.5f, 0.7f);
+	QVector3D minorGridColor(0.5f, 0.5f, 0.7f);
+	QVector3D majorGridColor(0.8f, 0.8f, 1.0f);
 
 	m_gpuTimers.reset();
 
@@ -161,11 +164,11 @@ void SceneView::paintGL() {
 	m_gpuTimers.recordSample(); // setup grid
 	SHADER(1)->bind();
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[0], m_worldToView);
-	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], gridColor);
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], minorGridColor);
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[2], backColor);
-
-	m_gpuTimers.recordSample(); // render grid
-	m_gridObject.render();
+	m_minorGridObject.render();
+	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], majorGridColor);
+	m_majorGridObject.render();
 	SHADER(1)->release();
 
 	m_gpuTimers.recordSample(); // done painting

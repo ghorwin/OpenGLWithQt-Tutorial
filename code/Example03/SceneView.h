@@ -81,7 +81,8 @@ private:
 	QList<ShaderProgram>		m_shaderPrograms;
 
 	BoxObject					m_boxObject;
-	GridObject					m_gridObject;
+	GridObject					m_minorGridObject;
+	GridObject					m_majorGridObject;
 	PickLineObject				m_pickLineObject;
 
 	QOpenGLTimeMonitor			m_gpuTimers;
