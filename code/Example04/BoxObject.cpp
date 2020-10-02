@@ -65,8 +65,8 @@ BoxObject::BoxObject() :
 		int boxCount = boxPerCells[xGrid][zGrid]++;
 		float boxHeight = 4.5;
 		BoxMesh b(4,boxHeight,3);
-		b.setFaceColors({Qt::blue, Qt::red, Qt::yellow, Qt::green, Qt::magenta, Qt::darkCyan});
-//		b.setColor(QColor("#ffffe6"));
+//		b.setFaceColors({Qt::blue, Qt::red, Qt::yellow, Qt::green, Qt::magenta, Qt::darkCyan});
+		b.setColor(QColor("#ffffe6"));
 		trans.setTranslation((-GridDim/2+xGrid)*BoxGridSize, boxCount*BoxGridSize + 0.5*boxHeight, (-GridDim/2 + zGrid)*BoxGridSize);
 		b.transform(trans.toMatrix());
 		m_boxes.push_back(b);

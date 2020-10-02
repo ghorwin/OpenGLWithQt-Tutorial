@@ -59,7 +59,7 @@ void BoxMesh::copy2Buffer(VertexVNC *& vertexBuffer, GLuint *& elementBuffer, un
 	// now we populate the vertex buffer for all planes
 
 	// front plane: a, b, c, d, vertexes (0, 1, 2, 3)
-	QVector3D normal(0,0,-1);
+	QVector3D normal(0,0,1);
 	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
 			VertexVNC(m_vertices[0], normal, cols[0]),
 			VertexVNC(m_vertices[1], normal, cols[0]),
@@ -78,7 +78,7 @@ void BoxMesh::copy2Buffer(VertexVNC *& vertexBuffer, GLuint *& elementBuffer, un
 		);
 
 	// back plane: g=5, e=4, h=7, g=6
-	normal = QVector3D(0,0,1);
+	normal = QVector3D(0,0,-1);
 	copyPlane2Buffer(vertexBuffer, elementBuffer, elementStartIndex,
 			VertexVNC(m_vertices[5], normal, cols[2]),
 			VertexVNC(m_vertices[4], normal, cols[2]),

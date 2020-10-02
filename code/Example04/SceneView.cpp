@@ -151,14 +151,14 @@ void SceneView::paintGL() {
 	QVector3D majorGridColor(0.8f, 0.8f, 1.0f);
 	QVector3D lightColor(1.f, 1.f, 1.f);
 
-	QVector3D lightPos(0.f, 500.f, 500.f);
+	QVector3D lightPos(0.f, 5000.f, 1500.f);
 
-	m_rotationCounter = (m_rotationCounter + 1) % 360;
-	QQuaternion lightRot = QQuaternion::fromAxisAndAngle(QVector3D(0,1,0), 1*m_rotationCounter);
+	m_rotationCounter = (m_rotationCounter + 1) % 3600;
+	QQuaternion lightRot = QQuaternion::fromAxisAndAngle(QVector3D(0,1,0), 0.1*m_rotationCounter);
 //	QQuaternion lightRot = QQuaternion::fromAxisAndAngle(QVector3D(0,1,0), 5*m_rotationCounter/180. * 3.1415);
 	lightPos = lightRot.rotatedVector(lightPos);
 	qDebug() << lightPos;
-	renderLater();
+//	renderLater();
 
 	m_gpuTimers.reset();
 
