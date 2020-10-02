@@ -43,7 +43,7 @@ public:
 	unsigned int				m_bufferSize;
 
 	// number of lines to draw in x and z direction
-	const unsigned int			m_N = 1000;
+	const unsigned int			m_N = 1001;
 	// width is in "space units", whatever that means for you (meters, km, nanometers...)
 	const float					m_width = 5000;
 

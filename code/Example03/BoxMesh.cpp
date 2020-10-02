@@ -144,15 +144,18 @@ void copyPlane2Buffer(Vertex * & vertexBuffer, GLuint * & elementBuffer, unsigne
 	vertexBuffer[2] = c;
 	vertexBuffer[3] = d;
 
+	// DISCUSS
+#if 0
 	// tweak the colors of the bottom left and bottom right nodes
 	if (a.y < c.y) {
-		vertexBuffer[0].r *= 0.5;
-		vertexBuffer[1].r *= 0.5;
-		vertexBuffer[0].g *= 0.5;
-		vertexBuffer[1].g *= 0.5;
-		vertexBuffer[0].b *= 0.5;
-		vertexBuffer[1].b *= 0.5;
+		vertexBuffer[0].r *= 0.2;
+		vertexBuffer[1].r *= 0.2;
+		vertexBuffer[0].g *= 0.2;
+		vertexBuffer[1].g *= 0.2;
+		vertexBuffer[0].b *= 0.2;
+		vertexBuffer[1].b *= 0.2;
 	}
+#endif
 
 	// advance vertexBuffer
 	vertexBuffer += 4;

@@ -23,16 +23,16 @@ BoxObject::BoxObject() :
 {
 
 	// create first box
-	BoxMesh b(4,2,3);
+	BoxMesh b(10,5,1);
 	b.setFaceColors({Qt::blue, Qt::red, Qt::yellow, Qt::green, Qt::magenta, Qt::darkCyan});
 	Transform3D trans;
-	trans.setTranslation(0,1,0);
-	b.transform(trans.toMatrix());
+	trans.setTranslation(0,2.5,0); // DISCUSS
+	b.transform(trans.toMatrix()); // inplace-modification
 	m_boxes.push_back( b);
 
 	// create 'some' other boxes
 
-	const int BoxGenCount = 10;
+	const int BoxGenCount = 0; // DISCUSS
 	const int GridDim = 10; // must be an int, or you have to use a cast below
 
 	// initialize grid (block count)
