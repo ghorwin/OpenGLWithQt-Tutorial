@@ -50,7 +50,7 @@ BoxObject::BoxObject() :
 
 	const int BoxGenCount = 10000; // DISCUSS
 	const int BoxGridSize = 5;
-	const int GridDim = 100; // must be an int, or you have to use a cast below
+	const int GridDim = 50; // must be an int, or you have to use a cast below
 
 	// initialize grid (block count)
 	int boxPerCells[GridDim][GridDim];

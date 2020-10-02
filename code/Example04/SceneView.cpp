@@ -101,7 +101,7 @@ void SceneView::initializeGL() {
 		m_pickLineObject.create(SHADER(0));
 
 		// Timer
-		m_gpuTimers.setSampleCount(6);
+		m_gpuTimers.setSampleCount(5);
 		m_gpuTimers.create();
 	}
 	catch (OpenGLException & ex) {
@@ -153,12 +153,12 @@ void SceneView::paintGL() {
 
 	QVector3D lightPos(0.f, 5000.f, 1500.f);
 
-	m_rotationCounter = (m_rotationCounter + 1) % 3600;
-	QQuaternion lightRot = QQuaternion::fromAxisAndAngle(QVector3D(0,1,0), 0.1*m_rotationCounter);
+	m_rotationCounter = (m_rotationCounter + 1) % 900;
+	QQuaternion lightRot = QQuaternion::fromAxisAndAngle(QVector3D(0,1,0), -0.4*m_rotationCounter);
 //	QQuaternion lightRot = QQuaternion::fromAxisAndAngle(QVector3D(0,1,0), 5*m_rotationCounter/180. * 3.1415);
 	lightPos = lightRot.rotatedVector(lightPos);
 	qDebug() << lightPos;
-//	renderLater();
+	renderLater();
 
 	m_gpuTimers.reset();
 
