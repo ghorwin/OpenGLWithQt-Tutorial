@@ -55,20 +55,17 @@ SceneView::SceneView() :
 
 	// Shaderprogram #3 : transparent planes
 	ShaderProgram transPlanes(":/shaders/VertexColorTransparent.vert",":/shaders/simple.frag");
-	lightedBlocks.m_uniformNames.append("worldToView");
-	lightedBlocks.m_uniformNames.append("lightPos");
-	lightedBlocks.m_uniformNames.append("lightColor");
-	m_shaderPrograms.append( lightedBlocks );
+	transPlanes.m_uniformNames.append("worldToView");
+	m_shaderPrograms.append( transPlanes );
 
 	// *** initialize camera placement and model placement in the world
 
 	// move camera a little back (mind: positive z) and look straight ahead
-	m_camera.translate(0,50,50);
-//	m_camera.translate(0,17,50);
+	m_camera.translate(0,17,50);
 	// look slightly down
-	m_camera.rotate(-45, m_camera.right());
+	m_camera.rotate(-5, m_camera.right());
 	// look slightly left
-//	m_camera.rotate(-10, QVector3D(0.0f, 1.0f, 0.0f));
+	m_camera.rotate(-10, QVector3D(0.0f, 1.0f, 0.0f));
 }
 
 
@@ -83,6 +80,7 @@ SceneView::~SceneView() {
 		m_minorGridObject.destroy();
 		m_majorGridObject.destroy();
 		m_pickLineObject.destroy();
+		m_planeObject.destroy();
 
 		m_gpuTimers.destroy();
 	}
@@ -96,8 +94,6 @@ void SceneView::initializeGL() {
 		for (ShaderProgram & p : m_shaderPrograms)
 			p.create();
 
-		// tell OpenGL to show only faces whose normal vector points towards us
-		glEnable(GL_CULL_FACE);
 		// enable depth testing, important for the grid and for the drawing order of several objects
 		glEnable(GL_DEPTH_TEST);
 
@@ -106,9 +102,10 @@ void SceneView::initializeGL() {
 		m_minorGridObject.create(SHADER(1), false);
 		m_majorGridObject.create(SHADER(1), true);
 		m_pickLineObject.create(SHADER(0));
+		m_planeObject.create(SHADER(3));
 
 		// Timer
-		m_gpuTimers.setSampleCount(6);
+		m_gpuTimers.setSampleCount(5);
 		m_gpuTimers.create();
 	}
 	catch (OpenGLException & ex) {
@@ -150,6 +147,9 @@ void SceneView::paintGL() {
 	// set the background color = clear color
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	// set the background color = clear color
 	QVector3D backColor(0.1f, 0.15f, 0.3f);
 	glClearColor(0.1f, 0.15f, 0.3f, 1.0f);
@@ -169,31 +169,37 @@ void SceneView::paintGL() {
 
 	m_gpuTimers.reset();
 
-	m_gpuTimers.recordSample(); // setup boxes
+	// tell OpenGL to show only faces whose normal vector points towards us
+	glEnable(GL_CULL_FACE);
 
 	// *** render boxes
+	m_gpuTimers.recordSample();
+
 	SHADER(2)->bind();
 	SHADER(2)->setUniformValue(m_shaderPrograms[2].m_uniformIDs[0], m_worldToView);
 	SHADER(2)->setUniformValue(m_shaderPrograms[2].m_uniformIDs[1], lightPos);
 	SHADER(2)->setUniformValue(m_shaderPrograms[2].m_uniformIDs[2], lightColor);
 
-	m_gpuTimers.recordSample(); // render boxes
 	m_boxObject.render();
 
 	SHADER(2)->release();
 
+
+	// *** render lines
+	m_gpuTimers.recordSample();
+
 	SHADER(0)->bind();
 	SHADER(0)->setUniformValue(m_shaderPrograms[0].m_uniformIDs[0], m_worldToView);
 
-	m_gpuTimers.recordSample(); // render pickline
 	if (m_pickLineObject.m_visible)
 		m_pickLineObject.render();
 
 	SHADER(0)->release();
 
-	// *** render grid ***
 
-	m_gpuTimers.recordSample(); // setup grid
+	// *** render grid ***
+	m_gpuTimers.recordSample();
+
 	SHADER(1)->bind();
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[0], m_worldToView);
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], minorGridColor);
@@ -202,6 +208,25 @@ void SceneView::paintGL() {
 	SHADER(1)->setUniformValue(m_shaderPrograms[1].m_uniformIDs[1], majorGridColor);
 	m_majorGridObject.render();
 	SHADER(1)->release();
+
+
+	// *** render transparent planes (always last)
+	m_gpuTimers.recordSample(); // done painting
+
+	// tell OpenGL to show all planes
+	glDisable(GL_CULL_FACE);
+	// disable update of depth test but still use it
+	glDepthMask (GL_FALSE);
+
+	SHADER(3)->bind();
+	SHADER(3)->setUniformValue(m_shaderPrograms[3].m_uniformIDs[0], m_worldToView);
+
+	m_planeObject.render();
+
+	SHADER(3)->release();
+
+	// re-enable updating of z-buffer
+	glDepthMask(GL_TRUE);
 
 	m_gpuTimers.recordSample(); // done painting
 

@@ -23,6 +23,7 @@ License    : BSD License,
 #include "BoxObject.h"
 #include "PickLineObject.h"
 #include "Camera.h"
+#include "PlaneObject.h"
 
 /*! The class SceneView extends the primitive OpenGLWindow
 	by adding keyboard/mouse event handling, and rendering of different
@@ -84,6 +85,7 @@ private:
 	GridObject					m_minorGridObject;
 	GridObject					m_majorGridObject;
 	PickLineObject				m_pickLineObject;
+	PlaneObject					m_planeObject;
 
 	QOpenGLTimeMonitor			m_gpuTimers;
 	QElapsedTimer				m_cpuTimer;

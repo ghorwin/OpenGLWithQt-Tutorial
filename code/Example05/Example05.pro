@@ -49,6 +49,8 @@ SOURCES += \
 		OpenGLWindow.cpp \
 		PickLineObject.cpp \
 		PickObject.cpp \
+		PlaneMesh.cpp \
+		PlaneObject.cpp \
 		SceneView.cpp \
 		ShaderProgram.cpp \
 		TestDialog.cpp \
@@ -66,6 +68,8 @@ HEADERS += \
 	OpenGLWindow.h \
 	PickLineObject.h \
 	PickObject.h \
+	PlaneMesh.h \
+	PlaneObject.h \
 	SceneView.h \
 	ShaderProgram.h \
 	TestDialog.h \

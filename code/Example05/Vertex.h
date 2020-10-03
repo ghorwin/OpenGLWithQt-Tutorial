@@ -74,4 +74,32 @@ struct VertexVNC {
 	float r,g,b;
 };
 
+
+/*! A container class to store data (coordinates, normals, textures, colors) of a vertex, used for interleaved
+	storage. Expand this class as needed.
+
+	Memory layout (each char is a byte): xxxxyyyyzzzzwwwwrrrrggggbbbbaaaa = 8*4 = 32 Bytes
+
+	(nmo = normal vector components)
+
+	You can define a vector<VertexVNC> and use this directly as input to the vertex buffer.
+*/
+struct VertexVCA {
+	VertexVCA() {}
+	VertexVCA(const QVector3D & coords, const QColor & col) :
+		x(float(coords.x())),
+		y(float(coords.y())),
+		z(float(coords.z())),
+		w(0),
+		r(float(col.redF())),
+		g(float(col.greenF())),
+		b(float(col.blueF())),
+		a(float(col.alphaF()))
+	{
+	}
+
+	float x,y,z,w;
+	float r,g,b,a;
+};
+
 #endif // VERTEX_H
