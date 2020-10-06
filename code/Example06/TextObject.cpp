@@ -23,7 +23,7 @@ void TextObject::create(ShaderProgram & shaderProgram) {
 
 	// first generate the image holding the individual texts
 
-	int fontSize = 15;
+	int fontSize = 22;
 	int textWidth=0;
 	int textHeight=0;
 
@@ -31,10 +31,11 @@ void TextObject::create(ShaderProgram & shaderProgram) {
 	f.setPointSize(fontSize);
 
 	QFontMetrics fm(f);
+	textHeight = fm.lineSpacing();
 	for (const TextData & t : m_texts) {
 		QRect textRect = fm.boundingRect(t.m_text);
 		textWidth = qMax(textWidth, textRect.width());
-		textHeight = qMax(textHeight, fm.lineSpacing());
+		textHeight = qMax(textHeight, textRect.height());
 	}
 
 	QColor textColor(255,255,255);
@@ -44,12 +45,12 @@ void TextObject::create(ShaderProgram & shaderProgram) {
 	// our texture size shall be limited to 640 px, that will be enough for quite some text
 	textWidth = qMin(640, textWidth);
 
-//	textWidth = 128;
-//	imgHeight = 128;
+	textWidth = 196;
+	imgHeight = 196;
 	QImage textimg(textWidth, imgHeight, QImage::Format_RGBA8888);
 	{
 		QPainter painter(&textimg);
-		painter.fillRect(0, 0, textWidth, imgHeight, QColor(55,55,255,40));
+		painter.fillRect(0, 0, textWidth, imgHeight, QColor(55,55,255,0));
 		painter.setBrush(textColor);
 		painter.setPen(textColor);
 		painter.setFont(f);
@@ -60,11 +61,11 @@ void TextObject::create(ShaderProgram & shaderProgram) {
 			// store coordinates of text bounding rect on texture
 			t.m_texX1 = 0; // currently always 0
 			t.m_texX2 = fm.boundingRect(t.m_text).width()/float(textWidth);
-			t.m_texY1 = height;
-			t.m_texY2 = height - textHeight;
+			t.m_texY1 = height+1;
+			t.m_texY2 = height - textHeight+1;
 			// invert and normalize j coords
-			t.m_texY1 = (imgHeight - t.m_texY1)/float(imgHeight);
-			t.m_texY2 = (imgHeight - t.m_texY2)/float(imgHeight);
+			t.m_texY1 = t.m_texY1/float(imgHeight);
+			t.m_texY2 = t.m_texY2/float(imgHeight);
 
 			// now update the vertexes to have the correct aspect ratio
 			QVector3D a = t.m_b-t.m_a;
@@ -91,6 +92,7 @@ void TextObject::create(ShaderProgram & shaderProgram) {
 	// texture attributes
 	m_texture->setMinificationFilter(QOpenGLTexture::NearestMipMapLinear);
 	m_texture->setMagnificationFilter(QOpenGLTexture::Linear);
+	m_texture->setWrapMode(QOpenGLTexture::ClampToBorder);
 	m_texture->setData(textimg); // allocate() will be called internally
 	qDebug()<< "Texture mipmap levels: " << m_texture->mipLevels();
 	// tell shader to associate texture uniform 'text01' with a texture index

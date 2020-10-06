@@ -111,11 +111,8 @@ void SceneView::initializeGL() {
 		m_pickLineObject.create(SHADER(0));
 		m_planeObject.create(SHADER(3));
 
-		m_textObject.addText("Osten", QVector3D(0,-30,0), QVector3D(10,-30,0), QVector3D(0,-25,0));
-//		m_textObject.m_texts[0].m_text = "Osten";
-//		m_textObject.m_texts[0].m_plane = PlaneMesh(QVector3D())
-//		m_textObject.m_texts[1].m_text = "Total verwinkelte Westwand";
-//		m_textObject.m_texts[2].m_text = "Oben drauf";
+		m_textObject.addText("Osten", QVector3D(0,30,0), QVector3D(10,30,0), QVector3D(0,45,0));
+		m_textObject.addText("юго-запад", QVector3D(-70,30,70), QVector3D(0,30,0), QVector3D(-70,45,70));
 
 		m_textObject.create(m_shaderPrograms[4]);
 
@@ -228,21 +225,14 @@ void SceneView::paintGL() {
 	m_majorGridObject.render();
 	SHADER(1)->release();
 
-
-	// *** render text
-
-	SHADER(4)->bind();
-	SHADER(4)->setUniformValue(m_shaderPrograms[4].m_uniformIDs[0], m_worldToView);
-	m_textObject.render();
-	SHADER(4)->release();
-
-	// *** render transparent planes (always last)
-	m_gpuTimers.recordSample(); // done painting
-
 	// tell OpenGL to show all planes
 	glDisable(GL_CULL_FACE);
+
 	// disable update of depth test but still use it
 	glDepthMask (GL_FALSE);
+
+	// *** render transparent planes
+	m_gpuTimers.recordSample(); // done painting
 
 	SHADER(3)->bind();
 	SHADER(3)->setUniformValue(m_shaderPrograms[3].m_uniformIDs[0], m_worldToView);
@@ -251,6 +241,12 @@ void SceneView::paintGL() {
 
 	SHADER(3)->release();
 
+	// *** render text (always in front of all transparent stuff)
+
+	SHADER(4)->bind();
+	SHADER(4)->setUniformValue(m_shaderPrograms[4].m_uniformIDs[0], m_worldToView);
+	m_textObject.render();
+	SHADER(4)->release();
 
 	m_gpuTimers.recordSample(); // done painting
 

@@ -56,7 +56,7 @@ BoxObject::BoxObject() :
 #endif
 	// create 'some' other boxes
 
-	const int BoxGenCount = 0; // DISCUSS
+	const int BoxGenCount = 10000; // DISCUSS
 	const int BoxGridSize = 5;
 	const int GridDim = 100; // must be an int, or you have to use a cast below
 
