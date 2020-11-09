@@ -69,14 +69,19 @@ void RectangleWindow::initializeGL() {
 	};
 
 	QColor vertexColors [] = {
+		// left triangle
+
 		QColor("#ff0000"),  // red    // top right
 		QColor("#00ff00"), // green  // bottom right
 		QColor("#0000ff"), // blue   // top left
 		QColor("#ffffff"), // white  // bottom left
-		QColor("#ff0000"),
-		QColor("#ff00ff"),
-		QColor("#ffffff"),
-		QColor("#00ff00")
+
+		// right triangle
+
+		QColor("#ff0000"),	// red - top right
+		QColor("#ff00ff"),	// magenta - bottom right
+		QColor("#ffffff"),	// white - top left
+		QColor("#00ff00")	// green - bottom left
 	};
 
 	// create buffer for 2 interleaved attributes: position and color, 4 vertices, 3 floats each
