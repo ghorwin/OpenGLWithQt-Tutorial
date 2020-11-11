@@ -88,7 +88,7 @@ void RectangleWindow::initializeGL() {
 	// create buffer for 2 interleaved attributes: position and color, 4 vertices, 3 floats each
 	unsigned int N_Vertices = 8;
 	std::vector<float> vertexBufferData(N_Vertices*3);
-	std::vector<float> colorBufferData(N_Vertices*4);
+	std::vector<char> colorBufferData(N_Vertices*4);
 	// create new data buffer - the following memory copy stuff should
 	// be placed in some convenience class in later tutorials
 	// copy data in interleaved mode with pattern p0c0|p1c1|p2c2|p3c3
@@ -101,10 +101,10 @@ void RectangleWindow::initializeGL() {
 
 
 		// colors
-		colorBufferData[v*4 + 0] = vertexColors[v].redF();
-		colorBufferData[v*4 + 1] = vertexColors[v].greenF();
-		colorBufferData[v*4 + 2] = vertexColors[v].blueF();
-		colorBufferData[v*4 + 3] = vertexColors[v].alphaF();
+		colorBufferData[v*4 + 0] = vertexColors[v].red();
+		colorBufferData[v*4 + 1] = vertexColors[v].green();
+		colorBufferData[v*4 + 2] = vertexColors[v].blue();
+		colorBufferData[v*4 + 3] = vertexColors[v].alpha();
 	}
 
 	// create a new buffer for the vertices and colors, interleaved storage
@@ -120,7 +120,7 @@ void RectangleWindow::initializeGL() {
 	m_colorBufferObject.create();
 	m_colorBufferObject.setUsagePattern(QOpenGLBuffer::StaticDraw);
 	m_colorBufferObject.bind();
-	m_colorBufferObject.allocate(colorBufferData.data(), colorBufferData.size()*sizeof(float) );
+	m_colorBufferObject.allocate(colorBufferData.data(), colorBufferData.size()*sizeof(char) );
 
 	// create and bind Vertex Array Object - must be bound *before* the element buffer is bound,
 	// because the VAO remembers and manages element buffers as well
@@ -165,7 +165,7 @@ void RectangleWindow::initializeGL() {
 	// layout location 1 - vec3 with colors
 	m_colorBufferObject.bind();
 	m_program->enableAttributeArray(1);
-	m_program->setAttributeBuffer(1, GL_FLOAT, 0, 4, 4*sizeof(float));
+	m_program->setAttributeBuffer(1, GL_UNSIGNED_BYTE, 0, 4, 4*sizeof(char));
 
 	m_vao.release();
 	m_vertexBufferObject.release();
