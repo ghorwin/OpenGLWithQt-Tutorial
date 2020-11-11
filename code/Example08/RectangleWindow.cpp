@@ -88,7 +88,7 @@ void RectangleWindow::initializeGL() {
 	// create buffer for 2 interleaved attributes: position and color, 4 vertices, 3 floats each
 	unsigned int N_Vertices = 8;
 	std::vector<float> vertexBufferData(N_Vertices*3);
-	std::vector<float> colorBufferData(N_Vertices*3);
+	std::vector<float> colorBufferData(N_Vertices*4);
 	// create new data buffer - the following memory copy stuff should
 	// be placed in some convenience class in later tutorials
 	// copy data in interleaved mode with pattern p0c0|p1c1|p2c2|p3c3
@@ -101,9 +101,10 @@ void RectangleWindow::initializeGL() {
 
 
 		// colors
-		colorBufferData[v*3 + 0] = vertexColors[v].redF();
-		colorBufferData[v*3 + 1] = vertexColors[v].greenF();
-		colorBufferData[v*3 + 2] = vertexColors[v].blueF();
+		colorBufferData[v*4 + 0] = vertexColors[v].redF();
+		colorBufferData[v*4 + 1] = vertexColors[v].greenF();
+		colorBufferData[v*4 + 2] = vertexColors[v].blueF();
+		colorBufferData[v*4 + 3] = vertexColors[v].alphaF();
 	}
 
 	// create a new buffer for the vertices and colors, interleaved storage
@@ -155,18 +156,16 @@ void RectangleWindow::initializeGL() {
 	m_indexBufferObject.allocate(indices, sizeof(indices) );
 
 	// stride = number of bytes for one vertex (with all its attributes) = 3+3 floats = 6*4 = 24 Bytes
-	int stride = 3*sizeof(float);
 
 	// layout location 0 - vec3 with coordinates
 	m_vertexBufferObject.bind();
 	m_program->enableAttributeArray(0);
-	m_program->setAttributeBuffer(0, GL_FLOAT, 0, 3, stride);
+	m_program->setAttributeBuffer(0, GL_FLOAT, 0, 3, 3*sizeof(float));
 
 	// layout location 1 - vec3 with colors
 	m_colorBufferObject.bind();
 	m_program->enableAttributeArray(1);
-	int colorOffset = 3*sizeof(float);
-	m_program->setAttributeBuffer(1, GL_FLOAT, 0, 3, stride);
+	m_program->setAttributeBuffer(1, GL_FLOAT, 0, 4, 4*sizeof(float));
 
 	m_vao.release();
 	m_vertexBufferObject.release();
