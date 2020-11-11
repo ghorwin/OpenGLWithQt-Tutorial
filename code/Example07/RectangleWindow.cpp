@@ -115,6 +115,7 @@ void RectangleWindow::initializeGL() {
 	m_vao.create();
 	m_vao.bind();
 
+//	glEnable(GL_CULL_FACE);
 //#define USE_DEGENERATED_TRIANGLE_RESTART
 #ifdef USE_DEGENERATED_TRIANGLE_RESTART
 	GLushort indices[] = {  // note that we start from 0!
