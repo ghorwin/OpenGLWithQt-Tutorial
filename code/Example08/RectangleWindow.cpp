@@ -63,10 +63,14 @@ void RectangleWindow::initializeGL() {
 		 0.8f, -0.8f, 0.0f,  // bottom right	= 1
 		-0.8f,  0.8f, 0.0f,   // top left		= 2
 		-0.8f, -0.8f, 0.0f,  // bottom left		= 3
-		1.8f,  0.8f, 0.0f,  // top right		= 0
-		1.8f, -0.8f, 0.0f,  // bottom right	= 1
-		1.0f,  0.8f, 0.0f,   // top left		= 2
-		1.0f, -0.8f, 0.0f  // bottom left		= 3
+
+
+		1.0f, -0.8f, 0.0f, // 4
+		1.0f,  0.8f, 0.0f,
+		1.2f, -0.8f, 0.0f,
+		1.2f,  0.8f, 0.0f,
+		1.4f, -0.8f, 0.0f,
+		1.4f,  0.8f, 0.0f, // 9
 	};
 
 	QColor vertexColors [] = {
@@ -79,14 +83,16 @@ void RectangleWindow::initializeGL() {
 
 		// right triangle
 
-		QColor("#ff0000"),	// red - top right
-		QColor("#ff00ff"),	// magenta - bottom right
-		QColor("#ffffff"),	// white - top left
-		QColor("#00ff00")	// green - bottom left
+		QColor("#ff0000"),	// red
+		QColor("#ff00ff"),	// magenta
+		QColor("#ffffff"),	// white
+		QColor("#00ff00"),	// green
+		QColor("#00ffff"),	// cyan
+		QColor("#8080ff")	// bright blue
 	};
 
 	// create buffer for 2 interleaved attributes: position and color, 4 vertices, 3 floats each
-	unsigned int N_Vertices = 8;
+	unsigned int N_Vertices = 10;
 	std::vector<float> vertexBufferData(N_Vertices*3);
 	std::vector<char> colorBufferData(N_Vertices*4);
 	// create new data buffer - the following memory copy stuff should
@@ -98,7 +104,6 @@ void RectangleWindow::initializeGL() {
 		buf[0] = vertices[3*v]/2;
 		buf[1] = vertices[3*v+1]/2;
 		buf[2] = vertices[3*v+2]/2;
-
 
 		// colors
 		colorBufferData[v*4 + 0] = vertexColors[v].red();
@@ -144,9 +149,9 @@ void RectangleWindow::initializeGL() {
 	GLushort indices[] = {  // note that we start from 0!
 		0, 1, 2, 3,
 		0xFFFF,
-		4, 5, 6, 7
+		4, 5, 6, 7, 8, 9
 	};
-	m_indexCount = 9;
+	m_indexCount = 11;
 #endif
 	// create a new buffer for the indexes
 	m_indexBufferObject = QOpenGLBuffer(QOpenGLBuffer::IndexBuffer); // Mind: use 'IndexBuffer' here
